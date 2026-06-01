@@ -139,11 +139,9 @@ export default function SessionView() {
       navigate('/')
     } catch (err) {
       console.error('Challenge löschen fehlgeschlagen', err)
-      alert('Löschen fehlgeschlagen. Nur der Host kann die Challenge löschen.')
+      alert('Löschen fehlgeschlagen.')
     }
   }
-
-  const isHost = session.host_id === userId
 
   return (
     <div className="mx-auto flex min-h-full max-w-md flex-col gap-5 p-5 pb-28">
@@ -155,14 +153,12 @@ export default function SessionView() {
             </Link>
             <h1 className="text-2xl font-bold leading-tight">{session.name}</h1>
           </div>
-          {isHost && (
-            <button
-              className="shrink-0 rounded-lg px-2 py-1 text-sm text-slate-500 hover:bg-red-500/10 hover:text-red-400"
-              onClick={handleDelete}
-            >
-              Löschen
-            </button>
-          )}
+          <button
+            className="shrink-0 rounded-lg px-2 py-1 text-sm text-slate-500 hover:bg-red-500/10 hover:text-red-400"
+            onClick={handleDelete}
+          >
+            Löschen
+          </button>
         </div>
         <div className="flex items-center justify-between">
           <ShareSession code={session.join_code} />

@@ -96,7 +96,7 @@ manuell synchron gehalten werden.
 ## Bewusst (noch) nicht gebaut
 
 Keine DELETE-Policy für `results` (einzelne Ergebnisse löschen fehlt); Archivieren von Sessions
-(`status='archived'`) ist im UI nicht umgesetzt – nur hartes Löschen durch den Host
-(`sessions_delete`, Cascade); Host-Korrektur fremder Ergebnisse ist per RLS erlaubt, aber im UI
+(`status='archived'`) ist im UI nicht umgesetzt – nur hartes Löschen durch jeden Teilnehmer
+(`sessions_delete` via `is_session_member`, Cascade); Host-Korrektur fremder Ergebnisse ist per RLS erlaubt, aber im UI
 nicht umgesetzt; keine Pro-Boulder-Detailansicht ("wer hat was"), keine Challenge-Modi, keine
 Offline-Eingabe mit Sync.
