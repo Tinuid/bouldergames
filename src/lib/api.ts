@@ -89,8 +89,19 @@ export async function getSessionById(id: string): Promise<Session | null> {
 // Challenge löschen (nur Host, via RLS erzwungen). Cascade entfernt Teilnehmer,
 // Boulder und Ergebnisse mit.
 export async function deleteSession(sessionId: string): Promise<void> {
-  const { error } = await supabase.from('sessions').delete().eq('id', sessionId)
+  // .select() zurückfordern, um echtes Löschen zu erkennen: Ein per RLS
+  // blockiertes DELETE wirft KEINEN Fehler, betrifft aber 0 Zeilen.
+  const { data, error } = await supabase
+    .from('sessions')
+    .delete()
+    .eq('id', sessionId)
+    .select('id')
   if (error) throw error
+  if (!data || data.length === 0) {
+    throw new Error(
+      'Nichts gelöscht – vermutlich fehlt die DELETE-Policy in Supabase (siehe sessions_delete).',
+    )
+  }
 }
 
 export async function joinSession(

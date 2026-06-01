@@ -139,7 +139,7 @@ export default function SessionView() {
       navigate('/')
     } catch (err) {
       console.error('Challenge löschen fehlgeschlagen', err)
-      alert('Löschen fehlgeschlagen.')
+      alert(err instanceof Error ? err.message : 'Löschen fehlgeschlagen.')
     }
   }
 
