@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useRealtimeSession } from '../hooks/useRealtimeSession'
 import { addBoulder, deleteSession, joinSession, upsertResult } from '../lib/api'
+import { uploadBoulderImage } from '../lib/images'
 import { forgetSession, rememberSession } from '../lib/localHistory'
 import { scoringFromSession, type ResultStatus } from '../types'
 import Leaderboard from '../components/Leaderboard'
@@ -122,9 +123,15 @@ export default function SessionView() {
     }
   }
 
-  async function handleAddBoulder(difficulty: number | null, color: string | null) {
+  async function handleAddBoulder(
+    difficulty: number | null,
+    color: string | null,
+    image: File | null,
+  ) {
     if (!userId) return
-    await addBoulder({ sessionId: session!.id, userId, difficulty, color })
+    // Bild zuerst hochladen (verkleinert), damit der Pfad direkt am Boulder hängt.
+    const imagePath = image ? await uploadBoulderImage(image, userId) : null
+    await addBoulder({ sessionId: session!.id, userId, difficulty, color, imagePath })
     refresh()
   }
 

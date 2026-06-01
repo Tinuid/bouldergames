@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export default function AddBoulderDialog({
   open,
@@ -7,13 +7,41 @@ export default function AddBoulderDialog({
 }: {
   open: boolean
   onClose: () => void
-  onAdd: (difficulty: number | null, color: string | null) => Promise<void>
+  onAdd: (
+    difficulty: number | null,
+    color: string | null,
+    image: File | null,
+  ) => Promise<void>
 }) {
   const [difficulty, setDifficulty] = useState('')
   const [color, setColor] = useState('')
+  const [image, setImage] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Vorschau-URL zum gewählten Bild verwalten und sauber wieder freigeben.
+  useEffect(() => {
+    if (!image) {
+      setPreviewUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(image)
+    setPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [image])
 
   if (!open) return null
+
+  function pickImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null
+    setImage(file)
+  }
+
+  function clearImage() {
+    setImage(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -21,9 +49,10 @@ export default function AddBoulderDialog({
     setSaving(true)
     try {
       const diff = difficulty.trim() === '' ? null : Number(difficulty)
-      await onAdd(Number.isNaN(diff as number) ? null : diff, color.trim() || null)
+      await onAdd(Number.isNaN(diff as number) ? null : diff, color.trim() || null, image)
       setDifficulty('')
       setColor('')
+      clearImage()
       onClose()
     } finally {
       setSaving(false)
@@ -68,6 +97,37 @@ export default function AddBoulderDialog({
               value={color}
               onChange={(e) => setColor(e.target.value)}
             />
+          </div>
+          <div>
+            <span className="label">Foto (optional)</span>
+            <input
+              ref={fileInputRef}
+              id="image"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={pickImage}
+            />
+            {previewUrl ? (
+              <div className="relative overflow-hidden rounded-xl border border-slate-700">
+                <img src={previewUrl} alt="Vorschau" className="max-h-56 w-full object-cover" />
+                <button
+                  type="button"
+                  className="absolute right-2 top-2 rounded-lg bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
+                  onClick={clearImage}
+                >
+                  Entfernen
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="btn-secondary w-full"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                📷 Foto auswählen
+              </button>
+            )}
           </div>
         </div>
         <div className="mt-5 flex gap-2">

@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import ResultEditor from './ResultEditor'
+import ImageLightbox from './ImageLightbox'
+import { boulderImageUrl } from '../lib/images'
 import type { Boulder, Result, ResultStatus, ScoringConfig } from '../types'
 
 // Häufige Hallen-Farben -> CSS. Unbekannte Farben werden nur als Text gezeigt.
@@ -38,10 +41,22 @@ export default function BoulderCard({
   const tops = allResults.filter((r) => r.status === 'top' || r.status === 'flash').length
   const flashes = allResults.filter((r) => r.status === 'flash').length
   const dot = boulder.color ? COLOR_MAP[boulder.color.trim().toLowerCase()] : undefined
+  const imageUrl = boulderImageUrl(boulder.image_path)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
 
   return (
     <div className="card flex flex-col gap-3">
       <div className="flex items-center gap-2">
+        {imageUrl && (
+          <button
+            type="button"
+            className="h-12 w-12 shrink-0 overflow-hidden rounded-lg ring-1 ring-slate-600"
+            onClick={() => setLightboxOpen(true)}
+            aria-label="Foto vergrößern"
+          >
+            <img src={imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+          </button>
+        )}
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-700 text-sm font-bold">
           {boulder.seq}
         </span>
@@ -70,6 +85,10 @@ export default function BoulderCard({
       </div>
 
       <ResultEditor result={myResult} scoring={scoring} onSave={onSaveResult} />
+
+      {imageUrl && lightboxOpen && (
+        <ImageLightbox src={imageUrl} onClose={() => setLightboxOpen(false)} />
+      )}
     </div>
   )
 }

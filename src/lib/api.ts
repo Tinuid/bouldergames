@@ -171,6 +171,7 @@ export async function addBoulder(params: {
   userId: string
   difficulty: number | null
   color: string | null
+  imagePath?: string | null
 }): Promise<Boulder> {
   // seq wird per DB-Trigger vergeben (race-sicher), daher hier nicht setzen.
   const { data, error } = await supabase
@@ -180,6 +181,7 @@ export async function addBoulder(params: {
       created_by: params.userId,
       difficulty: params.difficulty,
       color: params.color,
+      image_path: params.imagePath ?? null,
     })
     .select()
     .single<Boulder>()

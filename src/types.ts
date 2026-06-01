@@ -45,6 +45,9 @@ export interface Boulder {
   seq: number
   difficulty: number | null
   color: string | null
+  // Objekt-Pfad im Storage-Bucket 'boulder-images' (nicht die volle URL), z.B.
+  // "<user_id>/<uuid>.jpg". null = kein Bild. Siehe src/lib/images.ts.
+  image_path: string | null
   created_by: string
   created_at: string
 }
