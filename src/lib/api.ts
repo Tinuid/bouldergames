@@ -29,6 +29,7 @@ export async function createSession(params: {
         flash_points: params.scoring.flashPoints,
         top_points: params.scoring.topPoints,
         attempt_cost: params.scoring.attemptCost,
+        free_success: params.scoring.freeSuccess ?? false,
       })
       .select()
       .single<Session>()

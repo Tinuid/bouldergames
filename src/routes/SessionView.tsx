@@ -163,7 +163,8 @@ export default function SessionView() {
         <div className="flex items-center justify-between">
           <ShareSession code={session.join_code} />
           <span className="text-xs text-slate-500">
-            ⚡{scoring.flashPoints} · ✓{scoring.topPoints} · −{scoring.attemptCost}/Versuch
+            ⚡{scoring.flashPoints} · ✓{scoring.topPoints} ·{' '}
+            {scoring.freeSuccess ? '−' + scoring.attemptCost + '/Fehlversuch' : '−' + scoring.attemptCost + '/Versuch'}
           </span>
         </div>
       </header>

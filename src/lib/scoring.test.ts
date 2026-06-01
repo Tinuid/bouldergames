@@ -36,6 +36,30 @@ describe('computePoints mit eigener Konfiguration', () => {
   })
 })
 
+describe('computePoints mit freeSuccess (Top & Flash kosten nichts)', () => {
+  const config = { ...DEFAULT_SCORING, freeSuccess: true }
+
+  it('Flash = 30 (erfolgreicher Versuch gratis)', () => {
+    expect(computePoints('flash', 1, config)).toBe(30)
+  })
+
+  it('Top im 1. Versuch = 25 (keine Fehlversuche)', () => {
+    expect(computePoints('top', 1, config)).toBe(25)
+  })
+
+  it('Top im 3. Versuch = 25 - 2*5 = 15 (nur die 2 Fehlversuche kosten)', () => {
+    expect(computePoints('top', 3, config)).toBe(15)
+  })
+
+  it('3x ohne Top = -3*5 = -15 (Fehlversuche kosten unverändert)', () => {
+    expect(computePoints('fail', 3, config)).toBe(-15)
+  })
+
+  it('Offen = 0', () => {
+    expect(computePoints('open', 0, config)).toBe(0)
+  })
+})
+
 describe('normalizeResult', () => {
   it('Flash erzwingt genau 1 Versuch', () => {
     expect(normalizeResult('flash', 5)).toEqual({ status: 'flash', attempts: 1 })

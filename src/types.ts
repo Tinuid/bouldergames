@@ -6,12 +6,15 @@ export interface ScoringConfig {
   flashPoints: number
   topPoints: number
   attemptCost: number
+  // Wenn true: Top & Flash kosten keine Punkte – nur nicht erfolgreiche Versuche.
+  freeSuccess?: boolean
 }
 
 export const DEFAULT_SCORING: ScoringConfig = {
   flashPoints: 30,
   topPoints: 25,
   attemptCost: 5,
+  freeSuccess: false,
 }
 
 export interface Session {
@@ -22,6 +25,7 @@ export interface Session {
   flash_points: number
   top_points: number
   attempt_cost: number
+  free_success: boolean
   status: 'active' | 'archived'
   created_at: string
 }
@@ -62,5 +66,6 @@ export function scoringFromSession(s: Session): ScoringConfig {
     flashPoints: s.flash_points,
     topPoints: s.top_points,
     attemptCost: s.attempt_cost,
+    freeSuccess: s.free_success,
   }
 }

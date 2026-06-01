@@ -1,7 +1,7 @@
 import type { ResultStatus, ScoringConfig } from '../types'
 
 /**
- * Punkteberechnung "strikt bezahlen":
+ * Punkteberechnung "strikt bezahlen" (Default):
  * Jeder Versuch kostet `attemptCost` – auch der erfolgreiche.
  *
  *  flash → flashPoints - attempts * attemptCost   (Flash = Top im 1. Versuch, attempts = 1)
@@ -13,21 +13,31 @@ import type { ResultStatus, ScoringConfig } from '../types'
  *  - Flash:               30 - 1*5  = 25
  *  - Top im 2. Versuch:   25 - 2*5  = 15
  *  - 3x ohne Top:          0 - 3*5  = -15
+ *
+ * Mit `freeSuccess`: Nur nicht erfolgreiche Versuche kosten – der erfolgreiche
+ * (bei Flash/Top) ist gratis. Bei einem Top zählen also nur die `attempts - 1`
+ * Fehlversuche davor.
+ *
+ *  flash → flashPoints                              (1 Versuch, erfolgreich ⇒ gratis)
+ *  top   → topPoints - (attempts - 1) * attemptCost
+ *  fail  → 0         - attempts * attemptCost
  */
 export function computePoints(
   status: ResultStatus,
   attempts: number,
   config: ScoringConfig,
 ): number {
-  const cost = Math.max(0, attempts) * config.attemptCost
+  const tries = Math.max(0, attempts)
+  // Bei freeSuccess kostet der erfolgreiche Versuch nichts, nur die Fehlversuche davor.
+  const successfulCost = config.freeSuccess ? Math.max(0, tries - 1) : tries
 
   switch (status) {
     case 'flash':
-      return config.flashPoints - cost
+      return config.flashPoints - successfulCost * config.attemptCost
     case 'top':
-      return config.topPoints - cost
+      return config.topPoints - successfulCost * config.attemptCost
     case 'fail':
-      return -cost
+      return -tries * config.attemptCost
     case 'open':
       return 0
   }

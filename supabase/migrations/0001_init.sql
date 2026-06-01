@@ -14,9 +14,13 @@ create table if not exists public.sessions (
   flash_points int  not null default 30,
   top_points   int  not null default 25,
   attempt_cost int  not null default 5,
+  free_success boolean not null default false,  -- true: Top & Flash kosten nichts, nur Fehlversuche
   status       text not null default 'active' check (status in ('active', 'archived')),
   created_at   timestamptz not null default now()
 );
+
+-- Idempotent nachrüstbar für bereits angelegte sessions-Tabellen:
+alter table public.sessions add column if not exists free_success boolean not null default false;
 
 create table if not exists public.participants (
   id           uuid primary key default gen_random_uuid(),
