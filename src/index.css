@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-900 text-slate-100 antialiased;
+  margin: 0;
+  /* Safe-Area-Padding für Notch-Geräte */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold
+      transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-brand text-slate-950 hover:bg-brand-dark;
+  }
+  .btn-secondary {
+    @apply btn bg-slate-700 text-slate-100 hover:bg-slate-600;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-slate-300 hover:bg-slate-800;
+  }
+  .input {
+    @apply w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-slate-100
+      placeholder:text-slate-500 focus:border-brand focus:outline-none;
+  }
+  .card {
+    @apply rounded-2xl border border-slate-800 bg-slate-800/50 p-4;
+  }
+  .label {
+    @apply mb-1 block text-sm font-medium text-slate-400;
+  }
+}

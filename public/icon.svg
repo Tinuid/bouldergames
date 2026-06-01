@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="96" fill="#0f172a"/>
+  <!-- Boulder-Hold / Griff -->
+  <circle cx="256" cy="200" r="70" fill="#22c55e"/>
+  <circle cx="256" cy="200" r="30" fill="#0f172a"/>
+  <!-- Pokal-/Punkte-Akzent -->
+  <path d="M176 300 h160 l-24 96 a40 40 0 0 1 -38 28 h-36 a40 40 0 0 1 -38 -28 z" fill="#22c55e"/>
+  <rect x="236" y="300" width="40" height="20" fill="#16a34a"/>
+</svg>

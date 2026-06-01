@@ -1,0 +1,41 @@
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from './hooks/useAuth'
+import Home from './routes/Home'
+import CreateSession from './routes/CreateSession'
+import JoinSession from './routes/JoinSession'
+import SessionView from './routes/SessionView'
+
+export default function App() {
+  const { loading, error } = useAuth()
+
+  if (error) {
+    return (
+      <div className="mx-auto flex min-h-full max-w-md flex-col justify-center gap-3 p-6">
+        <h1 className="text-xl font-bold text-red-400">Verbindung fehlgeschlagen</h1>
+        <p className="text-slate-300">{error}</p>
+        <button className="btn-primary" onClick={() => location.reload()}>
+          Erneut versuchen
+        </button>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-full items-center justify-center p-6 text-slate-400">
+        Lädt …
+      </div>
+    )
+  }
+
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/create" element={<CreateSession />} />
+      <Route path="/join" element={<JoinSession />} />
+      <Route path="/join/:code" element={<JoinSession />} />
+      <Route path="/s/:sessionId" element={<SessionView />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}
