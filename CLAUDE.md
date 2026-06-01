@@ -35,6 +35,9 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
 1. **Anonymous Sign-ins aktivieren** (Authentication → Providers). Sonst: HTTP 422
    `anonymous_provider_disabled`, und die App bleibt am Auth-Bootstrap hängen.
 2. `supabase/migrations/0001_init.sql` einmalig im SQL-Editor ausführen.
+3. `supabase/migrations/0002_boulder_images.sql` ausführen (legt die `boulders.image_path`-Spalte
+   und den öffentlichen Storage-Bucket `boulder-images` samt Policies an). Diese Migration ist
+   idempotent und kann gefahrlos erneut laufen.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.
@@ -69,6 +72,17 @@ Konventionen: Upserts nutzen `onConflict` (`participants` → `session_id,user_i
 `boulder_id,participant_id`). Die fortlaufende `boulders.seq` wird **per DB-Trigger** (Advisory-Lock,
 race-sicher) vergeben – beim Insert **kein** `seq` mitsenden.
 
+**Boulder-Bilder via Storage, nicht in der DB.** Jeder Boulder kann ein Foto haben. Die Bilder
+liegen im öffentlichen Storage-Bucket `boulder-images`; in der DB steht nur der Objekt-Pfad
+(`boulders.image_path`, z.B. `<user_id>/<uuid>.jpg`), **nicht** die volle URL oder base64. Das ist
+bewusst so: Realtime lädt bei jeder Änderung die ganze `boulders`-Tabelle neu (s.u.) – base64-Blobs
+würden die Payloads aufblähen. `src/lib/images.ts` kapselt alles: client-seitiges Verkleinern via
+Canvas (max. 1600px Kante, JPEG ~0.82, EXIF-Orientierung berücksichtigt), Upload und das Bauen der
+öffentlichen URL (`boulderImageUrl`). Der Upload-Pfad **muss** mit `auth.uid()` als erstem
+Pfadsegment beginnen – die Storage-RLS in `0002` erzwingt das. Ablauf beim Anlegen: erst Bild
+hochladen, dann `addBoulder` mit dem zurückgegebenen Pfad. `BoulderCard` zeigt ein Thumbnail, das
+`ImageLightbox` (eigene Komponente, keine externe Lib) zum Zoomen öffnet.
+
 **Realtime per Re-Fetch.** `src/hooks/useRealtimeSession.ts` lädt eine komplette Session
 (Stammdaten + Teilnehmer + Boulder + Ergebnisse) und abonniert `postgres_changes` für
 `participants`/`boulders`/`results`/`sessions`. Bei jeder Änderung wird die betroffene Tabelle
@@ -86,10 +100,13 @@ Namens-/Beitritts-Formular).
 
 ## Schema-Änderungen
 
-`supabase/migrations/0001_init.sql` ist die Schema-Quelle der Wahrheit und wird **manuell** im
-Supabase-SQL-Editor angewendet (kein lokales Supabase/Docker eingerichtet). Das Skript ist
-**nicht idempotent** – `create policy` schlägt fehl, wenn die Policy schon existiert. Für erneute
-Läufe `drop policy if exists ...` voranstellen oder gezielt nur die neuen Statements ausführen.
+Die `supabase/migrations/*.sql` sind die Schema-Quelle der Wahrheit und werden **manuell** in
+Reihenfolge im Supabase-SQL-Editor angewendet (kein lokales Supabase/Docker eingerichtet).
+`0001_init.sql` ist **nicht idempotent** – `create policy` schlägt fehl, wenn die Policy schon
+existiert. Für erneute Läufe `drop policy if exists ...` voranstellen oder gezielt nur die neuen
+Statements ausführen. Neuere Migrationen (z.B. `0002_boulder_images.sql`) sind bewusst idempotent
+geschrieben (`add column if not exists`, `drop policy if exists` vor jedem `create policy`,
+`on conflict` beim Bucket-Insert) – als Konvention für künftige Migrationen so beibehalten.
 TypeScript-Typen für die Tabellen liegen in `src/types.ts` und müssen bei Schemaänderungen
 manuell synchron gehalten werden.
 
