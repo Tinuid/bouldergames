@@ -153,6 +153,9 @@ create policy sessions_insert on public.sessions
   for insert to authenticated with check (host_id = auth.uid());
 create policy sessions_update on public.sessions
   for update to authenticated using (host_id = auth.uid()) with check (host_id = auth.uid());
+-- löschen nur durch den Host; Teilnehmer/Boulder/Ergebnisse gehen per FK-Cascade mit.
+create policy sessions_delete on public.sessions
+  for delete to authenticated using (host_id = auth.uid());
 
 -- participants: lesen für alle; sich selbst eintragen; eigene Zeile (oder Host) ändern/löschen.
 create policy participants_select on public.participants

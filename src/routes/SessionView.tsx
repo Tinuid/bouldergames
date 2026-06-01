@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useRealtimeSession } from '../hooks/useRealtimeSession'
-import { addBoulder, joinSession, upsertResult } from '../lib/api'
-import { rememberSession } from '../lib/localHistory'
+import { addBoulder, deleteSession, joinSession, upsertResult } from '../lib/api'
+import { forgetSession, rememberSession } from '../lib/localHistory'
 import { scoringFromSession, type ResultStatus } from '../types'
 import Leaderboard from '../components/Leaderboard'
 import BoulderCard from '../components/BoulderCard'
@@ -12,6 +12,7 @@ import ShareSession from '../components/ShareSession'
 
 export default function SessionView() {
   const { sessionId } = useParams()
+  const navigate = useNavigate()
   const { userId } = useAuth()
   const { session, participants, boulders, results, loading, error, notFound, refresh } =
     useRealtimeSession(sessionId)
@@ -127,6 +128,23 @@ export default function SessionView() {
     refresh()
   }
 
+  async function handleDelete() {
+    const confirmed = window.confirm(
+      'Challenge wirklich beenden und löschen? Alle Boulder und Ergebnisse gehen unwiderruflich verloren.',
+    )
+    if (!confirmed) return
+    try {
+      await deleteSession(session!.id)
+      forgetSession(session!.id)
+      navigate('/')
+    } catch (err) {
+      console.error('Challenge löschen fehlgeschlagen', err)
+      alert('Löschen fehlgeschlagen. Nur der Host kann die Challenge löschen.')
+    }
+  }
+
+  const isHost = session.host_id === userId
+
   return (
     <div className="mx-auto flex min-h-full max-w-md flex-col gap-5 p-5 pb-28">
       <header className="flex flex-col gap-3 pt-2">
@@ -137,6 +155,14 @@ export default function SessionView() {
             </Link>
             <h1 className="text-2xl font-bold leading-tight">{session.name}</h1>
           </div>
+          {isHost && (
+            <button
+              className="shrink-0 rounded-lg px-2 py-1 text-sm text-slate-500 hover:bg-red-500/10 hover:text-red-400"
+              onClick={handleDelete}
+            >
+              Löschen
+            </button>
+          )}
         </div>
         <div className="flex items-center justify-between">
           <ShareSession code={session.join_code} />

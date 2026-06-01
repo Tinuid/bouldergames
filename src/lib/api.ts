@@ -86,6 +86,13 @@ export async function getSessionById(id: string): Promise<Session | null> {
   return data
 }
 
+// Challenge löschen (nur Host, via RLS erzwungen). Cascade entfernt Teilnehmer,
+// Boulder und Ergebnisse mit.
+export async function deleteSession(sessionId: string): Promise<void> {
+  const { error } = await supabase.from('sessions').delete().eq('id', sessionId)
+  if (error) throw error
+}
+
 export async function joinSession(
   sessionId: string,
   userId: string,
