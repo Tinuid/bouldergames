@@ -9,3 +9,7 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+// Zur Build-Zeit via vite.config.ts `define` ersetzt.
+declare const __APP_VERSION__: string
+declare const __BUILD_DATE__: string
