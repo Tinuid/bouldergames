@@ -18,7 +18,8 @@ export default function AddBoulderDialog({
   const [image, setImage] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
 
   // Vorschau-URL zum gewählten Bild verwalten und sauber wieder freigeben.
   useEffect(() => {
@@ -40,7 +41,8 @@ export default function AddBoulderDialog({
 
   function clearImage() {
     setImage(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
+    if (cameraInputRef.current) cameraInputRef.current.value = ''
+    if (galleryInputRef.current) galleryInputRef.current.value = ''
   }
 
   async function submit(e: React.FormEvent) {
@@ -100,9 +102,21 @@ export default function AddBoulderDialog({
           </div>
           <div>
             <span className="label">Foto (optional)</span>
+            {/* Zwei separate Inputs: der eine erzwingt die Kamera (capture), der andere
+                lässt bewusst die Galerie/Dateiauswahl offen – damit das Verhalten auf
+                allen Geräten gleich und vorhersehbar ist statt vom OS-Default abzuhängen. */}
             <input
-              ref={fileInputRef}
-              id="image"
+              ref={cameraInputRef}
+              id="image-camera"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={pickImage}
+            />
+            <input
+              ref={galleryInputRef}
+              id="image-gallery"
               type="file"
               accept="image/*"
               className="hidden"
@@ -120,13 +134,22 @@ export default function AddBoulderDialog({
                 </button>
               </div>
             ) : (
-              <button
-                type="button"
-                className="btn-secondary w-full"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                📷 Foto auswählen
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="btn-secondary flex-1"
+                  onClick={() => cameraInputRef.current?.click()}
+                >
+                  📷 Foto aufnehmen
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary flex-1"
+                  onClick={() => galleryInputRef.current?.click()}
+                >
+                  🖼️ Aus Galerie
+                </button>
+              </div>
             )}
           </div>
         </div>
