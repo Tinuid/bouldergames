@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { boulderImageUrl } from '../lib/images'
 import { BOULDER_COLORS } from '../lib/colors'
 import type { Boulder } from '../types'
+import { Camera, Picture, X } from './icons'
 
 export interface BoulderFormValues {
   difficulty: number | null
@@ -15,12 +16,15 @@ export default function AddBoulderDialog({
   open,
   onClose,
   onSubmit,
+  onDelete,
   boulder = null,
   requireDifficulty = false,
 }: {
   open: boolean
   onClose: () => void
   onSubmit: (values: BoulderFormValues) => Promise<void>
+  // Nur im Edit-Modus relevant: löscht den Boulder (Ersteller/Host).
+  onDelete?: () => Promise<void>
   // Gesetzt ⇒ Bearbeiten-Modus (Felder vorbelegt). null/undefined ⇒ Anlegen.
   boulder?: Boulder | null
   // Im Multiplikator-Modus ist der Grad der Punkte-Faktor und daher Pflicht.
@@ -33,6 +37,7 @@ export default function AddBoulderDialog({
   const [removeImage, setRemoveImage] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
@@ -105,130 +110,165 @@ export default function AddBoulderDialog({
     }
   }
 
+  async function handleDelete() {
+    if (!onDelete || deleting) return
+    const confirmed = window.confirm(
+      'Diesen Boulder wirklich löschen? Alle Ergebnisse dazu gehen verloren.',
+    )
+    if (!confirmed) return
+    setDeleting(true)
+    try {
+      await onDelete()
+      onClose()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Löschen fehlgeschlagen.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center"
-      onClick={onClose}
-    >
-      <form
-        className="w-full max-w-md rounded-2xl bg-slate-800 p-5"
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={submit}
-      >
-        <h2 className="mb-4 text-lg font-bold">{isEdit ? 'Boulder bearbeiten' : 'Boulder hinzufügen'}</h2>
-        <div className="flex flex-col gap-4">
-          <div>
-            <span className="label">
-              Schwierigkeit / Wertung{requireDifficulty ? ' (Pflicht – Punkte-Faktor)' : ' (optional)'}
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {[1, 2, 3, 4, 5, 6, 7].map((n) => {
-                const value = String(n)
-                const selected = difficulty === value
-                return (
-                  <button
-                    key={n}
-                    type="button"
-                    // Im optionalen Modus lässt sich die Auswahl durch erneutes Tippen aufheben.
-                    onClick={() => setDifficulty(selected && !requireDifficulty ? '' : value)}
-                    aria-pressed={selected}
-                    className={`h-10 w-10 rounded-lg text-sm font-bold transition ${
-                      selected
-                        ? 'bg-indigo-500 text-white'
-                        : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
-                    }`}
-                  >
-                    {n}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-          <div>
-            <span className="label">Farbe</span>
-            <div className="flex flex-wrap gap-2">
-              {BOULDER_COLORS.map((c) => {
-                const selected = color === c.name
-                return (
-                  <button
-                    key={c.name}
-                    type="button"
-                    onClick={() => setColor(c.name)}
-                    title={c.name}
-                    aria-label={c.name}
-                    aria-pressed={selected}
-                    className={`h-8 w-8 rounded-full ring-1 ring-slate-600 transition ${
-                      selected ? 'ring-2 ring-offset-2 ring-offset-slate-800 ring-white' : ''
-                    }`}
-                    style={{ background: c.swatch }}
-                  />
-                )
-              })}
-            </div>
-            {color && <p className="mt-1.5 text-sm text-slate-400">{color}</p>}
-          </div>
-          <div>
-            <span className="label">Foto (optional)</span>
-            {/* Zwei separate Inputs: der eine erzwingt die Kamera (capture), der andere
-                lässt bewusst die Galerie/Dateiauswahl offen – damit das Verhalten auf
-                allen Geräten gleich und vorhersehbar ist statt vom OS-Default abzuhängen. */}
-            <input
-              ref={cameraInputRef}
-              id="image-camera"
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={pickImage}
-            />
-            <input
-              ref={galleryInputRef}
-              id="image-gallery"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={pickImage}
-            />
-            {previewSrc ? (
-              <div className="relative overflow-hidden rounded-xl border border-slate-700">
-                <img src={previewSrc} alt="Vorschau" className="max-h-56 w-full object-cover" />
-                <button
-                  type="button"
-                  className="absolute right-2 top-2 rounded-lg bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
-                  onClick={clearImage}
-                >
-                  Entfernen
-                </button>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="btn-secondary flex-1"
-                  onClick={() => cameraInputRef.current?.click()}
-                >
-                  📷 Foto aufnehmen
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary flex-1"
-                  onClick={() => galleryInputRef.current?.click()}
-                >
-                  🖼️ Aus Galerie
-                </button>
-              </div>
-            )}
-          </div>
+    <div className="sheet-scrim" onClick={onClose}>
+      <form className="sheet" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
+        <div className="sheet-grip" />
+        <div className="font-display text-[21px] font-extrabold tracking-[-0.02em]">
+          {isEdit ? 'Boulder bearbeiten' : 'Boulder hinzufügen'}
         </div>
-        {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
-        <div className="mt-5 flex gap-2">
-          <button type="button" className="btn-ghost flex-1" onClick={onClose}>
+
+        <div className="mb-[11px] mt-[18px] font-display text-[13px] font-semibold text-muted">
+          Schwierigkeit / Wertung{' '}
+          <span className="font-medium text-faint">
+            {requireDifficulty ? '(Pflicht – Punkte-Faktor)' : '(optional)'}
+          </span>
+        </div>
+        <div className="grid grid-cols-7 gap-2">
+          {[1, 2, 3, 4, 5, 6, 7].map((n) => {
+            const value = String(n)
+            const selected = difficulty === value
+            return (
+              <button
+                key={n}
+                type="button"
+                // Im optionalen Modus lässt sich die Auswahl durch erneutes Tippen aufheben.
+                onClick={() => setDifficulty(selected && !requireDifficulty ? '' : value)}
+                aria-pressed={selected}
+                className={`flex aspect-square items-center justify-center rounded-xl border font-num text-[22px] font-bold transition active:scale-90 ${
+                  selected
+                    ? 'border-accent bg-accent text-accent-ink'
+                    : 'border-border-strong bg-surface-2 text-ink'
+                }`}
+              >
+                {n}
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="mb-[11px] mt-[18px] font-display text-[13px] font-semibold text-muted">Farbe</div>
+        <div className="grid grid-cols-7 gap-2.5">
+          {BOULDER_COLORS.map((c) => {
+            const selected = color === c.name
+            return (
+              <button
+                key={c.name}
+                type="button"
+                onClick={() => setColor(c.name)}
+                title={c.name}
+                aria-label={c.name}
+                aria-pressed={selected}
+                className="flex aspect-square items-center justify-center rounded-full transition active:scale-90"
+              >
+                <span
+                  className={`aspect-square w-full rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.14)] transition ${
+                    selected
+                      ? 'shadow-[0_0_0_3px_var(--surface),0_0_0_5px_var(--ink)]'
+                      : ''
+                  }`}
+                  style={{ background: c.swatch }}
+                />
+              </button>
+            )
+          })}
+        </div>
+        {color && <p className="mt-2 text-[13px] text-muted">{color}</p>}
+
+        <div className="mb-[11px] mt-[18px] font-display text-[13px] font-semibold text-muted">
+          Foto <span className="font-medium text-faint">(optional)</span>
+        </div>
+        {/* Zwei separate Inputs: der eine erzwingt die Kamera (capture), der andere
+            lässt bewusst die Galerie/Dateiauswahl offen – damit das Verhalten auf
+            allen Geräten gleich und vorhersehbar ist statt vom OS-Default abzuhängen. */}
+        <input
+          ref={cameraInputRef}
+          id="image-camera"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={pickImage}
+        />
+        <input
+          ref={galleryInputRef}
+          id="image-gallery"
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={pickImage}
+        />
+        {previewSrc ? (
+          <div className="relative overflow-hidden rounded-sm2 border border-border-strong">
+            <img src={previewSrc} alt="Vorschau" className="max-h-56 w-full object-cover" />
+            <button
+              type="button"
+              className="absolute right-2 top-2 flex items-center gap-1 rounded-lg bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
+              onClick={clearImage}
+            >
+              <X className="text-sm" />
+              Entfernen
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded-sm2 border border-border-strong bg-surface-2 px-2 py-3.5 text-[13.5px] font-semibold text-ink transition hover:border-accent hover:text-accent active:scale-[0.97]"
+              onClick={() => cameraInputRef.current?.click()}
+            >
+              <Camera className="text-[17px]" />
+              Foto aufnehmen
+            </button>
+            <button
+              type="button"
+              className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded-sm2 border border-border-strong bg-surface-2 px-2 py-3.5 text-[13.5px] font-semibold text-ink transition hover:border-accent hover:text-accent active:scale-[0.97]"
+              onClick={() => galleryInputRef.current?.click()}
+            >
+              <Picture className="text-[17px]" />
+              Aus Galerie
+            </button>
+          </div>
+        )}
+
+        {error && <p className="mt-3 text-sm text-bad">{error}</p>}
+
+        <div className="mt-[22px] grid grid-cols-[1fr_1.35fr] gap-2.5">
+          <button type="button" className="btn-ghost" onClick={onClose}>
             Abbrechen
           </button>
-          <button type="submit" className="btn-primary flex-1" disabled={saving}>
+          <button type="submit" className="btn-primary" disabled={saving}>
             {saving ? 'Speichere …' : isEdit ? 'Speichern' : 'Hinzufügen'}
           </button>
         </div>
+
+        {isEdit && onDelete && (
+          <button
+            type="button"
+            className="mt-3 w-full p-2 text-[14px] font-semibold text-bad hover:underline disabled:opacity-50"
+            onClick={handleDelete}
+            disabled={deleting}
+          >
+            {deleting ? 'Lösche …' : 'Boulder löschen'}
+          </button>
+        )}
       </form>
     </div>
   )

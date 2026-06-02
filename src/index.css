@@ -2,8 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ════════════════ CHALK THEME TOKENS (Light) ════════════════ */
+/* Quelle der Wahrheit für Farben/Radii/Schatten. Tailwind-Utilities
+   (siehe tailwind.config.js) zeigen über var(--…) hierauf. */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
+
+  --bg: #f4f0e8; /* App-Hintergrund (warmes Papier) */
+  --surface: #fcfbf7; /* Cards, Inputs, Panels */
+  --surface-2: #efeade; /* Sekundär-Buttons, Segmented/Stepper */
+  --surface-3: #e7e1d2; /* Rank-Chips, Boulder-Nummer */
+  --border: #e4decf; /* Haarlinien / Trenner */
+  --border-strong: #d6cebb; /* Stärkere Ränder (Inputs, Controls) */
+  --ink: #221f19; /* Primärtext (warmes Fast-Schwarz) */
+  --muted: #8c8576; /* Sekundärtext */
+  --faint: #b6ae9e; /* Tertiärtext, Section-Labels, Chevrons */
+  --accent: #e2522a; /* Primär-Akzent (Signal-Vermilion) */
+  --accent-ink: #ffffff; /* Text/Icon auf Akzentflächen */
+  --accent-soft: rgba(226, 82, 42, 0.12); /* getönte Akzentflächen */
+  --ok: #1e8a52; /* Erfolg (aktives „Top", positive Punkte, „du") */
+  --ok-soft: rgba(30, 138, 82, 0.12);
+  --bad: #c23b3b; /* Gefahr (aktives „Nicht", negative Punkte, Löschen) */
+  --bad-soft: rgba(194, 59, 59, 0.1);
+  --gold: #d69a1e; /* Leaderboard Rang 1 */
+  --silver: #a7aaae; /* Rang 2 */
+  --bronze: #b9743e; /* Rang 3 */
+
+  --radius: 14px; /* Cards/Panels */
+  --radius-sm: 10px; /* Inputs/Segmente/innere Controls */
+  --radius-btn: 11px; /* Buttons */
+  --shadow: 0 1px 2px rgba(40, 33, 20, 0.04);
 }
 
 html,
@@ -13,35 +41,179 @@ body,
 }
 
 body {
-  @apply bg-slate-900 text-slate-100 antialiased;
   margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   /* Safe-Area-Padding für Notch-Geräte */
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
     env(safe-area-inset-left);
 }
 
 @layer components {
+  /* ─────────── Buttons ─────────── */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold
-      transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-[56px] items-center justify-center gap-2.5 rounded-btn px-4
+      font-display text-[17px] font-bold tracking-[-0.01em] transition
+      disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .btn:active:not(:disabled) {
+    transform: scale(0.975);
   }
   .btn-primary {
-    @apply btn bg-brand text-slate-950 hover:bg-brand-dark;
+    @apply btn bg-accent text-accent-ink;
+    box-shadow: 0 2px 0 rgba(160, 48, 16, 0.25); /* 2px „ink shadow" */
   }
   .btn-secondary {
-    @apply btn bg-slate-700 text-slate-100 hover:bg-slate-600;
+    @apply btn border border-border-strong bg-surface-2 text-ink;
   }
   .btn-ghost {
-    @apply btn bg-transparent text-slate-300 hover:bg-slate-800;
+    @apply btn border border-border-strong bg-transparent text-muted hover:border-ink hover:text-ink;
   }
+
+  /* ─────────── Inputs / Labels ─────────── */
   .input {
-    @apply w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-slate-100
-      placeholder:text-slate-500 focus:border-brand focus:outline-none;
-  }
-  .card {
-    @apply rounded-2xl border border-slate-800 bg-slate-800/50 p-4;
+    @apply w-full rounded-sm2 border border-border-strong bg-surface px-4 py-[15px] text-base
+      text-ink outline-none transition placeholder:text-faint
+      focus:border-accent focus:shadow-[0_0_0_3px_var(--accent-soft)];
   }
   .label {
-    @apply mb-1 block text-sm font-medium text-slate-400;
+    @apply mb-2 block font-display text-[13px] font-semibold text-muted;
+  }
+
+  /* ─────────── Card / Panel ─────────── */
+  .card {
+    @apply rounded-card border border-border bg-surface p-4 shadow-card;
+  }
+  .panel {
+    @apply rounded-card border border-border bg-surface px-4 py-[18px] shadow-card;
+  }
+  .panel-title,
+  .section-label {
+    @apply font-display text-[12px] font-bold uppercase tracking-[0.13em] text-faint;
+  }
+
+  /* ─────────── Segmented control ─────────── */
+  .seg {
+    @apply grid grid-cols-2 gap-2;
+  }
+  .seg-opt {
+    @apply flex flex-col gap-0.5 rounded-sm2 border border-border-strong bg-surface-2 px-3 py-[13px]
+      text-left text-ink transition;
+  }
+  .seg-opt.is-active {
+    @apply border-accent bg-accent text-accent-ink;
+  }
+
+  /* ─────────── Chips (Minuspunkte) ─────────── */
+  .chip {
+    @apply flex flex-col gap-1 rounded-sm2 border border-border-strong bg-surface-2 px-2.5 py-3
+      text-left text-ink transition;
+  }
+  .chip.is-active {
+    @apply border-accent bg-accent text-accent-ink;
+  }
+
+  /* ─────────── Stepper ─────────── */
+  .stepper {
+    @apply flex items-center gap-1 rounded-[11px] border border-border bg-surface-2 p-[3px];
+  }
+  .step-btn {
+    @apply flex h-8 w-8 items-center justify-center rounded-lg text-muted transition
+      hover:bg-surface-3 hover:text-ink;
+  }
+  .step-btn:active {
+    transform: scale(0.9);
+  }
+  .step-val {
+    @apply min-w-[30px] text-center font-num text-lg font-bold tabular-nums;
+  }
+
+  /* ─────────── Code-Chip (Join-Code) ─────────── */
+  .code-chip {
+    @apply cursor-pointer rounded-sm2 border border-border-strong bg-surface-2 px-4 py-[11px]
+      font-num text-[19px] font-bold tracking-[0.22em] text-ink transition
+      hover:border-accent hover:text-accent;
+  }
+
+  /* ─────────── Bottom-Sheet ─────────── */
+  .sheet-scrim {
+    @apply fixed inset-0 z-50 flex items-end justify-center;
+    background: rgba(8, 8, 12, 0.45);
+    backdrop-filter: blur(2px);
+    animation: bcFade 0.2s ease;
+  }
+  .sheet {
+    @apply max-h-[90%] w-full max-w-md overflow-y-auto border-t border-border bg-surface;
+    border-top-left-radius: 26px;
+    border-top-right-radius: 26px;
+    padding: 10px 20px calc(34px + 18px);
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25);
+    animation: bcUp 0.32s cubic-bezier(0.2, 0.8, 0.25, 1);
+  }
+  .sheet-grip {
+    @apply mx-auto mb-4 h-[5px] w-[38px] rounded-[3px] bg-border-strong;
+  }
+}
+
+/* ════════════════ KEYFRAMES ════════════════ */
+@keyframes bcIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes bcFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes bcUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes bcBump {
+  0% {
+    background: var(--accent-soft);
+  }
+  40% {
+    background: var(--accent-soft);
+  }
+  100% {
+  }
+}
+
+.animate-screen-in {
+  animation: bcIn 0.34s cubic-bezier(0.22, 0.7, 0.3, 1);
+}
+.animate-bump {
+  animation: bcBump 0.65s ease;
+}
+
+/* ════════════════ REDUCED MOTION ════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .btn:active:not(:disabled),
+  .step-btn:active {
+    transform: none;
   }
 }

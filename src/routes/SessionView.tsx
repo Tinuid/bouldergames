@@ -2,11 +2,19 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useRealtimeSession } from '../hooks/useRealtimeSession'
-import { addBoulder, deleteSession, joinSession, updateBoulder, upsertResult } from '../lib/api'
+import {
+  addBoulder,
+  deleteBoulder,
+  deleteSession,
+  joinSession,
+  updateBoulder,
+  upsertResult,
+} from '../lib/api'
 import { deleteBoulderImage, uploadBoulderImage } from '../lib/images'
 import { forgetSession, rememberSession } from '../lib/localHistory'
 import { scoringFromSession, type Boulder, type PenaltyMode, type ResultStatus } from '../types'
 import type { BoulderFormValues } from '../components/AddBoulderDialog'
+import { Bolt, Check, ChevronLeft, Plus } from '../components/icons'
 
 const PENALTY_LABELS: Record<PenaltyMode, string> = {
   top_floor: 'Top nie negativ',
@@ -63,14 +71,14 @@ export default function SessionView() {
   }, [results, myParticipant])
 
   if (loading) {
-    return <div className="flex min-h-full items-center justify-center text-slate-400">Lädt …</div>
+    return <div className="flex min-h-full items-center justify-center text-muted">Lädt …</div>
   }
 
   if (notFound || (error && !session)) {
     return (
       <div className="mx-auto flex min-h-full max-w-md flex-col justify-center gap-3 p-6 text-center">
-        <h1 className="text-xl font-bold">Challenge nicht gefunden</h1>
-        <p className="text-slate-400">{error ?? 'Der Link oder Code ist ungültig.'}</p>
+        <h1 className="font-display text-xl font-bold">Challenge nicht gefunden</h1>
+        <p className="text-muted">{error ?? 'Der Link oder Code ist ungültig.'}</p>
         <Link to="/" className="btn-primary">
           Zur Startseite
         </Link>
@@ -95,9 +103,9 @@ export default function SessionView() {
       }
     }
     return (
-      <div className="mx-auto flex min-h-full max-w-md flex-col justify-center gap-4 p-6">
-        <h1 className="text-2xl font-bold">{session.name}</h1>
-        <p className="text-slate-400">Tritt der Challenge bei, um mitzumachen.</p>
+      <div className="animate-screen-in mx-auto flex min-h-full max-w-md flex-col justify-center gap-4 p-6">
+        <h1 className="font-display text-[34px] font-extrabold tracking-[-0.025em]">{session.name}</h1>
+        <p className="text-muted">Tritt der Challenge bei, um mitzumachen.</p>
         <form className="flex flex-col gap-3" onSubmit={doJoin}>
           <input
             className="input"
@@ -175,6 +183,15 @@ export default function SessionView() {
     refresh()
   }
 
+  async function handleDeleteBoulder() {
+    if (!editingBoulder) return
+    const b = editingBoulder
+    await deleteBoulder(b.id)
+    // Bild best-effort aufräumen (Storage hängt nicht am DB-Cascade).
+    await deleteBoulderImage(b.image_path)
+    refresh()
+  }
+
   async function handleDelete() {
     const confirmed = window.confirm(
       'Challenge wirklich beenden und löschen? Alle Boulder und Ergebnisse gehen unwiderruflich verloren.',
@@ -191,46 +208,65 @@ export default function SessionView() {
   }
 
   return (
-    <div className="mx-auto flex min-h-full max-w-md flex-col gap-5 p-5 pb-28">
-      <header className="flex flex-col gap-3 pt-2">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <Link to="/" className="text-sm text-slate-400 hover:text-slate-200">
-              ← Übersicht
-            </Link>
-            <h1 className="text-2xl font-bold leading-tight">{session.name}</h1>
-          </div>
-          <button
-            className="shrink-0 rounded-lg px-2 py-1 text-sm text-slate-500 hover:bg-red-500/10 hover:text-red-400"
-            onClick={handleDelete}
-          >
-            Löschen
-          </button>
-        </div>
-        <div className="flex items-center justify-between">
-          <ShareSession code={session.join_code} />
-          <span className="text-xs text-slate-500">
-            {scoring.mode === 'multiplier' && <span className="text-brand">×Grad · </span>}
-            ⚡{scoring.flashPoints} · ✓{scoring.topPoints} · −{scoring.attemptCost}/Fehlversuch ·{' '}
-            {PENALTY_LABELS[scoring.penaltyMode]}
-          </span>
-        </div>
-      </header>
+    <div className="animate-screen-in mx-auto flex min-h-full max-w-md flex-col px-5 pb-11 pt-14">
+      <div className="mb-3.5 flex items-center justify-between">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-0.5 text-[15px] font-semibold text-muted hover:text-ink"
+        >
+          <ChevronLeft className="text-[18px]" />
+          Übersicht
+        </Link>
+        <button className="text-[15px] font-semibold text-bad" onClick={handleDelete}>
+          Löschen
+        </button>
+      </div>
 
-      <Leaderboard participants={participants} results={results} currentUserId={userId} />
+      <h1 className="mb-4 font-display text-[34px] font-extrabold leading-none tracking-[-0.025em]">
+        {session.name}
+      </h1>
+
+      <div className="mb-4">
+        <ShareSession code={session.join_code} />
+      </div>
+
+      <div className="mb-[22px] flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] leading-relaxed text-muted">
+        {scoring.mode === 'multiplier' && (
+          <>
+            <span className="font-num font-bold text-accent">×Grad</span>
+            <span className="text-faint">·</span>
+          </>
+        )}
+        <span className="inline-flex items-center gap-1">
+          <Bolt className="text-[14px] text-accent" />
+          {scoring.flashPoints} Flash
+        </span>
+        <span className="text-faint">·</span>
+        <span className="inline-flex items-center gap-1">
+          <Check className="text-[14px] text-ok" />
+          {scoring.topPoints} Top
+        </span>
+        <span className="text-faint">·</span>
+        <span>−{scoring.attemptCost}/Fehlversuch</span>
+        <span className="text-faint">·</span>
+        <span className="font-semibold text-ok">{PENALTY_LABELS[scoring.penaltyMode]}</span>
+      </div>
+
+      <div className="mb-[26px]">
+        <Leaderboard participants={participants} results={results} currentUserId={userId} />
+      </div>
 
       <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
-            Boulder ({boulders.length})
-          </h2>
+        <div className="flex items-center justify-between px-0.5">
+          <h2 className="section-label">Boulder ({boulders.length})</h2>
+          <button
+            className="flex items-center gap-1 text-[12px] font-bold text-accent"
+            onClick={openAddBoulder}
+          >
+            <Plus className="text-[15px]" />
+            Hinzufügen
+          </button>
         </div>
-
-        {boulders.length === 0 && (
-          <p className="card text-center text-slate-400">
-            Noch keine Boulder. Füge den ersten hinzu!
-          </p>
-        )}
 
         {boulders.map((b) => {
           const canEdit = b.created_by === userId || session.host_id === userId
@@ -248,20 +284,21 @@ export default function SessionView() {
             />
           )
         })}
-      </section>
 
-      {/* Floating-Button zum Hinzufügen */}
-      <button
-        className="btn-primary fixed bottom-5 left-1/2 z-40 -translate-x-1/2 shadow-lg"
-        onClick={openAddBoulder}
-      >
-        + Boulder hinzufügen
-      </button>
+        <button
+          className="flex w-full items-center justify-center gap-2 rounded-card border-[1.5px] border-dashed border-border-strong bg-transparent p-[15px] font-display text-[15px] font-bold text-muted transition hover:border-accent hover:text-accent"
+          onClick={openAddBoulder}
+        >
+          <Plus className="text-[18px]" />
+          Boulder hinzufügen
+        </button>
+      </section>
 
       <AddBoulderDialog
         open={dialogOpen}
         onClose={closeBoulderDialog}
         onSubmit={handleSubmitBoulder}
+        onDelete={editingBoulder ? handleDeleteBoulder : undefined}
         boulder={editingBoulder}
         requireDifficulty={scoring.mode === 'multiplier'}
       />

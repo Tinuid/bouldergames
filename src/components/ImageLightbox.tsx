@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { X } from './icons'
 
 /**
  * Vollbild-Overlay für ein Boulder-Foto. Klick auf das Bild schaltet zwischen
@@ -38,10 +39,10 @@ export default function ImageLightbox({
       <button
         type="button"
         aria-label="Schließen"
-        className="fixed right-4 top-4 z-10 rounded-full bg-white/10 px-3 py-1.5 text-lg leading-none text-white hover:bg-white/20"
+        className="fixed right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl leading-none text-white hover:bg-white/20"
         onClick={onClose}
       >
-        ✕
+        <X />
       </button>
       <img
         src={src}

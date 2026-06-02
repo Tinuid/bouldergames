@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { getSessionByCode, joinSession } from '../lib/api'
 import { rememberSession } from '../lib/localHistory'
 import { normalizeJoinCode } from '../lib/codes'
+import { ChevronLeft } from '../components/icons'
 
 export default function JoinSession() {
   const { userId } = useAuth()
@@ -45,22 +46,32 @@ export default function JoinSession() {
     }
   }
 
-  return (
-    <div className="mx-auto flex min-h-full max-w-md flex-col gap-5 p-5">
-      <Link to="/" className="text-sm text-slate-400 hover:text-slate-200">
-        ← Zurück
-      </Link>
-      <h1 className="text-2xl font-bold">Challenge beitreten</h1>
+  const valid = code.trim().length >= 4 && displayName.trim().length >= 1
 
-      <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
-        <div>
+  return (
+    <div className="animate-screen-in mx-auto flex min-h-full max-w-md flex-col px-5 pb-11 pt-14">
+      <div className="mb-3.5">
+        <Link to="/" className="inline-flex items-center gap-0.5 text-[15px] font-semibold text-muted hover:text-ink">
+          <ChevronLeft className="text-[18px]" />
+          Zurück
+        </Link>
+      </div>
+      <h1 className="mb-3 font-display text-[34px] font-extrabold leading-none tracking-[-0.025em]">
+        Challenge beitreten
+      </h1>
+      <p className="mb-[22px] text-[15px] leading-relaxed text-muted">
+        Gib den 6-stelligen Code ein, den du von deiner Crew bekommen hast.
+      </p>
+
+      <form className="flex flex-col" onSubmit={handleSubmit}>
+        <div className="mb-[18px]">
           <label className="label" htmlFor="code">
-            Beitritts-Code
+            Challenge-Code
           </label>
           <input
             id="code"
-            className="input text-center text-2xl font-bold uppercase tracking-[0.3em]"
-            placeholder="ABC123"
+            className="input font-num text-[22px] font-bold uppercase tracking-[0.3em]"
+            placeholder="z.B. 5ZUKMJ"
             value={code}
             maxLength={8}
             autoCapitalize="characters"
@@ -70,23 +81,23 @@ export default function JoinSession() {
           />
         </div>
 
-        <div>
+        <div className="mb-[18px]">
           <label className="label" htmlFor="name">
             Dein Name
           </label>
           <input
             id="name"
             className="input"
-            placeholder="z.B. Sam"
+            placeholder="z.B. Alex"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             required
           />
         </div>
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="mb-3 text-sm text-bad">{error}</p>}
 
-        <button type="submit" className="btn-primary text-lg" disabled={submitting}>
+        <button type="submit" className="btn-primary mt-1.5" disabled={submitting || !valid}>
           {submitting ? 'Trete bei …' : 'Beitreten'}
         </button>
       </form>

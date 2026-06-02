@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Participant, Result } from '../types'
 
 interface Row {
@@ -7,6 +7,8 @@ interface Row {
   tops: number
   flashes: number
 }
+
+const RANK_CLASSES = ['bg-gold text-[#3a2a06]', 'bg-silver text-[#2a2d33]', 'bg-bronze text-[#2e1a0c]']
 
 export default function Leaderboard({
   participants,
@@ -34,44 +36,68 @@ export default function Leaderboard({
       }
     }
     return [...byParticipant.values()].sort(
-      (a, b) => b.points - a.points || b.tops - a.tops || a.participant.display_name.localeCompare(b.participant.display_name),
+      (a, b) =>
+        b.points - a.points ||
+        b.tops - a.tops ||
+        a.participant.display_name.localeCompare(b.participant.display_name),
     )
   }, [participants, results])
 
-  const medals = ['🥇', '🥈', '🥉']
+  // Kurzer Puls auf der eigenen Zeile, wenn sich die eigene Punktzahl ändert.
+  const myRow = rows.find((r) => currentUserId !== null && r.participant.user_id === currentUserId)
+  const prevScore = useRef<number | null>(null)
+  const [bump, setBump] = useState(false)
+  useEffect(() => {
+    const score = myRow?.points ?? null
+    if (prevScore.current !== null && score !== null && score !== prevScore.current) {
+      setBump(true)
+      const t = setTimeout(() => setBump(false), 650)
+      prevScore.current = score
+      return () => clearTimeout(t)
+    }
+    prevScore.current = score
+  }, [myRow?.points])
 
   return (
-    <div className="card">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
-        Leaderboard
-      </h2>
+    <div className="card !p-1.5">
+      <h2 className="section-label px-3 pb-2.5 pt-3.5">Leaderboard</h2>
       <ol className="flex flex-col gap-1">
         {rows.map((row, i) => {
           const isMe = currentUserId !== null && row.participant.user_id === currentUserId
           return (
             <li
               key={row.participant.id}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2 ${
-                isMe ? 'bg-brand/10 ring-1 ring-brand/40' : ''
-              }`}
+              className={`flex items-center gap-3 rounded-sm2 px-3 py-2.5 ${
+                isMe ? 'bg-ok-soft shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ok)_40%,transparent)]' : ''
+              } ${isMe && bump ? 'animate-bump' : ''}`}
             >
-              <span className="w-7 text-center text-lg">{medals[i] ?? i + 1}</span>
-              <div className="flex-1">
-                <div className="font-semibold">
-                  {row.participant.display_name}
-                  {isMe && <span className="ml-1 text-xs text-brand">(du)</span>}
+              <span
+                className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full font-num text-[14px] font-bold ${
+                  RANK_CLASSES[i] ?? 'bg-surface-3 text-ink'
+                }`}
+              >
+                {i + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 font-display text-[17px] font-bold">
+                  <span className="truncate">{row.participant.display_name}</span>
+                  {isMe && (
+                    <span className="rounded-md bg-ok-soft px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-ok">
+                      du
+                    </span>
+                  )}
                 </div>
-                <div className="text-xs text-slate-400">
+                <div className="text-[12.5px] text-muted">
                   {row.tops} Tops · {row.flashes} Flashes
                 </div>
               </div>
-              <span className="text-xl font-bold tabular-nums">{row.points}</span>
+              <span className="font-num text-[30px] font-bold leading-none tracking-[-0.02em] tabular-nums">
+                {row.points}
+              </span>
             </li>
           )
         })}
-        {rows.length === 0 && (
-          <li className="px-3 py-2 text-slate-500">Noch keine Teilnehmer.</li>
-        )}
+        {rows.length === 0 && <li className="px-3 py-2 text-muted">Noch keine Teilnehmer.</li>}
       </ol>
     </div>
   )

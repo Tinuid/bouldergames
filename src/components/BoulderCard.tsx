@@ -4,6 +4,7 @@ import ImageLightbox from './ImageLightbox'
 import { boulderImageUrl } from '../lib/images'
 import { colorSwatch } from '../lib/colors'
 import type { Boulder, Result, ResultStatus, ScoringConfig } from '../types'
+import { Edit } from './icons'
 
 export default function BoulderCard({
   boulder,
@@ -22,36 +23,35 @@ export default function BoulderCard({
   onEdit?: () => void
 }) {
   const tops = allResults.filter((r) => r.status === 'top' || r.status === 'flash').length
-  const flashes = allResults.filter((r) => r.status === 'flash').length
   const dot = colorSwatch(boulder.color)
   const imageUrl = boulderImageUrl(boulder.image_path)
   const [lightboxOpen, setLightboxOpen] = useState(false)
 
   return (
-    <div className="card flex flex-col gap-3">
-      <div className="flex items-center gap-2">
+    <div className="card !px-[15px] !pb-[13px] !pt-[15px]">
+      <div className="mb-[13px] flex items-center gap-[13px]">
         {imageUrl && (
           <button
             type="button"
-            className="h-12 w-12 shrink-0 overflow-hidden rounded-lg ring-1 ring-slate-600"
+            className="h-[34px] w-[34px] shrink-0 overflow-hidden rounded-[11px] ring-1 ring-border-strong"
             onClick={() => setLightboxOpen(true)}
             aria-label="Foto vergrößern"
           >
             <img src={imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
           </button>
         )}
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-700 text-sm font-bold">
+        <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-surface-3 font-num text-[15px] font-bold">
           {boulder.seq}
         </span>
-        <div className="flex-1">
-          <div className="font-semibold">
-            {boulder.difficulty != null ? `Grad ${boulder.difficulty}` : `Boulder ${boulder.seq}`}
+        <div className="min-w-0 flex-1">
+          <div className="font-display text-[17px] font-bold">
+            {boulder.difficulty != null ? `Grad ${boulder.difficulty}` : 'Boulder'}
           </div>
           {boulder.color && (
-            <div className="flex items-center gap-1.5 text-sm text-slate-400">
+            <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-muted">
               {dot && (
                 <span
-                  className="inline-block h-3 w-3 rounded-full ring-1 ring-slate-600"
+                  className="inline-block h-[11px] w-[11px] rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)]"
                   style={{ background: dot }}
                 />
               )}
@@ -59,23 +59,20 @@ export default function BoulderCard({
             </div>
           )}
         </div>
-        {(tops > 0 || flashes > 0) && (
-          <div className="text-right text-xs text-slate-400">
-            {tops} Tops
-            {flashes > 0 && <> · {flashes} ⚡</>}
-          </div>
-        )}
-        {onEdit && (
-          <button
-            type="button"
-            className="shrink-0 rounded-lg p-1.5 text-slate-500 hover:bg-slate-700 hover:text-slate-200"
-            onClick={onEdit}
-            aria-label="Boulder bearbeiten"
-            title="Bearbeiten"
-          >
-            ✎
-          </button>
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          {tops > 0 && <span className="whitespace-nowrap text-[13px] text-muted">{tops} Tops</span>}
+          {onEdit && (
+            <button
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded-[9px] text-faint transition hover:bg-surface-2 hover:text-accent"
+              onClick={onEdit}
+              aria-label="Boulder bearbeiten"
+              title="Bearbeiten"
+            >
+              <Edit className="text-[16px]" />
+            </button>
+          )}
+        </div>
       </div>
 
       <ResultEditor

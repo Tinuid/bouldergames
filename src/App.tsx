@@ -12,8 +12,8 @@ export default function App() {
   if (error) {
     return (
       <div className="mx-auto flex min-h-full max-w-md flex-col justify-center gap-3 p-6">
-        <h1 className="text-xl font-bold text-red-400">Verbindung fehlgeschlagen</h1>
-        <p className="text-slate-300">{error}</p>
+        <h1 className="font-display text-xl font-bold text-bad">Verbindung fehlgeschlagen</h1>
+        <p className="text-muted">{error}</p>
         <button className="btn-primary" onClick={() => location.reload()}>
           Erneut versuchen
         </button>
@@ -23,9 +23,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="flex min-h-full items-center justify-center p-6 text-slate-400">
-        Lädt …
-      </div>
+      <div className="flex min-h-full items-center justify-center p-6 text-muted">Lädt …</div>
     )
   }
 

@@ -10,7 +10,7 @@ const buildDate = new Date(__BUILD_DATE__).toLocaleDateString('de-DE', {
 
 export default function VersionBadge() {
   return (
-    <p className="text-center text-xs text-slate-600">
+    <p className="text-center text-xs text-faint">
       Version {__APP_VERSION__} · {buildDate}
     </p>
   )

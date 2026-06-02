@@ -5,6 +5,7 @@ import { listSessions, type SessionSummary } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import VersionBadge from '../components/VersionBadge'
 import FeedbackDialog from '../components/FeedbackDialog'
+import { ChevronRight, Picture, Plus, Share, Users, X } from '../components/icons'
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('de-DE', {
@@ -62,48 +63,52 @@ export default function Home() {
   }
 
   return (
-    <div className="mx-auto flex min-h-full max-w-md flex-col gap-6 p-5">
-      <header className="pt-6 text-center">
-        <h1 className="text-3xl font-extrabold tracking-tight">
-          Boulder <span className="text-brand">Challenges</span>
+    <div className="animate-screen-in mx-auto flex min-h-full max-w-md flex-col gap-6 px-5 pb-11 pt-14">
+      <header className="px-1 pb-2 pt-3.5 text-center">
+        <h1 className="font-display text-[46px] font-extrabold leading-[0.96] tracking-[-0.025em]">
+          Boulder
+          <br />
+          <span className="text-accent">Challenges</span>
         </h1>
-        <p className="mt-2 text-slate-400">
+        <p className="mx-auto mt-3.5 max-w-[30ch] text-[15px] leading-relaxed text-muted [text-wrap:balance]">
           Tracke Flashes, Tops &amp; Versuche mit deiner Crew – in Echtzeit.
         </p>
       </header>
 
-      <div className="flex flex-col gap-3">
-        <Link to="/create" className="btn-primary text-lg">
+      <div className="flex flex-col gap-2.5">
+        <Link to="/create" className="btn-primary">
+          <Plus className="text-[19px]" />
           Neue Challenge erstellen
         </Link>
-        <Link to="/join" className="btn-secondary text-lg">
+        <Link to="/join" className="btn-secondary">
+          <Users className="text-[19px]" />
           Challenge beitreten
         </Link>
       </div>
 
       {history.length > 0 && (
-        <section className="mt-2">
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Zuletzt gespielt
-          </h2>
-          <ul className="flex flex-col gap-2">
+        <section>
+          <h2 className="section-label mb-2.5 px-0.5">Zuletzt gespielt</h2>
+          <ul className="flex flex-col gap-2.5">
             {history.map((h) => (
-              <li key={h.sessionId} className="card flex items-center justify-between">
+              <li key={h.sessionId} className="card flex items-center gap-3 !p-4">
                 <button
-                  className="flex-1 text-left"
+                  className="min-w-0 flex-1 text-left"
                   onClick={() => navigate(`/s/${h.sessionId}`)}
                 >
-                  <div className="font-semibold">{h.name}</div>
-                  <div className="text-sm text-slate-400">
+                  <div className="truncate font-display text-[17px] font-bold tracking-[-0.01em]">
+                    {h.name}
+                  </div>
+                  <div className="mt-0.5 truncate text-[13px] text-muted">
                     Code {h.code} · als {h.displayName}
                   </div>
                 </button>
                 <button
-                  className="ml-2 rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-700 hover:text-slate-200"
+                  className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full text-[15px] text-faint transition hover:bg-surface-2 hover:text-ink"
                   aria-label="Aus Verlauf entfernen"
                   onClick={() => remove(h.sessionId)}
                 >
-                  ✕
+                  <X />
                 </button>
               </li>
             ))}
@@ -111,39 +116,36 @@ export default function Home() {
         </section>
       )}
 
-      <section className="mt-2">
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Alle Challenges
-        </h2>
+      <section>
+        <h2 className="section-label mb-2.5 px-0.5">Alle Challenges</h2>
 
-        {sessionsLoading && <p className="text-sm text-slate-500">Lädt …</p>}
+        {sessionsLoading && <p className="text-sm text-muted">Lädt …</p>}
 
-        {sessionsError && (
-          <p className="text-sm text-red-400">{sessionsError}</p>
-        )}
+        {sessionsError && <p className="text-sm text-bad">{sessionsError}</p>}
 
         {!sessionsLoading && !sessionsError && sessions.length === 0 && (
-          <p className="text-sm text-slate-500">
-            Noch keine Challenges. Erstelle die erste!
-          </p>
+          <p className="text-sm text-muted">Noch keine Challenges. Erstelle die erste!</p>
         )}
 
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-2.5">
           {sessions.map((s) => (
-            <li key={s.id} className="card">
+            <li key={s.id} className="card !p-4">
               <button
                 className="flex w-full items-center justify-between gap-3 text-left"
                 onClick={() => navigate(`/s/${s.id}`)}
               >
                 <div className="min-w-0">
-                  <div className="truncate font-semibold">{s.name}</div>
-                  <div className="text-sm text-slate-400">
+                  <div className="truncate font-display text-[17px] font-bold tracking-[-0.01em]">
+                    {s.name}
+                  </div>
+                  <div className="mt-0.5 text-[13px] text-muted">
                     Code {s.join_code} · {formatDate(s.created_at)}
                   </div>
                 </div>
-                <span className="shrink-0 text-sm text-slate-400">
-                  {s.participantCount} Spieler
-                </span>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <span className="text-[13px] text-muted">{s.participantCount} Spieler</span>
+                  <ChevronRight className="text-[17px] text-faint" />
+                </div>
               </button>
             </li>
           ))}
@@ -159,20 +161,20 @@ export default function Home() {
         <button
           type="button"
           onClick={() => navigate('/feedback')}
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-700 text-2xl shadow-lg shadow-black/40 transition hover:bg-slate-600"
+          className="flex h-14 w-14 items-center justify-center rounded-full border border-border-strong bg-surface text-[22px] text-muted shadow-lg shadow-black/10 transition hover:text-accent"
           aria-label="Feedback ansehen"
           title="Feedback ansehen"
         >
-          📋
+          <Picture />
         </button>
         <button
           type="button"
           onClick={() => setFeedbackOpen(true)}
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-brand text-2xl shadow-lg shadow-black/40 transition hover:brightness-110"
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-accent text-[22px] text-accent-ink shadow-lg shadow-black/20 transition hover:brightness-110"
           aria-label="Feedback geben"
           title="Feedback geben"
         >
-          💬
+          <Share />
         </button>
       </div>
 

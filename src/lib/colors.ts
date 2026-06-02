@@ -6,20 +6,22 @@ export interface BoulderColor {
   swatch: string
 }
 
+// swatch-Hex aus dem Chalk-Design (HOLD_LIST). `name` bleibt unverändert –
+// das ist der in der DB persistierte Wert.
 export const BOULDER_COLORS: BoulderColor[] = [
-  { name: 'blau', swatch: '#3b82f6' },
-  { name: 'grün-blau', swatch: 'linear-gradient(135deg, #22c55e 0 50%, #3b82f6 50% 100%)' },
-  { name: 'gelb', swatch: '#eab308' },
-  { name: 'schwarz', swatch: '#0f172a' },
-  { name: 'rot', swatch: '#ef4444' },
-  { name: 'weiß', swatch: '#f8fafc' },
-  { name: 'mint', swatch: '#6ee7b7' },
-  { name: 'lila', swatch: '#a855f7' },
-  { name: 'orange', swatch: '#f97316' },
-  { name: 'grau', swatch: '#94a3b8' },
-  { name: 'hellblau', swatch: '#7dd3fc' },
-  { name: 'orange-schwarz', swatch: 'linear-gradient(135deg, #f97316 0 50%, #0f172a 50% 100%)' },
-  { name: 'grün', swatch: '#22c55e' },
+  { name: 'blau', swatch: '#2F6BEB' },
+  { name: 'grün-blau', swatch: 'linear-gradient(135deg, #27B24A 0 50%, #2F6BEB 50% 100%)' },
+  { name: 'gelb', swatch: '#E6B017' },
+  { name: 'schwarz', swatch: '#1B2130' },
+  { name: 'rot', swatch: '#E5484D' },
+  { name: 'weiß', swatch: '#F4F2EC' },
+  { name: 'mint', swatch: '#57E0A1' },
+  { name: 'lila', swatch: '#A855F7' },
+  { name: 'orange', swatch: '#F97316' },
+  { name: 'grau', swatch: '#9AA1AC' },
+  { name: 'hellblau', swatch: '#84CDF5' },
+  { name: 'orange-schwarz', swatch: 'linear-gradient(135deg, #F97316 0 50%, #1B2130 50% 100%)' },
+  { name: 'grün', swatch: '#27B24A' },
 ]
 
 // CSS-Hintergrund zu einem gespeicherten Farbnamen (oder undefined, wenn unbekannt).

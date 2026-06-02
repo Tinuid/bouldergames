@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { listFeedback, deleteFeedback } from '../lib/api'
 import type { Feedback } from '../types'
 import FeedbackDialog from '../components/FeedbackDialog'
+import { ChevronLeft, Trash } from '../components/icons'
 
 // Öffentliche Feedback-Liste: jeder kann alle Einträge lesen. Löschen ist durch
 // ein Passwort geschützt, das serverseitig (RPC delete_feedback) geprüft wird –
@@ -88,24 +89,30 @@ export default function FeedbackList() {
   const hasSavedKey = localStorage.getItem(KEY_STORAGE) != null
 
   return (
-    <div className="mx-auto flex min-h-full max-w-2xl flex-col gap-5 p-5">
-      <Link to="/" className="text-sm text-slate-400 hover:text-slate-200">
-        ← Zurück
+    <div className="animate-screen-in mx-auto flex min-h-full max-w-2xl flex-col gap-5 px-5 pb-11 pt-14">
+      <Link
+        to="/"
+        className="inline-flex items-center gap-0.5 text-[15px] font-semibold text-muted hover:text-ink"
+      >
+        <ChevronLeft className="text-[18px]" />
+        Zurück
       </Link>
 
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Feedback</h1>
-        <button type="button" className="btn-secondary" onClick={() => setWriteOpen(true)}>
+        <h1 className="font-display text-[34px] font-extrabold leading-none tracking-[-0.025em]">
+          Feedback
+        </h1>
+        <button type="button" className="btn-secondary !min-h-0 !px-4 !py-2.5 !text-[15px]" onClick={() => setWriteOpen(true)}>
           Feedback geben
         </button>
       </div>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-bad">{error}</p>}
 
-      {entries === null && !error && <p className="text-sm text-slate-500">Lädt …</p>}
+      {entries === null && !error && <p className="text-sm text-muted">Lädt …</p>}
 
       {entries !== null && entries.length === 0 && (
-        <p className="text-sm text-slate-500">Noch kein Feedback eingegangen.</p>
+        <p className="text-sm text-muted">Noch kein Feedback eingegangen.</p>
       )}
 
       {entries !== null && entries.length > 0 && (
@@ -113,21 +120,21 @@ export default function FeedbackList() {
           {entries.map((f) => (
             <li key={f.id} className="card">
               <div className="mb-1 flex items-baseline justify-between gap-3">
-                <span className="font-semibold">{f.name}</span>
+                <span className="font-display font-bold">{f.name}</span>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="text-xs text-slate-500">{formatDateTime(f.created_at)}</span>
+                  <span className="text-xs text-faint">{formatDateTime(f.created_at)}</span>
                   <button
                     type="button"
-                    className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-700 hover:text-red-400"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-[16px] text-faint transition hover:bg-surface-2 hover:text-bad"
                     aria-label="Feedback löschen"
                     title="Löschen"
                     onClick={() => askDelete(f)}
                   >
-                    🗑️
+                    <Trash />
                   </button>
                 </div>
               </div>
-              <p className="whitespace-pre-wrap text-slate-200">{f.message}</p>
+              <p className="whitespace-pre-wrap text-ink">{f.message}</p>
             </li>
           ))}
         </ul>
@@ -142,18 +149,18 @@ export default function FeedbackList() {
       />
 
       {pendingDelete && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center"
-          onClick={closeDelete}
-        >
+        <div className="sheet-scrim" onClick={closeDelete}>
           <div
-            className="w-full max-w-sm rounded-2xl bg-slate-800 p-5"
+            className="sheet !max-w-sm"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="mb-2 text-lg font-bold">Feedback löschen?</h2>
-            <p className="mb-4 text-sm text-slate-400">
-              Von <span className="font-semibold text-slate-200">{pendingDelete.name}</span>. Das
-              lässt sich nicht rückgängig machen.
+            <div className="sheet-grip" />
+            <h2 className="mb-2 font-display text-[21px] font-extrabold tracking-[-0.02em]">
+              Feedback löschen?
+            </h2>
+            <p className="mb-4 text-sm text-muted">
+              Von <span className="font-semibold text-ink">{pendingDelete.name}</span>. Das lässt
+              sich nicht rückgängig machen.
             </p>
 
             {!hasSavedKey && (
@@ -177,7 +184,7 @@ export default function FeedbackList() {
               </div>
             )}
 
-            {deleteError && <p className="mb-3 text-sm text-red-400">{deleteError}</p>}
+            {deleteError && <p className="mb-3 text-sm text-bad">{deleteError}</p>}
 
             <div className="flex gap-2">
               <button type="button" className="btn-ghost flex-1" onClick={closeDelete}>
@@ -185,7 +192,7 @@ export default function FeedbackList() {
               </button>
               <button
                 type="button"
-                className="btn-primary flex-1 !bg-red-600 hover:!bg-red-500"
+                className="btn-primary flex-1 !bg-bad"
                 onClick={confirmDelete}
                 disabled={deleting}
               >

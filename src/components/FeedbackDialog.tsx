@@ -54,20 +54,14 @@ export default function FeedbackDialog({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center"
-      onClick={onClose}
-    >
-      <form
-        className="w-full max-w-md rounded-2xl bg-slate-800 p-5"
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={submit}
-      >
-        <h2 className="mb-4 text-lg font-bold">Feedback</h2>
+    <div className="sheet-scrim" onClick={onClose}>
+      <form className="sheet" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
+        <div className="sheet-grip" />
+        <h2 className="mb-4 font-display text-[21px] font-extrabold tracking-[-0.02em]">Feedback</h2>
 
         {sent ? (
           <div className="flex flex-col gap-4">
-            <p className="text-slate-300">Danke für dein Feedback! 🙌</p>
+            <p className="text-muted">Danke für dein Feedback! 🙌</p>
             <button type="button" className="btn-primary" onClick={onClose}>
               Schließen
             </button>
@@ -104,7 +98,7 @@ export default function FeedbackDialog({
                 />
               </div>
             </div>
-            {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+            {error && <p className="mt-3 text-sm text-bad">{error}</p>}
             <div className="mt-5 flex gap-2">
               <button type="button" className="btn-ghost flex-1" onClick={onClose}>
                 Abbrechen

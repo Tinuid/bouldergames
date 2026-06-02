@@ -253,6 +253,22 @@ export async function updateBoulder(params: {
   return data
 }
 
+// Boulder löschen (nur Ersteller oder Host, via RLS boulders_delete erzwungen).
+// results hängen per Cascade am Boulder und verschwinden mit.
+export async function deleteBoulder(boulderId: string): Promise<void> {
+  // .select() zurückfordern, um echtes Löschen zu erkennen: Ein per RLS
+  // blockiertes DELETE wirft KEINEN Fehler, betrifft aber 0 Zeilen.
+  const { data, error } = await supabase
+    .from('boulders')
+    .delete()
+    .eq('id', boulderId)
+    .select('id')
+  if (error) throw error
+  if (!data || data.length === 0) {
+    throw new Error('Nichts gelöscht – fehlende Berechtigung (nur Ersteller oder Host).')
+  }
+}
+
 export async function upsertResult(params: {
   sessionId: string
   boulderId: string

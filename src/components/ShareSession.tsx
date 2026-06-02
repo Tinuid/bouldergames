@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Share } from './icons'
 
 export default function ShareSession({ code }: { code: string }) {
   const [copied, setCopied] = useState<'code' | 'link' | null>(null)
@@ -27,16 +28,16 @@ export default function ShareSession({ code }: { code: string }) {
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <button
-        onClick={() => copy(code, 'code')}
-        className="rounded-lg bg-slate-700 px-3 py-1.5 font-mono text-lg font-bold tracking-widest hover:bg-slate-600"
-        title="Code kopieren"
-      >
-        {copied === 'code' ? 'Kopiert!' : code}
+    <div className="flex items-center gap-3">
+      <button onClick={() => copy(code, 'code')} className="code-chip" title="Code kopieren">
+        {copied === 'code' ? 'Kopiert ✓' : code}
       </button>
-      <button onClick={share} className="btn-ghost px-3 py-1.5 text-sm">
-        Teilen
+      <button
+        onClick={share}
+        className="flex items-center gap-1.5 text-[15px] font-semibold text-muted transition hover:text-accent"
+      >
+        <Share className="text-[18px]" />
+        {copied === 'link' ? 'Kopiert ✓' : 'Teilen'}
       </button>
     </div>
   )
