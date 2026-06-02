@@ -56,6 +56,9 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
    alle `results.points` des Boulders serverseitig neu skaliert). Idempotent.
 6. `supabase/migrations/0005_penalty_mode.sql` ausführen (legt die `sessions.penalty_mode`-Spalte
    an: `'top_floor'` | `'strict'` | `'misses'`). Idempotent.
+7. `supabase/migrations/0006_feedback.sql` ausführen (legt die `feedback`-Tabelle samt RLS an:
+   jeder Angemeldete darf einfügen, niemand per RLS lesen – Feedback ist nur über das Dashboard
+   einsehbar). Idempotent.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.

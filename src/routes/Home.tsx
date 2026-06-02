@@ -4,6 +4,7 @@ import { getHistory, forgetSession, type HistoryEntry } from '../lib/localHistor
 import { listSessions, type SessionSummary } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import VersionBadge from '../components/VersionBadge'
+import FeedbackDialog from '../components/FeedbackDialog'
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('de-DE', {
@@ -18,6 +19,7 @@ export default function Home() {
   const [sessions, setSessions] = useState<SessionSummary[]>([])
   const [sessionsLoading, setSessionsLoading] = useState(true)
   const [sessionsError, setSessionsError] = useState<string | null>(null)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -151,6 +153,19 @@ export default function Home() {
       <footer className="mt-auto pt-4">
         <VersionBadge />
       </footer>
+
+      {/* Floating-Button unten rechts: Feedback geben. */}
+      <button
+        type="button"
+        onClick={() => setFeedbackOpen(true)}
+        className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-brand text-2xl shadow-lg shadow-black/40 transition hover:brightness-110"
+        aria-label="Feedback geben"
+        title="Feedback geben"
+      >
+        💬
+      </button>
+
+      <FeedbackDialog open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </div>
   )
 }

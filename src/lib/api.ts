@@ -10,6 +10,21 @@ import type {
   Session,
 } from '../types'
 
+// Freies Feedback abschicken. Per RLS für Clients nicht wieder lesbar
+// (siehe supabase/migrations/0006_feedback.sql) – darum nichts zurückgeben.
+export async function submitFeedback(params: {
+  userId: string
+  name: string
+  message: string
+}): Promise<void> {
+  const { error } = await supabase.from('feedback').insert({
+    user_id: params.userId,
+    name: params.name.trim() || 'Anonym',
+    message: params.message.trim(),
+  })
+  if (error) throw error
+}
+
 export async function createSession(params: {
   name: string
   hostId: string

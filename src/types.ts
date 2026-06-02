@@ -79,6 +79,14 @@ export interface Result {
   updated_at: string
 }
 
+export interface Feedback {
+  id: string
+  user_id: string | null
+  name: string
+  message: string
+  created_at: string
+}
+
 // Hilfs-Mapper: Session-Datensatz -> ScoringConfig
 export function scoringFromSession(s: Session): ScoringConfig {
   return {
