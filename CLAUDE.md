@@ -144,7 +144,20 @@ zusätzlich `refresh()` für sofortiges Feedback. Realtime ist in der Migration 
 **Routing/Screens.** `src/App.tsx` rendert erst nach erfolgreichem Auth-Bootstrap. Routen:
 `/` (Home), `/create`, `/join` + `/join/:code`, `/s/:sessionId` (`SessionView` – Hauptscreen;
 wird die Session über einen geteilten Link ohne vorherigen Beitritt geöffnet, zeigt er inline ein
-Namens-/Beitritts-Formular).
+Namens-/Beitritts-Formular) und `/feedback` (`FeedbackList` – öffentliche Feedback-Liste).
+
+**Farben zentralisiert.** Die wählbaren Hallen-Farben für Boulder leben als einzige Quelle der
+Wahrheit in `src/lib/colors.ts` (`BOULDER_COLORS`: persistierter `name` + CSS-`swatch`, inkl.
+Zweiton-Verläufen). `colorSwatch(name)` mappt einen gespeicherten Farbnamen zurück auf den
+CSS-Hintergrund. `AddBoulderDialog` (Auswahl) und `BoulderCard` (Farbklecks) nutzen beides – neue
+Farben **nur hier** ergänzen.
+
+**Feedback.** Freitext-Feedback aus der App: `FeedbackDialog` (von `Home` per Floating-Button
+geöffnet) schreibt über `submitFeedback` in die `feedback`-Tabelle; die öffentliche Liste
+`/feedback` (`FeedbackList`) liest alle Einträge via `listFeedback` (neueste zuerst). Löschen ist
+passwortgeschützt und läuft ausschließlich über die `security definer`-RPC `delete_feedback`
+(`deleteFeedback`, prüft das in `app_config` hinterlegte Passwort serverseitig) – es gibt bewusst
+keine delete-Policy auf der Tabelle. Schema/RLS siehe Migrationen `0006`/`0007`.
 
 ## Schema-Änderungen
 
