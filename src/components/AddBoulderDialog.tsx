@@ -118,21 +118,31 @@ export default function AddBoulderDialog({
         <h2 className="mb-4 text-lg font-bold">{isEdit ? 'Boulder bearbeiten' : 'Boulder hinzufügen'}</h2>
         <div className="flex flex-col gap-4">
           <div>
-            <label className="label" htmlFor="diff">
-              Schwierigkeit / Wertung{requireDifficulty ? ' (Pflicht – Punkte-Faktor)' : ''}
-            </label>
-            <input
-              id="diff"
-              type="number"
-              inputMode="numeric"
-              min={requireDifficulty ? 1 : undefined}
-              className="input"
-              placeholder="z.B. 4"
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value)}
-              required={requireDifficulty}
-              autoFocus
-            />
+            <span className="label">
+              Schwierigkeit / Wertung{requireDifficulty ? ' (Pflicht – Punkte-Faktor)' : ' (optional)'}
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {[1, 2, 3, 4, 5, 6, 7].map((n) => {
+                const value = String(n)
+                const selected = difficulty === value
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    // Im optionalen Modus lässt sich die Auswahl durch erneutes Tippen aufheben.
+                    onClick={() => setDifficulty(selected && !requireDifficulty ? '' : value)}
+                    aria-pressed={selected}
+                    className={`h-10 w-10 rounded-lg text-sm font-bold transition ${
+                      selected
+                        ? 'bg-indigo-500 text-white'
+                        : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+                    }`}
+                  >
+                    {n}
+                  </button>
+                )
+              })}
+            </div>
           </div>
           <div>
             <span className="label">Farbe</span>
