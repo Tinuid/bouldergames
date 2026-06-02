@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { getHistory, forgetSession, type HistoryEntry } from '../lib/localHistory'
 import { listSessions, type SessionSummary } from '../lib/api'
 import { supabase } from '../lib/supabase'
+import BrandMark from '../components/BrandMark'
 import VersionBadge from '../components/VersionBadge'
 import FeedbackDialog from '../components/FeedbackDialog'
 import { ChevronRight, Picture, Plus, Share, Users, X } from '../components/icons'
@@ -65,6 +66,7 @@ export default function Home() {
   return (
     <div className="animate-screen-in mx-auto flex min-h-full max-w-md flex-col gap-6 px-5 pb-11 pt-14">
       <header className="px-1 pb-2 pt-3.5 text-center">
+        <BrandMark className="mx-auto mb-5 h-[64px] w-[64px] drop-shadow-sm" />
         <h1 className="font-display text-[46px] font-extrabold leading-[0.96] tracking-[-0.025em]">
           Boulder
           <br />

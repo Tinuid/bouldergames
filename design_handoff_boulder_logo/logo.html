@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Boulder Challenges — Logo „The Hold"</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#F4F0E8; --surface:#FCFBF7; --ink:#221F19; --muted:#8C8576; --faint:#B6AE9E;
+    --border:#E4DECF; --accent:#E2522A;
+    --disp:'Bricolage Grotesque',sans-serif; --body:'Hanken Grotesk',sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased;padding:56px 40px 80px;}
+  .wrap{max-width:1040px;margin:0 auto;}
+  h1{font-family:var(--disp);font-weight:800;font-size:30px;letter-spacing:-.02em;margin:0 0 4px;}
+  h1 b{color:var(--accent);}
+  .sub{color:var(--muted);font-size:15px;margin:0 0 40px;}
+  .label{font-family:var(--disp);font-weight:700;font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);margin:0 0 16px;}
+  section{margin-bottom:46px;}
+  .grid{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-end;}
+  .swatch{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:26px;display:flex;flex-direction:column;align-items:center;gap:12px;}
+  .swatch.dark{background:var(--ink);border-color:#33302a;}
+  .swatch.paper{background:var(--bg);}
+  .cap{font-size:12px;color:var(--faint);}
+  .swatch.dark .cap{color:#8a857a;}
+
+  /* lockup */
+  .lockup{display:flex;align-items:center;gap:18px;}
+  .lockup .mark{width:58px;height:58px;flex-shrink:0;}
+  .wm{font-family:var(--disp);font-weight:800;line-height:.92;letter-spacing:-.03em;font-size:32px;}
+  .wm .a{display:block;color:var(--ink);}
+  .wm .b{display:block;color:var(--accent);}
+  .lockup.rev .wm .a{color:#FCFBF7;}
+  .lockup.h .wm{font-size:24px;line-height:1;white-space:nowrap;}
+  .lockup.h .wm .a,.lockup.h .wm .b{display:inline;}
+
+  .marks img{display:block;}
+  .clear{position:relative;}
+  .note{font-size:13.5px;color:var(--muted);line-height:1.6;max-width:70ch;}
+  .swatches-color{display:flex;gap:14px;flex-wrap:wrap;}
+  .chip{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;font-size:13px;}
+  .chip .dot{width:22px;height:22px;border-radius:6px;border:1px solid rgba(0,0,0,.08);}
+  .chip code{font-family:var(--body);color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Boulder <b>Challenges</b> — Logo „The Hold"</h1>
+  <p class="sub">Der zweifarbige Griff-Punkt als Marke · Chalk-Palette · Bricolage Grotesque</p>
+
+  <section>
+    <p class="label">Lockup</p>
+    <div class="grid">
+      <div class="swatch paper">
+        <div class="lockup"><img class="mark" src="logo-mark.svg" alt="" /><div class="wm"><span class="a">Boulder</span><span class="b">Challenges</span></div></div>
+        <div class="cap">primär · vertikal gesetzte Wortmarke</div>
+      </div>
+      <div class="swatch dark">
+        <div class="lockup rev"><img class="mark" src="logo-mark-reverse.svg" alt="" /><div class="wm"><span class="a">Boulder</span><span class="b">Challenges</span></div></div>
+        <div class="cap">auf Tinte · Reverse-Mark</div>
+      </div>
+    </div>
+    <div class="grid" style="margin-top:22px;">
+      <div class="swatch paper">
+        <div class="lockup h"><img class="mark" src="logo-mark.svg" alt="" style="width:38px;height:38px;" /><div class="wm"><span class="a">Boulder</span> <span class="b">Challenges</span></div></div>
+        <div class="cap">horizontal · einzeilig (enge Räume)</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">App-Icon &amp; Favicon</p>
+    <div class="grid marks">
+      <div class="swatch"><img src="app-icon.svg" width="132" height="132" alt="App icon" /><div class="cap">app-icon.svg · 1024</div></div>
+      <div class="swatch"><img src="favicon.svg" width="64" height="64" alt="Favicon" /><div class="cap">favicon.svg · 64</div></div>
+      <div class="swatch"><img src="favicon.svg" width="32" height="32" alt="Favicon 32" /><div class="cap">32 px</div></div>
+      <div class="swatch"><img src="favicon.svg" width="16" height="16" alt="Favicon 16" /><div class="cap">16 px</div></div>
+      <div class="swatch dark"><img src="logo-mark-reverse.svg" width="84" height="84" alt="Mark reverse" /><div class="cap">logo-mark-reverse.svg</div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">Farben</p>
+    <div class="swatches-color">
+      <div class="chip"><span class="dot" style="background:#221F19"></span>Tinte <code>#221F19</code></div>
+      <div class="chip"><span class="dot" style="background:#E2522A"></span>Vermillon <code>#E2522A</code></div>
+      <div class="chip"><span class="dot" style="background:#FCFBF7"></span>Papier <code>#FCFBF7</code></div>
+      <div class="chip"><span class="dot" style="background:#F4F0E8"></span>Hintergrund <code>#F4F0E8</code></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">Hinweis zur Wortmarke</p>
+    <p class="note">Die Wortmarke ist gesetzte Type — <b>Bricolage Grotesque, Weight 800</b>, Tracking −0.03em, Zeilenhöhe 0.92 (zweizeilig: „Boulder" in Tinte, „Challenges" in Vermillon). Sie ist <b>kein eigenes Bild-Asset</b>: in der App per CSS setzen (Font ist bereits eingebunden). Für statische Exporte (z. B. Social-Preview) die Schrift in Pfade umwandeln. Das eigentliche Logo-Asset ist der Griff-Punkt (<code>logo-mark.svg</code>).</p>
+  </section>
+</div>
+</body>
+</html>
