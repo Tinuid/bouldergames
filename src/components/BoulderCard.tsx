@@ -2,28 +2,8 @@ import { useState } from 'react'
 import ResultEditor from './ResultEditor'
 import ImageLightbox from './ImageLightbox'
 import { boulderImageUrl } from '../lib/images'
+import { colorSwatch } from '../lib/colors'
 import type { Boulder, Result, ResultStatus, ScoringConfig } from '../types'
-
-// Häufige Hallen-Farben -> CSS. Unbekannte Farben werden nur als Text gezeigt.
-const COLOR_MAP: Record<string, string> = {
-  rot: '#ef4444',
-  blau: '#3b82f6',
-  grün: '#22c55e',
-  gruen: '#22c55e',
-  gelb: '#eab308',
-  grün2: '#22c55e',
-  orange: '#f97316',
-  lila: '#a855f7',
-  violett: '#a855f7',
-  pink: '#ec4899',
-  schwarz: '#0f172a',
-  weiß: '#f8fafc',
-  weiss: '#f8fafc',
-  türkis: '#14b8a6',
-  tuerkis: '#14b8a6',
-  grau: '#94a3b8',
-  braun: '#92400e',
-}
 
 export default function BoulderCard({
   boulder,
@@ -43,7 +23,7 @@ export default function BoulderCard({
 }) {
   const tops = allResults.filter((r) => r.status === 'top' || r.status === 'flash').length
   const flashes = allResults.filter((r) => r.status === 'flash').length
-  const dot = boulder.color ? COLOR_MAP[boulder.color.trim().toLowerCase()] : undefined
+  const dot = colorSwatch(boulder.color)
   const imageUrl = boulderImageUrl(boulder.image_path)
   const [lightboxOpen, setLightboxOpen] = useState(false)
 
@@ -72,7 +52,7 @@ export default function BoulderCard({
               {dot && (
                 <span
                   className="inline-block h-3 w-3 rounded-full ring-1 ring-slate-600"
-                  style={{ backgroundColor: dot }}
+                  style={{ background: dot }}
                 />
               )}
               {boulder.color}

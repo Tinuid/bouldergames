@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { boulderImageUrl } from '../lib/images'
+import { BOULDER_COLORS } from '../lib/colors'
 import type { Boulder } from '../types'
 
 export interface BoulderFormValues {
@@ -40,7 +41,7 @@ export default function AddBoulderDialog({
   useEffect(() => {
     if (!open) return
     setDifficulty(boulder?.difficulty != null ? String(boulder.difficulty) : '')
-    setColor(boulder?.color ?? '')
+    setColor(boulder?.color?.trim().toLowerCase() ?? '')
     setImage(null)
     setRemoveImage(false)
     setError(null)
@@ -90,10 +91,14 @@ export default function AddBoulderDialog({
       setError('In diesem Modus zählt der Grad als Punkte-Faktor – bitte einen Grad (> 0) angeben.')
       return
     }
+    if (!color) {
+      setError('Bitte eine Farbe auswählen.')
+      return
+    }
     setError(null)
     setSaving(true)
     try {
-      await onSubmit({ difficulty: diff, color: color.trim() || null, image, removeImage })
+      await onSubmit({ difficulty: diff, color, image, removeImage })
       onClose()
     } finally {
       setSaving(false)
@@ -130,16 +135,27 @@ export default function AddBoulderDialog({
             />
           </div>
           <div>
-            <label className="label" htmlFor="color">
-              Farbe (optional)
-            </label>
-            <input
-              id="color"
-              className="input"
-              placeholder="z.B. rot"
-              value={color}
-              onChange={(e) => setColor(e.target.value)}
-            />
+            <span className="label">Farbe</span>
+            <div className="flex flex-wrap gap-2">
+              {BOULDER_COLORS.map((c) => {
+                const selected = color === c.name
+                return (
+                  <button
+                    key={c.name}
+                    type="button"
+                    onClick={() => setColor(c.name)}
+                    title={c.name}
+                    aria-label={c.name}
+                    aria-pressed={selected}
+                    className={`h-8 w-8 rounded-full ring-1 ring-slate-600 transition ${
+                      selected ? 'ring-2 ring-offset-2 ring-offset-slate-800 ring-white' : ''
+                    }`}
+                    style={{ background: c.swatch }}
+                  />
+                )
+              })}
+            </div>
+            {color && <p className="mt-1.5 text-sm text-slate-400">{color}</p>}
           </div>
           <div>
             <span className="label">Foto (optional)</span>
