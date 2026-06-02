@@ -38,6 +38,8 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
 3. `supabase/migrations/0002_boulder_images.sql` ausführen (legt die `boulders.image_path`-Spalte
    und den öffentlichen Storage-Bucket `boulder-images` samt Policies an). Diese Migration ist
    idempotent und kann gefahrlos erneut laufen.
+4. `supabase/migrations/0003_scoring_mode.sql` ausführen (legt die `sessions.scoring_mode`-Spalte
+   an: `'classic'` | `'multiplier'`). Idempotent.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.
@@ -59,12 +61,20 @@ um RLS-Rekursion zu vermeiden – beim Ändern von Policies, die auf `participan
 zugreifen, diese Funktionen verwenden statt Sub-Selects mit RLS. Anonyme Nutzer haben die
 Postgres-Rolle `authenticated` (mit `is_anonymous=true`), darum sind alle Policies `to authenticated`.
 
-**Punktelogik an einer Stelle.** `src/lib/scoring.ts` `computePoints(status, attempts, config)`
+**Punktelogik an einer Stelle.** `src/lib/scoring.ts` `computePoints(status, attempts, config, difficulty?)`
 ist die einzige Quelle der Wahrheit für das Modell "strikt bezahlen" (jeder Versuch kostet, auch
 der erfolgreiche; Flash = Top im 1. Versuch). Punkte werden client-seitig berechnet **und** in
 `results.points` persistiert, damit das Leaderboard billig aggregieren kann. Das Leaderboard
 (`src/components/Leaderboard.tsx`) summiert `points` rein client-seitig aus den `results`.
 `normalizeResult` erzwingt Konsistenz (z.B. Flash ⇒ genau 1 Versuch).
+
+Zwei **Spielmodi** (`ScoringConfig.mode`, gespeichert in `sessions.scoring_mode`, beim Erstellen
+in `CreateSession` wählbar): `'classic'` (feste Punkte, Grad nur Info) und `'multiplier'`, bei dem
+das komplette klassische Ergebnis mit dem Schwierigkeitsgrad des Boulders multipliziert wird (z.B.
+Flash auf Grad 4 = `(flashPoints − attemptCost) × 4`). Im Multiplikator-Modus ist der Grad beim
+Anlegen eines Boulders **Pflicht** (`AddBoulderDialog`-Prop `requireDifficulty`); fehlt er dennoch,
+rechnet `computePoints` mit Faktor 1. Darum muss `difficulty` bis in `upsertResult` durchgereicht
+werden.
 
 **Datenzugriff zentralisiert.** Alle Supabase-Queries liegen in `src/lib/api.ts` – Routen und
 Komponenten rufen diese Funktionen auf, statt selbst `supabase.from(...)` zu nutzen. Wichtige

@@ -2,7 +2,14 @@
 
 export type ResultStatus = 'open' | 'flash' | 'top' | 'fail'
 
+// Spielmodus:
+//  'classic'    – feste Punkte (Flash/Top minus Versuchskosten), Grad ist nur Info.
+//  'multiplier' – der Schwierigkeitsgrad multipliziert das klassische Ergebnis
+//                 (z.B. Flash auf Grad 4 = (flashPoints − Kosten) × 4). Grad ist Pflicht.
+export type ScoringMode = 'classic' | 'multiplier'
+
 export interface ScoringConfig {
+  mode: ScoringMode
   flashPoints: number
   topPoints: number
   attemptCost: number
@@ -11,6 +18,7 @@ export interface ScoringConfig {
 }
 
 export const DEFAULT_SCORING: ScoringConfig = {
+  mode: 'classic',
   flashPoints: 30,
   topPoints: 25,
   attemptCost: 5,
@@ -22,6 +30,7 @@ export interface Session {
   join_code: string
   name: string
   host_id: string
+  scoring_mode: ScoringMode
   flash_points: number
   top_points: number
   attempt_cost: number
@@ -66,6 +75,7 @@ export interface Result {
 // Hilfs-Mapper: Session-Datensatz -> ScoringConfig
 export function scoringFromSession(s: Session): ScoringConfig {
   return {
+    mode: s.scoring_mode ?? 'classic',
     flashPoints: s.flash_points,
     topPoints: s.top_points,
     attemptCost: s.attempt_cost,

@@ -84,7 +84,12 @@ export default function BoulderCard({
         )}
       </div>
 
-      <ResultEditor result={myResult} scoring={scoring} onSave={onSaveResult} />
+      <ResultEditor
+        result={myResult}
+        scoring={scoring}
+        difficulty={boulder.difficulty}
+        onSave={onSaveResult}
+      />
 
       {imageUrl && lightboxOpen && (
         <ImageLightbox src={imageUrl} onClose={() => setLightboxOpen(false)} />

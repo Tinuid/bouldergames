@@ -4,6 +4,7 @@ export default function AddBoulderDialog({
   open,
   onClose,
   onAdd,
+  requireDifficulty = false,
 }: {
   open: boolean
   onClose: () => void
@@ -12,12 +13,15 @@ export default function AddBoulderDialog({
     color: string | null,
     image: File | null,
   ) => Promise<void>
+  // Im Multiplikator-Modus ist der Grad der Punkte-Faktor und daher Pflicht.
+  requireDifficulty?: boolean
 }) {
   const [difficulty, setDifficulty] = useState('')
   const [color, setColor] = useState('')
   const [image, setImage] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
 
@@ -48,10 +52,17 @@ export default function AddBoulderDialog({
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (saving) return
+    const raw = difficulty.trim()
+    const parsed = raw === '' ? null : Number(raw)
+    const diff = parsed != null && !Number.isNaN(parsed) ? parsed : null
+    if (requireDifficulty && (diff == null || diff <= 0)) {
+      setError('In diesem Modus zählt der Grad als Punkte-Faktor – bitte einen Grad (> 0) angeben.')
+      return
+    }
+    setError(null)
     setSaving(true)
     try {
-      const diff = difficulty.trim() === '' ? null : Number(difficulty)
-      await onAdd(Number.isNaN(diff as number) ? null : diff, color.trim() || null, image)
+      await onAdd(diff, color.trim() || null, image)
       setDifficulty('')
       setColor('')
       clearImage()
@@ -75,16 +86,18 @@ export default function AddBoulderDialog({
         <div className="flex flex-col gap-4">
           <div>
             <label className="label" htmlFor="diff">
-              Schwierigkeit / Wertung
+              Schwierigkeit / Wertung{requireDifficulty ? ' (Pflicht – Punkte-Faktor)' : ''}
             </label>
             <input
               id="diff"
               type="number"
               inputMode="numeric"
+              min={requireDifficulty ? 1 : undefined}
               className="input"
               placeholder="z.B. 4"
               value={difficulty}
               onChange={(e) => setDifficulty(e.target.value)}
+              required={requireDifficulty}
               autoFocus
             />
           </div>
@@ -153,6 +166,7 @@ export default function AddBoulderDialog({
             )}
           </div>
         </div>
+        {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
         <div className="mt-5 flex gap-2">
           <button type="button" className="btn-ghost flex-1" onClick={onClose}>
             Abbrechen

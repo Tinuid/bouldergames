@@ -11,10 +11,13 @@ const OPTIONS: { status: ResultStatus; label: string; cls: string }[] = [
 export default function ResultEditor({
   result,
   scoring,
+  difficulty = null,
   onSave,
 }: {
   result: Result | undefined
   scoring: ScoringConfig
+  // Schwierigkeitsgrad des Boulders – im Multiplikator-Modus der Punkte-Faktor.
+  difficulty?: number | null
   onSave: (status: ResultStatus, attempts: number) => void
 }) {
   const [status, setStatus] = useState<ResultStatus>(result?.status ?? 'open')
@@ -42,7 +45,7 @@ export default function ResultEditor({
     }
   }
 
-  const preview = computePoints(status, attempts, scoring)
+  const preview = computePoints(status, attempts, scoring, difficulty)
   const showStepper = status === 'top' || status === 'fail'
 
   return (

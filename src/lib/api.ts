@@ -26,6 +26,7 @@ export async function createSession(params: {
         join_code: code,
         name: params.name.trim() || 'Boulder-Challenge',
         host_id: params.hostId,
+        scoring_mode: params.scoring.mode,
         flash_points: params.scoring.flashPoints,
         top_points: params.scoring.topPoints,
         attempt_cost: params.scoring.attemptCost,
@@ -196,9 +197,11 @@ export async function upsertResult(params: {
   status: ResultStatus
   attempts: number
   scoring: ScoringConfig
+  // Schwierigkeitsgrad des Boulders – im Multiplikator-Modus der Punkte-Faktor.
+  difficulty: number | null
 }): Promise<Result> {
   const norm = normalizeResult(params.status, params.attempts)
-  const points = computePoints(norm.status, norm.attempts, params.scoring)
+  const points = computePoints(norm.status, norm.attempts, params.scoring, params.difficulty)
   const { data, error } = await supabase
     .from('results')
     .upsert(

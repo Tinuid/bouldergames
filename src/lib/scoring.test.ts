@@ -25,7 +25,7 @@ describe('computePoints (Default 30 / 25 / 5)', () => {
 })
 
 describe('computePoints mit eigener Konfiguration', () => {
-  const config = { flashPoints: 50, topPoints: 40, attemptCost: 10 }
+  const config = { mode: 'classic' as const, flashPoints: 50, topPoints: 40, attemptCost: 10 }
 
   it('Flash = 50 - 10 = 40', () => {
     expect(computePoints('flash', 1, config)).toBe(40)
@@ -57,6 +57,39 @@ describe('computePoints mit freeSuccess (Top & Flash kosten nichts)', () => {
 
   it('Offen = 0', () => {
     expect(computePoints('open', 0, config)).toBe(0)
+  })
+})
+
+describe('computePoints im Multiplikator-Modus (Grad × klassisches Ergebnis)', () => {
+  const config = { ...DEFAULT_SCORING, mode: 'multiplier' as const }
+
+  it('Flash auf Grad 1 = (30 − 5) × 1 = 25', () => {
+    expect(computePoints('flash', 1, config, 1)).toBe(25)
+  })
+
+  it('Flash auf Grad 4 = (30 − 5) × 4 = 100', () => {
+    expect(computePoints('flash', 1, config, 4)).toBe(100)
+  })
+
+  it('Top im 2. Versuch auf Grad 4 = (25 − 10) × 4 = 60', () => {
+    expect(computePoints('top', 2, config, 4)).toBe(60)
+  })
+
+  it('3x ohne Top auf Grad 4 = (−15) × 4 = −60', () => {
+    expect(computePoints('fail', 3, config, 4)).toBe(-60)
+  })
+
+  it('fehlender Grad zählt als Faktor 1', () => {
+    expect(computePoints('flash', 1, config, null)).toBe(25)
+  })
+
+  it('Offen = 0 unabhängig vom Grad', () => {
+    expect(computePoints('open', 0, config, 4)).toBe(0)
+  })
+
+  it('Multiplikator-Modus mit freeSuccess: Flash auf Grad 4 = 30 × 4 = 120', () => {
+    const free = { ...config, freeSuccess: true }
+    expect(computePoints('flash', 1, free, 4)).toBe(120)
   })
 })
 

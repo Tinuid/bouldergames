@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { createSession } from '../lib/api'
 import { rememberSession } from '../lib/localHistory'
-import { DEFAULT_SCORING } from '../types'
+import { DEFAULT_SCORING, type ScoringMode } from '../types'
 
 export default function CreateSession() {
   const { userId } = useAuth()
@@ -11,6 +11,7 @@ export default function CreateSession() {
 
   const [name, setName] = useState('')
   const [hostName, setHostName] = useState('')
+  const [mode, setMode] = useState<ScoringMode>(DEFAULT_SCORING.mode)
   const [flash, setFlash] = useState(DEFAULT_SCORING.flashPoints)
   const [top, setTop] = useState(DEFAULT_SCORING.topPoints)
   const [cost, setCost] = useState(DEFAULT_SCORING.attemptCost)
@@ -32,7 +33,7 @@ export default function CreateSession() {
         name,
         hostId: userId,
         hostName,
-        scoring: { flashPoints: flash, topPoints: top, attemptCost: cost, freeSuccess },
+        scoring: { mode, flashPoints: flash, topPoints: top, attemptCost: cost, freeSuccess },
       })
       rememberSession({
         sessionId: session.id,
@@ -82,8 +83,39 @@ export default function CreateSession() {
           />
         </div>
 
+        <fieldset className="card flex flex-col gap-3">
+          <legend className="px-1 text-sm font-semibold text-slate-300">Spielmodus</legend>
+          <div className="grid grid-cols-2 gap-2">
+            <ModeButton
+              active={mode === 'classic'}
+              title="Klassisch"
+              subtitle="Feste Punkte"
+              onClick={() => setMode('classic')}
+            />
+            <ModeButton
+              active={mode === 'multiplier'}
+              title="Multiplikator"
+              subtitle="Grad × Punkte"
+              onClick={() => setMode('multiplier')}
+            />
+          </div>
+          <p className="text-xs text-slate-500">
+            {mode === 'multiplier' ? (
+              <>
+                Der Schwierigkeitsgrad multipliziert die Punkte. Beispiel: Flash auf Grad 1 ={' '}
+                {flash - cost}, auf Grad 4 = {(flash - cost) * 4}. (Grad ist beim Anlegen eines
+                Boulders Pflicht.)
+              </>
+            ) : (
+              <>Feste Punkte pro Boulder; der Schwierigkeitsgrad dient nur zur Info.</>
+            )}
+          </p>
+        </fieldset>
+
         <fieldset className="card flex flex-col gap-4">
-          <legend className="px-1 text-sm font-semibold text-slate-300">Punkteregeln</legend>
+          <legend className="px-1 text-sm font-semibold text-slate-300">
+            {mode === 'multiplier' ? 'Punkteregeln (pro Grad)' : 'Punkteregeln'}
+          </legend>
           <NumberField label="Punkte für Flash" value={flash} onChange={setFlash} />
           <NumberField label="Punkte für Top" value={top} onChange={setTop} />
           <NumberField label="Kosten pro Versuch" value={cost} onChange={setCost} min={0} />
@@ -131,6 +163,34 @@ export default function CreateSession() {
         </button>
       </form>
     </div>
+  )
+}
+
+function ModeButton({
+  active,
+  title,
+  subtitle,
+  onClick,
+}: {
+  active: boolean
+  title: string
+  subtitle: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={`flex flex-col items-start rounded-xl px-3 py-2 text-left transition ${
+        active
+          ? 'bg-brand text-slate-950'
+          : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+      }`}
+    >
+      <span className="font-bold">{title}</span>
+      <span className={`text-xs ${active ? 'text-slate-800' : 'text-slate-400'}`}>{subtitle}</span>
+    </button>
   )
 }
 

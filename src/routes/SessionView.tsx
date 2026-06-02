@@ -106,7 +106,12 @@ export default function SessionView() {
     )
   }
 
-  async function handleSaveResult(boulderId: string, status: ResultStatus, attempts: number) {
+  async function handleSaveResult(
+    boulderId: string,
+    status: ResultStatus,
+    attempts: number,
+    difficulty: number | null,
+  ) {
     if (!myParticipant) return
     try {
       await upsertResult({
@@ -116,6 +121,7 @@ export default function SessionView() {
         status,
         attempts,
         scoring,
+        difficulty,
       })
       refresh()
     } catch (err) {
@@ -170,6 +176,7 @@ export default function SessionView() {
         <div className="flex items-center justify-between">
           <ShareSession code={session.join_code} />
           <span className="text-xs text-slate-500">
+            {scoring.mode === 'multiplier' && <span className="text-brand">×Grad · </span>}
             ⚡{scoring.flashPoints} · ✓{scoring.topPoints} ·{' '}
             {scoring.freeSuccess ? '−' + scoring.attemptCost + '/Fehlversuch' : '−' + scoring.attemptCost + '/Versuch'}
           </span>
@@ -198,7 +205,9 @@ export default function SessionView() {
             myResult={mine.get(b.id)}
             allResults={byBoulder.get(b.id) ?? []}
             scoring={scoring}
-            onSaveResult={(status, attempts) => handleSaveResult(b.id, status, attempts)}
+            onSaveResult={(status, attempts) =>
+              handleSaveResult(b.id, status, attempts, b.difficulty)
+            }
           />
         ))}
       </section>
@@ -215,6 +224,7 @@ export default function SessionView() {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onAdd={handleAddBoulder}
+        requireDifficulty={scoring.mode === 'multiplier'}
       />
     </div>
   )

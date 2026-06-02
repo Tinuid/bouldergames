@@ -21,26 +21,43 @@ import type { ResultStatus, ScoringConfig } from '../types'
  *  flash → flashPoints                              (1 Versuch, erfolgreich ⇒ gratis)
  *  top   → topPoints - (attempts - 1) * attemptCost
  *  fail  → 0         - attempts * attemptCost
+ *
+ * Im Multiplikator-Modus (`mode === 'multiplier'`) wird das komplette klassische
+ * Ergebnis mit dem Schwierigkeitsgrad multipliziert (fehlender Grad = Faktor 1):
+ *
+ *  Flash auf Grad 4 (30/25/5):  (30 - 5) * 4 = 100
+ *  Top im 2. Versuch auf Grad 4: (25 - 10) * 4 = 60
  */
 export function computePoints(
   status: ResultStatus,
   attempts: number,
   config: ScoringConfig,
+  difficulty: number | null = null,
 ): number {
   const tries = Math.max(0, attempts)
   // Bei freeSuccess kostet der erfolgreiche Versuch nichts, nur die Fehlversuche davor.
   const successfulCost = config.freeSuccess ? Math.max(0, tries - 1) : tries
 
+  let base: number
   switch (status) {
     case 'flash':
-      return config.flashPoints - successfulCost * config.attemptCost
+      base = config.flashPoints - successfulCost * config.attemptCost
+      break
     case 'top':
-      return config.topPoints - successfulCost * config.attemptCost
+      base = config.topPoints - successfulCost * config.attemptCost
+      break
     case 'fail':
-      return -tries * config.attemptCost
+      base = -tries * config.attemptCost
+      break
     case 'open':
       return 0
   }
+
+  if (config.mode === 'multiplier') {
+    const factor = difficulty && difficulty > 0 ? difficulty : 1
+    return base * factor
+  }
+  return base
 }
 
 /**
