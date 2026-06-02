@@ -1,31 +1,54 @@
 import { useEffect, useRef, useState } from 'react'
+import { boulderImageUrl } from '../lib/images'
+import type { Boulder } from '../types'
+
+export interface BoulderFormValues {
+  difficulty: number | null
+  color: string | null
+  image: File | null
+  // true: ein vorhandenes Bild soll beim Speichern entfernt werden (nur Edit-Modus).
+  removeImage: boolean
+}
 
 export default function AddBoulderDialog({
   open,
   onClose,
-  onAdd,
+  onSubmit,
+  boulder = null,
   requireDifficulty = false,
 }: {
   open: boolean
   onClose: () => void
-  onAdd: (
-    difficulty: number | null,
-    color: string | null,
-    image: File | null,
-  ) => Promise<void>
+  onSubmit: (values: BoulderFormValues) => Promise<void>
+  // Gesetzt ⇒ Bearbeiten-Modus (Felder vorbelegt). null/undefined ⇒ Anlegen.
+  boulder?: Boulder | null
   // Im Multiplikator-Modus ist der Grad der Punkte-Faktor und daher Pflicht.
   requireDifficulty?: boolean
 }) {
+  const isEdit = boulder != null
   const [difficulty, setDifficulty] = useState('')
   const [color, setColor] = useState('')
   const [image, setImage] = useState<File | null>(null)
+  const [removeImage, setRemoveImage] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
 
-  // Vorschau-URL zum gewählten Bild verwalten und sauber wieder freigeben.
+  // Beim Öffnen Felder aus dem Boulder vorbelegen (Edit) bzw. leeren (Anlegen).
+  useEffect(() => {
+    if (!open) return
+    setDifficulty(boulder?.difficulty != null ? String(boulder.difficulty) : '')
+    setColor(boulder?.color ?? '')
+    setImage(null)
+    setRemoveImage(false)
+    setError(null)
+    if (cameraInputRef.current) cameraInputRef.current.value = ''
+    if (galleryInputRef.current) galleryInputRef.current.value = ''
+  }, [open, boulder?.id])
+
+  // Vorschau-URL zum neu gewählten Bild verwalten und sauber wieder freigeben.
   useEffect(() => {
     if (!image) {
       setPreviewUrl(null)
@@ -38,13 +61,21 @@ export default function AddBoulderDialog({
 
   if (!open) return null
 
+  // Vorschau: neu gewähltes Bild gewinnt; sonst das vorhandene (falls nicht entfernt).
+  const existingUrl =
+    !image && !removeImage && boulder?.image_path ? boulderImageUrl(boulder.image_path) : null
+  const previewSrc = previewUrl ?? existingUrl
+
   function pickImage(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null
     setImage(file)
+    if (file) setRemoveImage(false)
   }
 
   function clearImage() {
+    // "Entfernen" bedeutet: nach dem Speichern kein Foto (verwirft auch ein vorhandenes).
     setImage(null)
+    setRemoveImage(true)
     if (cameraInputRef.current) cameraInputRef.current.value = ''
     if (galleryInputRef.current) galleryInputRef.current.value = ''
   }
@@ -62,10 +93,7 @@ export default function AddBoulderDialog({
     setError(null)
     setSaving(true)
     try {
-      await onAdd(diff, color.trim() || null, image)
-      setDifficulty('')
-      setColor('')
-      clearImage()
+      await onSubmit({ difficulty: diff, color: color.trim() || null, image, removeImage })
       onClose()
     } finally {
       setSaving(false)
@@ -82,7 +110,7 @@ export default function AddBoulderDialog({
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
       >
-        <h2 className="mb-4 text-lg font-bold">Boulder hinzufügen</h2>
+        <h2 className="mb-4 text-lg font-bold">{isEdit ? 'Boulder bearbeiten' : 'Boulder hinzufügen'}</h2>
         <div className="flex flex-col gap-4">
           <div>
             <label className="label" htmlFor="diff">
@@ -135,9 +163,9 @@ export default function AddBoulderDialog({
               className="hidden"
               onChange={pickImage}
             />
-            {previewUrl ? (
+            {previewSrc ? (
               <div className="relative overflow-hidden rounded-xl border border-slate-700">
-                <img src={previewUrl} alt="Vorschau" className="max-h-56 w-full object-cover" />
+                <img src={previewSrc} alt="Vorschau" className="max-h-56 w-full object-cover" />
                 <button
                   type="button"
                   className="absolute right-2 top-2 rounded-lg bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
@@ -172,7 +200,7 @@ export default function AddBoulderDialog({
             Abbrechen
           </button>
           <button type="submit" className="btn-primary flex-1" disabled={saving}>
-            {saving ? 'Speichere …' : 'Hinzufügen'}
+            {saving ? 'Speichere …' : isEdit ? 'Speichern' : 'Hinzufügen'}
           </button>
         </div>
       </form>

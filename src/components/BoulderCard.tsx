@@ -31,12 +31,15 @@ export default function BoulderCard({
   allResults,
   scoring,
   onSaveResult,
+  onEdit,
 }: {
   boulder: Boulder
   myResult: Result | undefined
   allResults: Result[]
   scoring: ScoringConfig
   onSaveResult: (status: ResultStatus, attempts: number) => void
+  // Nur gesetzt, wenn der aktuelle Nutzer den Boulder bearbeiten darf (Ersteller oder Host).
+  onEdit?: () => void
 }) {
   const tops = allResults.filter((r) => r.status === 'top' || r.status === 'flash').length
   const flashes = allResults.filter((r) => r.status === 'flash').length
@@ -81,6 +84,17 @@ export default function BoulderCard({
             {tops} Tops
             {flashes > 0 && <> · {flashes} ⚡</>}
           </div>
+        )}
+        {onEdit && (
+          <button
+            type="button"
+            className="shrink-0 rounded-lg p-1.5 text-slate-500 hover:bg-slate-700 hover:text-slate-200"
+            onClick={onEdit}
+            aria-label="Boulder bearbeiten"
+            title="Bearbeiten"
+          >
+            ✎
+          </button>
         )}
       </div>
 

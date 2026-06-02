@@ -40,13 +40,22 @@ export default function ResultEditor({
     // Toggle: nochmaliges Tippen setzt zurück auf "offen".
     if (s === status) {
       apply('open', 0)
+    } else if (s === 'flash') {
+      apply('flash', 1)
+    } else if (s === 'top') {
+      // Ein Top hat mindestens 1 Fehlversuch (0 Fehlversuche wäre ein Flash) ⇒ attempts ≥ 2.
+      apply('top', Math.max(2, attempts))
     } else {
-      apply(s, s === 'flash' ? 1 : Math.max(1, attempts))
+      apply('fail', Math.max(1, attempts))
     }
   }
 
   const preview = computePoints(status, attempts, scoring, difficulty)
   const showStepper = status === 'top' || status === 'fail'
+  // Angezeigt werden Fehlversuche: beim Top zählt der erfolgreiche Zug nicht mit.
+  const misses = status === 'top' ? attempts - 1 : attempts
+  // Untergrenze für attempts je Status (Top braucht mind. 1 Fehlversuch).
+  const minAttempts = status === 'top' ? 2 : 1
 
   return (
     <div className="flex flex-col gap-3">
@@ -66,20 +75,20 @@ export default function ResultEditor({
 
       {showStepper && (
         <div className="flex items-center justify-between rounded-xl bg-slate-900/60 px-3 py-2">
-          <span className="text-sm text-slate-400">Versuche</span>
+          <span className="text-sm text-slate-400">Fehlversuche</span>
           <div className="flex items-center gap-3">
             <button
               className="h-8 w-8 rounded-lg bg-slate-700 text-lg font-bold hover:bg-slate-600"
-              onClick={() => apply(status, Math.max(1, attempts - 1))}
-              aria-label="Weniger Versuche"
+              onClick={() => apply(status, Math.max(minAttempts, attempts - 1))}
+              aria-label="Weniger Fehlversuche"
             >
               −
             </button>
-            <span className="w-6 text-center text-lg font-bold tabular-nums">{attempts}</span>
+            <span className="w-6 text-center text-lg font-bold tabular-nums">{misses}</span>
             <button
               className="h-8 w-8 rounded-lg bg-slate-700 text-lg font-bold hover:bg-slate-600"
               onClick={() => apply(status, attempts + 1)}
-              aria-label="Mehr Versuche"
+              aria-label="Mehr Fehlversuche"
             >
               +
             </button>

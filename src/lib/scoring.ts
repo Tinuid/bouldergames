@@ -1,32 +1,26 @@
 import type { ResultStatus, ScoringConfig } from '../types'
 
 /**
- * Punkteberechnung "strikt bezahlen" (Default):
- * Jeder Versuch kostet `attemptCost` – auch der erfolgreiche.
+ * Punkteberechnung: Nur Fehlversuche kosten `attemptCost` – der erfolgreiche Zug
+ * (bei Flash/Top) ist gratis. `attempts` ist die Gesamtzahl der Versuche inkl. des
+ * erfolgreichen; die Fehlversuche davor sind also `attempts - 1`.
  *
- *  flash → flashPoints - attempts * attemptCost   (Flash = Top im 1. Versuch, attempts = 1)
- *  top   → topPoints   - attempts * attemptCost
- *  fail  → 0           - attempts * attemptCost
- *  open  → 0           (noch nichts eingetragen)
+ *  flash → flashPoints                              (1 Versuch, 0 Fehlversuche)
+ *  top   → topPoints - (attempts - 1) * attemptCost
+ *  fail  → 0         - attempts * attemptCost       (kein Erfolg ⇒ alle Versuche sind Fehlversuche)
+ *  open  → 0                                         (noch nichts eingetragen)
  *
  * Beispiele mit Defaults (30 / 25 / 5):
- *  - Flash:               30 - 1*5  = 25
- *  - Top im 2. Versuch:   25 - 2*5  = 15
- *  - 3x ohne Top:          0 - 3*5  = -15
- *
- * Mit `freeSuccess`: Nur nicht erfolgreiche Versuche kosten – der erfolgreiche
- * (bei Flash/Top) ist gratis. Bei einem Top zählen also nur die `attempts - 1`
- * Fehlversuche davor.
- *
- *  flash → flashPoints                              (1 Versuch, erfolgreich ⇒ gratis)
- *  top   → topPoints - (attempts - 1) * attemptCost
- *  fail  → 0         - attempts * attemptCost
+ *  - Flash:                     30
+ *  - Top, 1 Fehlversuch:        25 - 1*5 = 20
+ *  - Top, 3 Fehlversuche:       25 - 3*5 = 10
+ *  - Nicht geschafft (3x):       0 - 3*5 = -15
  *
  * Im Multiplikator-Modus (`mode === 'multiplier'`) wird das komplette klassische
  * Ergebnis mit dem Schwierigkeitsgrad multipliziert (fehlender Grad = Faktor 1):
  *
- *  Flash auf Grad 4 (30/25/5):  (30 - 5) * 4 = 100
- *  Top im 2. Versuch auf Grad 4: (25 - 10) * 4 = 60
+ *  Flash auf Grad 4 (30/25/5):   30 * 4 = 120
+ *  Top, 1 Fehlversuch auf Grad 4: (25 - 5) * 4 = 80
  */
 export function computePoints(
   status: ResultStatus,
@@ -35,16 +29,16 @@ export function computePoints(
   difficulty: number | null = null,
 ): number {
   const tries = Math.max(0, attempts)
-  // Bei freeSuccess kostet der erfolgreiche Versuch nichts, nur die Fehlversuche davor.
-  const successfulCost = config.freeSuccess ? Math.max(0, tries - 1) : tries
+  // Nur Fehlversuche kosten; der erfolgreiche Zug ist gratis.
+  const failed = Math.max(0, tries - 1)
 
   let base: number
   switch (status) {
     case 'flash':
-      base = config.flashPoints - successfulCost * config.attemptCost
+      base = config.flashPoints - failed * config.attemptCost
       break
     case 'top':
-      base = config.topPoints - successfulCost * config.attemptCost
+      base = config.topPoints - failed * config.attemptCost
       break
     case 'fail':
       base = -tries * config.attemptCost

@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useRealtimeSession } from '../hooks/useRealtimeSession'
-import { addBoulder, deleteSession, joinSession, upsertResult } from '../lib/api'
-import { uploadBoulderImage } from '../lib/images'
+import { addBoulder, deleteSession, joinSession, updateBoulder, upsertResult } from '../lib/api'
+import { deleteBoulderImage, uploadBoulderImage } from '../lib/images'
 import { forgetSession, rememberSession } from '../lib/localHistory'
-import { scoringFromSession, type ResultStatus } from '../types'
+import { scoringFromSession, type Boulder, type ResultStatus } from '../types'
+import type { BoulderFormValues } from '../components/AddBoulderDialog'
 import Leaderboard from '../components/Leaderboard'
 import BoulderCard from '../components/BoulderCard'
 import AddBoulderDialog from '../components/AddBoulderDialog'
@@ -19,6 +20,7 @@ export default function SessionView() {
     useRealtimeSession(sessionId)
 
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingBoulder, setEditingBoulder] = useState<Boulder | null>(null)
   const [joinName, setJoinName] = useState('')
   const [joining, setJoining] = useState(false)
 
@@ -129,15 +131,41 @@ export default function SessionView() {
     }
   }
 
-  async function handleAddBoulder(
-    difficulty: number | null,
-    color: string | null,
-    image: File | null,
-  ) {
+  function openAddBoulder() {
+    setEditingBoulder(null)
+    setDialogOpen(true)
+  }
+
+  function openEditBoulder(b: Boulder) {
+    setEditingBoulder(b)
+    setDialogOpen(true)
+  }
+
+  function closeBoulderDialog() {
+    setDialogOpen(false)
+    setEditingBoulder(null)
+  }
+
+  async function handleSubmitBoulder(values: BoulderFormValues) {
     if (!userId) return
-    // Bild zuerst hochladen (verkleinert), damit der Pfad direkt am Boulder hängt.
-    const imagePath = image ? await uploadBoulderImage(image, userId) : null
-    await addBoulder({ sessionId: session!.id, userId, difficulty, color, imagePath })
+    const { difficulty, color, image, removeImage } = values
+    if (editingBoulder) {
+      // Bearbeiten: Bild ggf. ersetzen/entfernen, sonst vorhandenes behalten.
+      let imagePath = editingBoulder.image_path
+      if (image) {
+        imagePath = await uploadBoulderImage(image, userId)
+        await deleteBoulderImage(editingBoulder.image_path) // altes Bild best-effort aufräumen
+      } else if (removeImage) {
+        imagePath = null
+        await deleteBoulderImage(editingBoulder.image_path)
+      }
+      // Im Multiplikator-Modus rechnet ein DB-Trigger die Punkte bei Grad-Änderung neu.
+      await updateBoulder({ boulderId: editingBoulder.id, difficulty, color, imagePath })
+    } else {
+      // Anlegen: Bild zuerst hochladen (verkleinert), damit der Pfad direkt am Boulder hängt.
+      const imagePath = image ? await uploadBoulderImage(image, userId) : null
+      await addBoulder({ sessionId: session!.id, userId, difficulty, color, imagePath })
+    }
     refresh()
   }
 
@@ -177,8 +205,7 @@ export default function SessionView() {
           <ShareSession code={session.join_code} />
           <span className="text-xs text-slate-500">
             {scoring.mode === 'multiplier' && <span className="text-brand">×Grad · </span>}
-            ⚡{scoring.flashPoints} · ✓{scoring.topPoints} ·{' '}
-            {scoring.freeSuccess ? '−' + scoring.attemptCost + '/Fehlversuch' : '−' + scoring.attemptCost + '/Versuch'}
+            ⚡{scoring.flashPoints} · ✓{scoring.topPoints} · −{scoring.attemptCost}/Fehlversuch
           </span>
         </div>
       </header>
@@ -198,32 +225,37 @@ export default function SessionView() {
           </p>
         )}
 
-        {boulders.map((b) => (
-          <BoulderCard
-            key={b.id}
-            boulder={b}
-            myResult={mine.get(b.id)}
-            allResults={byBoulder.get(b.id) ?? []}
-            scoring={scoring}
-            onSaveResult={(status, attempts) =>
-              handleSaveResult(b.id, status, attempts, b.difficulty)
-            }
-          />
-        ))}
+        {boulders.map((b) => {
+          const canEdit = b.created_by === userId || session.host_id === userId
+          return (
+            <BoulderCard
+              key={b.id}
+              boulder={b}
+              myResult={mine.get(b.id)}
+              allResults={byBoulder.get(b.id) ?? []}
+              scoring={scoring}
+              onSaveResult={(status, attempts) =>
+                handleSaveResult(b.id, status, attempts, b.difficulty)
+              }
+              onEdit={canEdit ? () => openEditBoulder(b) : undefined}
+            />
+          )
+        })}
       </section>
 
       {/* Floating-Button zum Hinzufügen */}
       <button
         className="btn-primary fixed bottom-5 left-1/2 z-40 -translate-x-1/2 shadow-lg"
-        onClick={() => setDialogOpen(true)}
+        onClick={openAddBoulder}
       >
         + Boulder hinzufügen
       </button>
 
       <AddBoulderDialog
         open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        onAdd={handleAddBoulder}
+        onClose={closeBoulderDialog}
+        onSubmit={handleSubmitBoulder}
+        boulder={editingBoulder}
         requireDifficulty={scoring.mode === 'multiplier'}
       />
     </div>

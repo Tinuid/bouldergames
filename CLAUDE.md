@@ -51,6 +51,9 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
    idempotent und kann gefahrlos erneut laufen.
 4. `supabase/migrations/0003_scoring_mode.sql` ausführen (legt die `sessions.scoring_mode`-Spalte
    an: `'classic'` | `'multiplier'`). Idempotent.
+5. `supabase/migrations/0004_boulder_points_rescale.sql` ausführen (legt den `security definer`-
+   Trigger `trg_boulder_rescale` an, der bei nachträglicher Grad-Änderung im Multiplikator-Modus
+   alle `results.points` des Boulders serverseitig neu skaliert). Idempotent.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.
@@ -73,9 +76,13 @@ zugreifen, diese Funktionen verwenden statt Sub-Selects mit RLS. Anonyme Nutzer 
 Postgres-Rolle `authenticated` (mit `is_anonymous=true`), darum sind alle Policies `to authenticated`.
 
 **Punktelogik an einer Stelle.** `src/lib/scoring.ts` `computePoints(status, attempts, config, difficulty?)`
-ist die einzige Quelle der Wahrheit für das Modell "strikt bezahlen" (jeder Versuch kostet, auch
-der erfolgreiche; Flash = Top im 1. Versuch). Punkte werden client-seitig berechnet **und** in
-`results.points` persistiert, damit das Leaderboard billig aggregieren kann. Das Leaderboard
+ist die einzige Quelle der Wahrheit. Modell: **nur Fehlversuche kosten** `attemptCost` – der
+erfolgreiche Zug ist gratis (Flash = Top im 1. Versuch). `attempts` ist die Gesamtzahl inkl. des
+erfolgreichen Zugs; die Fehlversuche sind `attempts − 1` (beim Fail zählen alle Versuche als
+Fehlversuche). Das UI (`ResultEditor`) zeigt/steppt **Fehlversuche**, persistiert aber weiterhin
+Gesamtversuche in `results.attempts`. Es gibt **keinen** Floor – ein Top kann bei sehr vielen
+Fehlversuchen negativ werden. Punkte werden client-seitig berechnet **und** in `results.points`
+persistiert, damit das Leaderboard billig aggregieren kann. Das Leaderboard
 (`src/components/Leaderboard.tsx`) summiert `points` rein client-seitig aus den `results`.
 `normalizeResult` erzwingt Konsistenz (z.B. Flash ⇒ genau 1 Versuch).
 
@@ -103,6 +110,15 @@ Canvas (max. 1600px Kante, JPEG ~0.82, EXIF-Orientierung berücksichtigt), Uploa
 Pfadsegment beginnen – die Storage-RLS in `0002` erzwingt das. Ablauf beim Anlegen: erst Bild
 hochladen, dann `addBoulder` mit dem zurückgegebenen Pfad. `BoulderCard` zeigt ein Thumbnail, das
 `ImageLightbox` (eigene Komponente, keine externe Lib) zum Zoomen öffnet.
+
+**Boulder nachträglich bearbeiten.** Ersteller oder Host (RLS `boulders_update`) können Grad/Farbe/
+Foto eines Boulders ändern. `AddBoulderDialog` dient als Anlegen- **und** Bearbeiten-Dialog (Prop
+`boulder` gesetzt ⇒ Edit-Modus, Felder vorbelegt); `BoulderCard` zeigt dafür einen ✎-Button, wenn
+`SessionView` ein `onEdit` reicht (nur bei Berechtigung). `updateBoulder` schreibt die Änderung;
+ein neues Foto wird hochgeladen und das alte best-effort via `deleteBoulderImage` aufgeräumt. Im
+Multiplikator-Modus hängen die Punkte am Grad – die Neuberechnung **aller** Ergebnisse (auch
+fremder) übernimmt der DB-Trigger aus `0004` serverseitig, weil die `results_update`-RLS einem
+Nicht-Host das Schreiben fremder Ergebnisse verbietet.
 
 **Realtime per Re-Fetch.** `src/hooks/useRealtimeSession.ts` lädt eine komplette Session
 (Stammdaten + Teilnehmer + Boulder + Ergebnisse) und abonniert `postgres_changes` für

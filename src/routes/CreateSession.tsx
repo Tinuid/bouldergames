@@ -15,7 +15,6 @@ export default function CreateSession() {
   const [flash, setFlash] = useState(DEFAULT_SCORING.flashPoints)
   const [top, setTop] = useState(DEFAULT_SCORING.topPoints)
   const [cost, setCost] = useState(DEFAULT_SCORING.attemptCost)
-  const [freeSuccess, setFreeSuccess] = useState(DEFAULT_SCORING.freeSuccess ?? false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -33,7 +32,7 @@ export default function CreateSession() {
         name,
         hostId: userId,
         hostName,
-        scoring: { mode, flashPoints: flash, topPoints: top, attemptCost: cost, freeSuccess },
+        scoring: { mode, flashPoints: flash, topPoints: top, attemptCost: cost },
       })
       rememberSession({
         sessionId: session.id,
@@ -103,8 +102,7 @@ export default function CreateSession() {
             {mode === 'multiplier' ? (
               <>
                 Der Schwierigkeitsgrad multipliziert die Punkte. Beispiel: Flash auf Grad 1 ={' '}
-                {flash - cost}, auf Grad 4 = {(flash - cost) * 4}. (Grad ist beim Anlegen eines
-                Boulders Pflicht.)
+                {flash}, auf Grad 4 = {flash * 4}. (Grad ist beim Anlegen eines Boulders Pflicht.)
               </>
             ) : (
               <>Feste Punkte pro Boulder; der Schwierigkeitsgrad dient nur zur Info.</>
@@ -118,41 +116,11 @@ export default function CreateSession() {
           </legend>
           <NumberField label="Punkte für Flash" value={flash} onChange={setFlash} />
           <NumberField label="Punkte für Top" value={top} onChange={setTop} />
-          <NumberField label="Kosten pro Versuch" value={cost} onChange={setCost} min={0} />
-
-          <button
-            type="button"
-            role="switch"
-            aria-checked={freeSuccess}
-            onClick={() => setFreeSuccess((v) => !v)}
-            className="flex items-center justify-between gap-3 text-left"
-          >
-            <span className="text-slate-300">Top & Flash kosten nichts</span>
-            <span
-              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                freeSuccess ? 'bg-emerald-500' : 'bg-slate-600'
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                  freeSuccess ? 'translate-x-[1.375rem]' : 'translate-x-0.5'
-                }`}
-              />
-            </span>
-          </button>
+          <NumberField label="Kosten pro Fehlversuch" value={cost} onChange={setCost} min={0} />
 
           <p className="text-xs text-slate-500">
-            {freeSuccess ? (
-              <>
-                Nur nicht erfolgreiche Versuche kosten Punkte. Beispiel: Flash = {flash}, Top im
-                2. Versuch = {top} − {cost} = {top - cost}.
-              </>
-            ) : (
-              <>
-                Jeder Versuch kostet Punkte – auch der erfolgreiche. Beispiel: Flash = {flash} −{' '}
-                {cost} = {flash - cost}.
-              </>
-            )}
+            Nur Fehlversuche kosten Punkte – der erfolgreiche Zug ist gratis. Beispiel: Flash ={' '}
+            {flash}, Top mit 1 Fehlversuch = {top} − {cost} = {top - cost}.
           </p>
         </fieldset>
 

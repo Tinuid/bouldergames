@@ -30,7 +30,6 @@ export async function createSession(params: {
         flash_points: params.scoring.flashPoints,
         top_points: params.scoring.topPoints,
         attempt_cost: params.scoring.attemptCost,
-        free_success: params.scoring.freeSuccess ?? false,
       })
       .select()
       .single<Session>()
@@ -187,6 +186,34 @@ export async function addBoulder(params: {
     .select()
     .single<Boulder>()
   if (error) throw error
+  return data
+}
+
+// Boulder nachträglich ändern (nur Ersteller oder Host, via RLS erzwungen). Im
+// Multiplikator-Modus rechnet ein DB-Trigger bei Grad-Änderung die Punkte aller
+// Ergebnisse neu (siehe supabase/migrations/0004_boulder_points_rescale.sql).
+export async function updateBoulder(params: {
+  boulderId: string
+  difficulty: number | null
+  color: string | null
+  imagePath: string | null
+}): Promise<Boulder> {
+  // .select() zurückfordern, um ein per RLS blockiertes Update zu erkennen
+  // (es wirft keinen Fehler, betrifft aber 0 Zeilen).
+  const { data, error } = await supabase
+    .from('boulders')
+    .update({
+      difficulty: params.difficulty,
+      color: params.color,
+      image_path: params.imagePath,
+    })
+    .eq('id', params.boulderId)
+    .select()
+    .single<Boulder>()
+  if (error) throw error
+  if (!data) {
+    throw new Error('Nichts geändert – fehlende Berechtigung (nur Ersteller oder Host).')
+  }
   return data
 }
 

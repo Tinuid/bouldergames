@@ -61,6 +61,21 @@ export async function uploadBoulderImage(file: File, userId: string): Promise<st
   return path
 }
 
+/**
+ * Löscht ein Boulder-Bild aus dem Storage (best-effort). Die Storage-RLS erlaubt
+ * das Löschen nur im eigenen Ordner (Pfad beginnt mit der user_id) – ein Host, der
+ * ein fremdes Bild ersetzt, darf dessen Datei evtl. nicht entfernen. Ein verwaistes
+ * Objekt im öffentlichen Bucket ist unkritisch, daher wird ein Fehler verschluckt.
+ */
+export async function deleteBoulderImage(path: string | null | undefined): Promise<void> {
+  if (!path) return
+  try {
+    await supabase.storage.from(BUCKET).remove([path])
+  } catch {
+    // bewusst ignoriert
+  }
+}
+
 /** Baut die öffentliche URL zu einem gespeicherten Boulder-Bild-Pfad. */
 export function boulderImageUrl(path: string | null | undefined): string | null {
   if (!path) return null

@@ -12,9 +12,8 @@ export interface ScoringConfig {
   mode: ScoringMode
   flashPoints: number
   topPoints: number
+  // Kosten pro Fehlversuch (der erfolgreiche Zug ist immer gratis).
   attemptCost: number
-  // Wenn true: Top & Flash kosten keine Punkte – nur nicht erfolgreiche Versuche.
-  freeSuccess?: boolean
 }
 
 export const DEFAULT_SCORING: ScoringConfig = {
@@ -22,7 +21,6 @@ export const DEFAULT_SCORING: ScoringConfig = {
   flashPoints: 30,
   topPoints: 25,
   attemptCost: 5,
-  freeSuccess: false,
 }
 
 export interface Session {
@@ -79,6 +77,5 @@ export function scoringFromSession(s: Session): ScoringConfig {
     flashPoints: s.flash_points,
     topPoints: s.top_points,
     attemptCost: s.attempt_cost,
-    freeSuccess: s.free_success,
   }
 }
