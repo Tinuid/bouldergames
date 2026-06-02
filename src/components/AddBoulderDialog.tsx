@@ -179,10 +179,10 @@ export default function AddBoulderDialog({
                 className="flex aspect-square items-center justify-center rounded-full transition active:scale-90"
               >
                 <span
-                  className={`aspect-square w-full rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.14)] transition ${
+                  className={`aspect-square w-full rounded-full transition ${
                     selected
-                      ? 'shadow-[0_0_0_3px_var(--surface),0_0_0_5px_var(--ink)]'
-                      : ''
+                      ? 'scale-110 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.14),0_0_0_2px_var(--surface),0_0_0_4px_var(--accent)]'
+                      : 'shadow-[inset_0_0_0_1px_rgba(0,0,0,0.14)]'
                   }`}
                   style={{ background: c.swatch }}
                 />
