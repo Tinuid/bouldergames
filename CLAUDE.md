@@ -27,6 +27,17 @@ Build nutzt bewusst `tsc --noEmit && vite build` (keine TS-Projekt-Referenzen �
 TS6310 aus, weil `tsc -b` referenzierte Projekte mit `noEmit` ablehnt). Vite kompiliert
 `vite.config.ts` selbst via esbuild; diese Datei wird nicht durch `tsc` typgeprüft.
 
+## Versionierung (bei jeder spürbaren Änderung mitziehen)
+
+Die `version` in `package.json` wird zur Build-Zeit via `vite.config.ts` `define` eingefroren und
+in der PWA unten als `VersionBadge` angezeigt (`__APP_VERSION__`). Bei der autoUpdate-PWA ist das
+der einzige sichtbare Hinweis, dass ein Update angekommen ist – darum **immer mitziehen**, wenn
+eine Änderung beim Nutzer ankommt (neues Feature, sichtbares Verhalten, Schema-/Migrationsänderung).
+SemVer-Daumenregel: neues Feature → Minor (`0.3.1` → `0.4.0`), Bugfix/Kleinkram → Patch
+(`0.4.0` → `0.4.1`). Reine Doku-/Test-/Tooling-Änderungen ohne App-Wirkung brauchen keinen Bump.
+Die Anpassung gehört in denselben Commit wie die Änderung (Commit-Konvention im Repo:
+`Update version to X.Y.Z and …`). Claude soll das ungefragt erledigen, wenn es passt.
+
 ## Voraussetzungen zum Laufen (häufige Stolperfalle)
 
 Die App braucht eine `.env` (Vorlage: `.env.example`) mit `VITE_SUPABASE_URL` und
