@@ -57,8 +57,12 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
 6. `supabase/migrations/0005_penalty_mode.sql` ausführen (legt die `sessions.penalty_mode`-Spalte
    an: `'top_floor'` | `'strict'` | `'misses'`). Idempotent.
 7. `supabase/migrations/0006_feedback.sql` ausführen (legt die `feedback`-Tabelle samt RLS an:
-   jeder Angemeldete darf einfügen, niemand per RLS lesen – Feedback ist nur über das Dashboard
-   einsehbar). Idempotent.
+   jeder Angemeldete darf einfügen **und lesen** – die Feedback-Liste `/feedback` ist öffentlich;
+   keine delete-Policy, Löschen läuft nur über die RPC aus 0007). Idempotent.
+8. `supabase/migrations/0007_feedback_admin.sql` ausführen (legt `app_config` + die
+   `security definer`-RPC `delete_feedback(p_id, p_key)` für passwortgeschütztes Löschen an) und
+   **danach einmalig das Lösch-Passwort setzen** (auskommentiertes `insert into public.app_config …`
+   im File, Passwort ersetzen). Ohne gesetztes Passwort ist Löschen gesperrt. Idempotent.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.

@@ -154,16 +154,27 @@ export default function Home() {
         <VersionBadge />
       </footer>
 
-      {/* Floating-Button unten rechts: Feedback geben. */}
-      <button
-        type="button"
-        onClick={() => setFeedbackOpen(true)}
-        className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-brand text-2xl shadow-lg shadow-black/40 transition hover:brightness-110"
-        aria-label="Feedback geben"
-        title="Feedback geben"
-      >
-        💬
-      </button>
+      {/* Floating-Buttons unten rechts: Feedback ansehen (alle) & geben. */}
+      <div className="fixed bottom-5 right-5 z-40 flex flex-col gap-3">
+        <button
+          type="button"
+          onClick={() => navigate('/feedback')}
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-700 text-2xl shadow-lg shadow-black/40 transition hover:bg-slate-600"
+          aria-label="Feedback ansehen"
+          title="Feedback ansehen"
+        >
+          📋
+        </button>
+        <button
+          type="button"
+          onClick={() => setFeedbackOpen(true)}
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-brand text-2xl shadow-lg shadow-black/40 transition hover:brightness-110"
+          aria-label="Feedback geben"
+          title="Feedback geben"
+        >
+          💬
+        </button>
+      </div>
 
       <FeedbackDialog open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </div>

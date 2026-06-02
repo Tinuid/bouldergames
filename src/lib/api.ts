@@ -3,6 +3,7 @@ import { generateJoinCode, normalizeJoinCode } from './codes'
 import { computePoints, normalizeResult } from './scoring'
 import type {
   Boulder,
+  Feedback,
   Participant,
   Result,
   ResultStatus,
@@ -22,6 +23,25 @@ export async function submitFeedback(params: {
     name: params.name.trim() || 'Anonym',
     message: params.message.trim(),
   })
+  if (error) throw error
+}
+
+// Alle Feedbacks lesen (öffentliche Liste, neueste zuerst). Lesen ist per RLS
+// für alle Angemeldeten erlaubt (siehe 0006).
+export async function listFeedback(): Promise<Feedback[]> {
+  const { data, error } = await supabase
+    .from('feedback')
+    .select()
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data ?? []
+}
+
+// Feedback löschen – nur mit korrektem Passwort. Läuft über die security-definer-
+// RPC delete_feedback, die das Passwort serverseitig prüft (siehe 0007). Ein
+// falsches/fehlendes Passwort wirft serverseitig einen Fehler.
+export async function deleteFeedback(id: string, key: string): Promise<void> {
+  const { error } = await supabase.rpc('delete_feedback', { p_id: id, p_key: key })
   if (error) throw error
 }
 
