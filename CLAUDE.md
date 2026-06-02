@@ -54,6 +54,8 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
 5. `supabase/migrations/0004_boulder_points_rescale.sql` ausführen (legt den `security definer`-
    Trigger `trg_boulder_rescale` an, der bei nachträglicher Grad-Änderung im Multiplikator-Modus
    alle `results.points` des Boulders serverseitig neu skaliert). Idempotent.
+6. `supabase/migrations/0005_penalty_mode.sql` ausführen (legt die `sessions.penalty_mode`-Spalte
+   an: `'top_floor'` | `'strict'` | `'misses'`). Idempotent.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.
@@ -76,13 +78,15 @@ zugreifen, diese Funktionen verwenden statt Sub-Selects mit RLS. Anonyme Nutzer 
 Postgres-Rolle `authenticated` (mit `is_anonymous=true`), darum sind alle Policies `to authenticated`.
 
 **Punktelogik an einer Stelle.** `src/lib/scoring.ts` `computePoints(status, attempts, config, difficulty?)`
-ist die einzige Quelle der Wahrheit. Modell: **nur Fehlversuche kosten** `attemptCost` – der
-erfolgreiche Zug ist gratis (Flash = Top im 1. Versuch). `attempts` ist die Gesamtzahl inkl. des
-erfolgreichen Zugs; die Fehlversuche sind `attempts − 1` (beim Fail zählen alle Versuche als
-Fehlversuche). Das UI (`ResultEditor`) zeigt/steppt **Fehlversuche**, persistiert aber weiterhin
-Gesamtversuche in `results.attempts`. Es gibt **keinen** Floor – ein Top kann bei sehr vielen
-Fehlversuchen negativ werden. Punkte werden client-seitig berechnet **und** in `results.points`
-persistiert, damit das Leaderboard billig aggregieren kann. Das Leaderboard
+ist die einzige Quelle der Wahrheit. `attempts` ist die Gesamtzahl inkl. des erfolgreichen Zugs; die
+Fehlversuche sind `attempts − 1` (beim Fail zählen alle Versuche als Fehlversuche). Das UI
+(`ResultEditor`) zeigt/steppt **Fehlversuche**, persistiert aber weiterhin Gesamtversuche in
+`results.attempts`. Wie Versuchskosten/Minuspunkte wirken, steuert der **pro Session wählbare**
+`ScoringConfig.penaltyMode` (`sessions.penalty_mode`, im `CreateSession`-Dialog wählbar):
+`'top_floor'` (Standard – nur Fehlversuche kosten, Flash/Top nie < 0, Fail bleibt negativ),
+`'strict'` (jeder Versuch kostet, auch der erfolgreiche; Top kann negativ werden) und `'misses'`
+(nur Fehlversuche kosten, aber kein Floor). Punkte werden client-seitig berechnet **und** in
+`results.points` persistiert, damit das Leaderboard billig aggregieren kann. Das Leaderboard
 (`src/components/Leaderboard.tsx`) summiert `points` rein client-seitig aus den `results`.
 `normalizeResult` erzwingt Konsistenz (z.B. Flash ⇒ genau 1 Versuch).
 

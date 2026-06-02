@@ -5,8 +5,14 @@ import { useRealtimeSession } from '../hooks/useRealtimeSession'
 import { addBoulder, deleteSession, joinSession, updateBoulder, upsertResult } from '../lib/api'
 import { deleteBoulderImage, uploadBoulderImage } from '../lib/images'
 import { forgetSession, rememberSession } from '../lib/localHistory'
-import { scoringFromSession, type Boulder, type ResultStatus } from '../types'
+import { scoringFromSession, type Boulder, type PenaltyMode, type ResultStatus } from '../types'
 import type { BoulderFormValues } from '../components/AddBoulderDialog'
+
+const PENALTY_LABELS: Record<PenaltyMode, string> = {
+  top_floor: 'Top nie negativ',
+  strict: 'strikt',
+  misses: 'nur Fehlversuche',
+}
 import Leaderboard from '../components/Leaderboard'
 import BoulderCard from '../components/BoulderCard'
 import AddBoulderDialog from '../components/AddBoulderDialog'
@@ -205,7 +211,8 @@ export default function SessionView() {
           <ShareSession code={session.join_code} />
           <span className="text-xs text-slate-500">
             {scoring.mode === 'multiplier' && <span className="text-brand">×Grad · </span>}
-            ⚡{scoring.flashPoints} · ✓{scoring.topPoints} · −{scoring.attemptCost}/Fehlversuch
+            ⚡{scoring.flashPoints} · ✓{scoring.topPoints} · −{scoring.attemptCost}/Fehlversuch ·{' '}
+            {PENALTY_LABELS[scoring.penaltyMode]}
           </span>
         </div>
       </header>

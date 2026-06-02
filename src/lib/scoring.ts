@@ -1,26 +1,29 @@
 import type { ResultStatus, ScoringConfig } from '../types'
 
 /**
- * Punkteberechnung: Nur Fehlversuche kosten `attemptCost` – der erfolgreiche Zug
- * (bei Flash/Top) ist gratis. `attempts` ist die Gesamtzahl der Versuche inkl. des
- * erfolgreichen; die Fehlversuche davor sind also `attempts - 1`.
+ * Punkteberechnung. `attempts` ist die Gesamtzahl der Versuche inkl. des erfolgreichen;
+ * die Fehlversuche davor sind `attempts - 1`. Wie Versuchskosten/Minuspunkte wirken,
+ * steuert `config.penaltyMode`:
  *
- *  flash → flashPoints                              (1 Versuch, 0 Fehlversuche)
- *  top   → topPoints - (attempts - 1) * attemptCost
- *  fail  → 0         - attempts * attemptCost       (kein Erfolg ⇒ alle Versuche sind Fehlversuche)
- *  open  → 0                                         (noch nichts eingetragen)
+ *  'top_floor' (Standard) – nur Fehlversuche kosten; Flash/Top werden auf >= 0 gedeckelt
+ *                           (Fail bleibt negativ).
+ *  'misses'               – nur Fehlversuche kosten; kein Floor (Top kann negativ werden).
+ *  'strict'               – jeder Versuch kostet (auch der erfolgreiche); kein Floor.
+ *
+ *  flash → flashPoints - kosten
+ *  top   → topPoints   - kosten        (top_floor: max(0, …))
+ *  fail  → 0           - tries * attemptCost
+ *  open  → 0
+ *
+ * kosten = (strict ? tries : tries - 1) * attemptCost.
  *
  * Beispiele mit Defaults (30 / 25 / 5):
- *  - Flash:                     30
- *  - Top, 1 Fehlversuch:        25 - 1*5 = 20
- *  - Top, 3 Fehlversuche:       25 - 3*5 = 10
- *  - Nicht geschafft (3x):       0 - 3*5 = -15
+ *  - top_floor: Flash 30 · Top 1 Fehlv. 20 · Top 8 Fehlv. 0 · Fail(3) -15
+ *  - strict:    Flash 25 · Top 1 Fehlv. 15 · Top 5 Fehlv. -5 · Fail(3) -15
+ *  - misses:    Flash 30 · Top 1 Fehlv. 20 · Top 6 Fehlv. -5 · Fail(3) -15
  *
- * Im Multiplikator-Modus (`mode === 'multiplier'`) wird das komplette klassische
- * Ergebnis mit dem Schwierigkeitsgrad multipliziert (fehlender Grad = Faktor 1):
- *
- *  Flash auf Grad 4 (30/25/5):   30 * 4 = 120
- *  Top, 1 Fehlversuch auf Grad 4: (25 - 5) * 4 = 80
+ * Im Multiplikator-Modus (`mode === 'multiplier'`) wird das (ggf. gedeckelte) Ergebnis
+ * mit dem Schwierigkeitsgrad multipliziert (fehlender Grad = Faktor 1).
  */
 export function computePoints(
   status: ResultStatus,
@@ -29,22 +32,28 @@ export function computePoints(
   difficulty: number | null = null,
 ): number {
   const tries = Math.max(0, attempts)
-  // Nur Fehlversuche kosten; der erfolgreiche Zug ist gratis.
   const failed = Math.max(0, tries - 1)
+  // strict: der erfolgreiche Zug kostet mit; sonst kosten nur die Fehlversuche.
+  const successCost = config.penaltyMode === 'strict' ? tries : failed
 
   let base: number
   switch (status) {
     case 'flash':
-      base = config.flashPoints - failed * config.attemptCost
+      base = config.flashPoints - successCost * config.attemptCost
       break
     case 'top':
-      base = config.topPoints - failed * config.attemptCost
+      base = config.topPoints - successCost * config.attemptCost
       break
     case 'fail':
       base = -tries * config.attemptCost
       break
     case 'open':
       return 0
+  }
+
+  // "Top nie negativ": Flash/Top auf >= 0 deckeln (Fail bleibt negativ).
+  if (config.penaltyMode === 'top_floor' && (status === 'flash' || status === 'top')) {
+    base = Math.max(0, base)
   }
 
   if (config.mode === 'multiplier') {

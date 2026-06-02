@@ -8,12 +8,19 @@ export type ResultStatus = 'open' | 'flash' | 'top' | 'fail'
 //                 (z.B. Flash auf Grad 4 = (flashPoints − Kosten) × 4). Grad ist Pflicht.
 export type ScoringMode = 'classic' | 'multiplier'
 
+// Strafmodus – wie Versuchskosten/Minuspunkte wirken (pro Session beim Erstellen wählbar):
+//  'top_floor' – erfolgreicher Zug gratis; Flash/Top nie < 0 (Fail bleibt negativ).
+//  'strict'    – jeder Versuch kostet (auch der erfolgreiche); Top kann negativ werden.
+//  'misses'    – erfolgreicher Zug gratis; nur Fehlversuche kosten (Top kann negativ werden).
+export type PenaltyMode = 'top_floor' | 'strict' | 'misses'
+
 export interface ScoringConfig {
   mode: ScoringMode
   flashPoints: number
   topPoints: number
-  // Kosten pro Fehlversuch (der erfolgreiche Zug ist immer gratis).
+  // Kosten pro Fehlversuch (im 'strict'-Modus kostet auch der erfolgreiche Zug).
   attemptCost: number
+  penaltyMode: PenaltyMode
 }
 
 export const DEFAULT_SCORING: ScoringConfig = {
@@ -21,6 +28,7 @@ export const DEFAULT_SCORING: ScoringConfig = {
   flashPoints: 30,
   topPoints: 25,
   attemptCost: 5,
+  penaltyMode: 'top_floor',
 }
 
 export interface Session {
@@ -33,6 +41,7 @@ export interface Session {
   top_points: number
   attempt_cost: number
   free_success: boolean
+  penalty_mode: PenaltyMode
   status: 'active' | 'archived'
   created_at: string
 }
@@ -77,5 +86,6 @@ export function scoringFromSession(s: Session): ScoringConfig {
     flashPoints: s.flash_points,
     topPoints: s.top_points,
     attemptCost: s.attempt_cost,
+    penaltyMode: s.penalty_mode ?? 'strict',
   }
 }

@@ -2,8 +2,31 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { createSession } from '../lib/api'
+import { computePoints } from '../lib/scoring'
 import { rememberSession } from '../lib/localHistory'
-import { DEFAULT_SCORING, type ScoringMode } from '../types'
+import { DEFAULT_SCORING, type PenaltyMode, type ScoringConfig, type ScoringMode } from '../types'
+
+// Auswählbare Strafmodi beim Erstellen (siehe PenaltyMode in types.ts).
+const PENALTY_MODES: { value: PenaltyMode; title: string; subtitle: string; hint: string }[] = [
+  {
+    value: 'top_floor',
+    title: 'Top nie negativ',
+    subtitle: 'Empfohlen',
+    hint: 'Nur Fehlversuche kosten, und ein Top gibt nie Minuspunkte. „Nicht geschafft“ bleibt negativ.',
+  },
+  {
+    value: 'strict',
+    title: 'Strikt',
+    subtitle: 'Kann negativ',
+    hint: 'Jeder Versuch kostet – auch der erfolgreiche. Ein Top kann ins Minus rutschen.',
+  },
+  {
+    value: 'misses',
+    title: 'Nur Fehlversuche',
+    subtitle: 'Kann negativ',
+    hint: 'Nur Fehlversuche kosten; bei sehr vielen Fehlversuchen kann ein Top trotzdem negativ werden.',
+  },
+]
 
 export default function CreateSession() {
   const { userId } = useAuth()
@@ -15,8 +38,23 @@ export default function CreateSession() {
   const [flash, setFlash] = useState(DEFAULT_SCORING.flashPoints)
   const [top, setTop] = useState(DEFAULT_SCORING.topPoints)
   const [cost, setCost] = useState(DEFAULT_SCORING.attemptCost)
+  const [penaltyMode, setPenaltyMode] = useState<PenaltyMode>(DEFAULT_SCORING.penaltyMode)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Beispielpunkte direkt aus der Punktelogik berechnen (immer konsistent mit dem Spiel).
+  // Basis = klassisch (ohne Grad-Faktor), damit die Strafmodus-Beispiele den reinen Effekt zeigen.
+  const baseCfg: ScoringConfig = {
+    mode: 'classic',
+    flashPoints: flash,
+    topPoints: top,
+    attemptCost: cost,
+    penaltyMode,
+  }
+  const exFlash = computePoints('flash', 1, baseCfg)
+  const exTop1 = computePoints('top', 2, baseCfg) // 1 Fehlversuch
+  const exTopMany = computePoints('top', 9, baseCfg) // 8 Fehlversuche
+  const exFail = computePoints('fail', 3, baseCfg) // 3× nicht geschafft
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -32,7 +70,7 @@ export default function CreateSession() {
         name,
         hostId: userId,
         hostName,
-        scoring: { mode, flashPoints: flash, topPoints: top, attemptCost: cost },
+        scoring: { mode, flashPoints: flash, topPoints: top, attemptCost: cost, penaltyMode },
       })
       rememberSession({
         sessionId: session.id,
@@ -101,11 +139,15 @@ export default function CreateSession() {
           <p className="text-xs text-slate-500">
             {mode === 'multiplier' ? (
               <>
-                Der Schwierigkeitsgrad multipliziert die Punkte. Beispiel: Flash auf Grad 1 ={' '}
-                {flash}, auf Grad 4 = {flash * 4}. (Grad ist beim Anlegen eines Boulders Pflicht.)
+                Der Schwierigkeitsgrad multipliziert die Punkte. Beispiel: ein Top mit 1 Fehlversuch
+                (klassisch {exTop1}) zählt auf Grad 4 = {exTop1 * 4}. Grad ist beim Anlegen eines
+                Boulders Pflicht.
               </>
             ) : (
-              <>Feste Punkte pro Boulder; der Schwierigkeitsgrad dient nur zur Info.</>
+              <>
+                Feste Punkte pro Boulder; der Schwierigkeitsgrad dient nur zur Info. Beispiel: ein
+                Top mit 1 Fehlversuch zählt {exTop1} Punkte – unabhängig vom Grad.
+              </>
             )}
           </p>
         </fieldset>
@@ -117,10 +159,27 @@ export default function CreateSession() {
           <NumberField label="Punkte für Flash" value={flash} onChange={setFlash} />
           <NumberField label="Punkte für Top" value={top} onChange={setTop} />
           <NumberField label="Kosten pro Fehlversuch" value={cost} onChange={setCost} min={0} />
+        </fieldset>
 
+        <fieldset className="card flex flex-col gap-3">
+          <legend className="px-1 text-sm font-semibold text-slate-300">Minuspunkte</legend>
+          <div className="grid grid-cols-3 gap-2">
+            {PENALTY_MODES.map((p) => (
+              <ModeButton
+                key={p.value}
+                active={penaltyMode === p.value}
+                title={p.title}
+                subtitle={p.subtitle}
+                onClick={() => setPenaltyMode(p.value)}
+              />
+            ))}
+          </div>
           <p className="text-xs text-slate-500">
-            Nur Fehlversuche kosten Punkte – der erfolgreiche Zug ist gratis. Beispiel: Flash ={' '}
-            {flash}, Top mit 1 Fehlversuch = {top} − {cost} = {top - cost}.
+            {PENALTY_MODES.find((p) => p.value === penaltyMode)?.hint}
+          </p>
+          <p className="text-xs text-slate-400">
+            Beispiel: Flash = <b>{exFlash}</b> · Top, 1 Fehlversuch = <b>{exTop1}</b> · Top,
+            8 Fehlversuche = <b>{exTopMany}</b> · 3× nicht geschafft = <b>{exFail}</b>.
           </p>
         </fieldset>
 
