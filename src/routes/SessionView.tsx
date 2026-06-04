@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useRealtimeSession } from '../hooks/useRealtimeSession'
+import { useDialogEscape } from '../hooks/useDialogEscape'
 import {
   addBoulder,
   deleteBoulder,
@@ -47,6 +48,9 @@ export default function SessionView() {
   const [joinName, setJoinName] = useState('')
   const [joining, setJoining] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const closeMenu = useCallback(() => setMenuOpen(false), [])
+  // Escape schließt das Menü-Sheet, Body-Scroll sperren – nur solange offen.
+  useDialogEscape(closeMenu, menuOpen)
   const [query, setQuery] = useState('')
   const [hideDone, setHideDone] = useState(false)
   const [viewedPlayer, setViewedPlayer] = useState<Participant | null>(null)
@@ -411,14 +415,14 @@ export default function SessionView() {
       />
 
       {menuOpen && (
-        <div className="sheet-scrim" onClick={() => setMenuOpen(false)}>
-          <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-scrim" onClick={closeMenu}>
+          <div className="sheet" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="sheet-grip" />
             <button
               type="button"
               className="flex w-full items-center gap-2.5 rounded-btn px-1 py-3.5 text-[16px] font-semibold text-bad transition hover:bg-surface-2"
               onClick={() => {
-                setMenuOpen(false)
+                closeMenu()
                 handleDelete()
               }}
             >
@@ -428,7 +432,7 @@ export default function SessionView() {
             <button
               type="button"
               className="btn-secondary mt-1 w-full"
-              onClick={() => setMenuOpen(false)}
+              onClick={closeMenu}
             >
               Abbrechen
             </button>

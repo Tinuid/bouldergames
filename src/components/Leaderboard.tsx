@@ -47,7 +47,10 @@ export default function Leaderboard({
   }, [participants, results])
 
   // Kurzer Puls auf der eigenen Zeile, wenn sich die eigene Punktzahl ändert.
-  const myRow = rows.find((r) => currentUserId !== null && r.participant.user_id === currentUserId)
+  const myRow = useMemo(
+    () => rows.find((r) => currentUserId !== null && r.participant.user_id === currentUserId),
+    [rows, currentUserId],
+  )
   const prevScore = useRef<number | null>(null)
   const [bump, setBump] = useState(false)
   useEffect(() => {
@@ -59,7 +62,7 @@ export default function Leaderboard({
       return () => clearTimeout(t)
     }
     prevScore.current = score
-  }, [myRow?.points])
+  }, [myRow])
 
   return (
     <div className="card !p-1.5">

@@ -7,8 +7,9 @@ import { ChevronLeft, Trash } from '../components/icons'
 
 // Öffentliche Feedback-Liste: jeder kann alle Einträge lesen. Löschen ist durch
 // ein Passwort geschützt, das serverseitig (RPC delete_feedback) geprüft wird –
-// beim ersten Löschen abgefragt und danach gerätelokal gemerkt.
-const KEY_STORAGE = 'feedback-admin-key'
+// beim ersten Löschen abgefragt und danach nur im Speicher (React-State) für die
+// aktuelle Seiten-Sitzung gemerkt. Bewusst NICHT im localStorage, damit das
+// Passwort nicht im Klartext auf dem Gerät liegt; nach einem Reload neu eingeben.
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('de-DE', {
@@ -30,6 +31,9 @@ export default function FeedbackList() {
   const [keyInput, setKeyInput] = useState('')
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  // Einmal korrekt eingegebenes Passwort für diese Seiten-Sitzung merken (nur im
+  // Speicher, nicht persistiert). Nach Reload ist es weg und wird neu abgefragt.
+  const [unlockedKey, setUnlockedKey] = useState<string | null>(null)
 
   async function load() {
     try {
@@ -59,8 +63,7 @@ export default function FeedbackList() {
 
   async function confirmDelete() {
     if (!pendingDelete || deleting) return
-    const savedKey = localStorage.getItem(KEY_STORAGE)
-    const key = savedKey ?? keyInput.trim()
+    const key = unlockedKey ?? keyInput.trim()
     if (!key) {
       setDeleteError('Bitte das Passwort eingeben.')
       return
@@ -69,14 +72,14 @@ export default function FeedbackList() {
     setDeleteError(null)
     try {
       await deleteFeedback(pendingDelete.id, key)
-      // Erfolgreich ⇒ Passwort fürs Gerät merken, damit es nicht erneut nötig ist.
-      localStorage.setItem(KEY_STORAGE, key)
+      // Erfolgreich ⇒ Passwort für diese Sitzung merken, damit es nicht erneut nötig ist.
+      setUnlockedKey(key)
       closeDelete()
       await load()
     } catch (err) {
       // Falsches Passwort ⇒ gemerktes verwerfen und erneut abfragen.
       const wrong = err instanceof Error && /passwort/i.test(err.message)
-      if (wrong) localStorage.removeItem(KEY_STORAGE)
+      if (wrong) setUnlockedKey(null)
       setDeleteError(
         wrong ? 'Falsches Passwort.' : err instanceof Error ? err.message : 'Löschen fehlgeschlagen.',
       )
@@ -86,7 +89,7 @@ export default function FeedbackList() {
   }
 
   // Im Lösch-Dialog nur dann ein Passwortfeld zeigen, wenn keins gemerkt ist.
-  const hasSavedKey = localStorage.getItem(KEY_STORAGE) != null
+  const hasSavedKey = unlockedKey != null
 
   return (
     <div className="animate-screen-in mx-auto flex min-h-full max-w-2xl flex-col gap-5 px-5 pb-11 pt-14">

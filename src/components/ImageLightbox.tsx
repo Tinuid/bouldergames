@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { X } from './icons'
+import { useDialogEscape } from '../hooks/useDialogEscape'
 
 /**
  * Vollbild-Overlay für ein Boulder-Foto. Klick auf das Bild schaltet zwischen
@@ -18,22 +19,13 @@ export default function ImageLightbox({
   const [zoomed, setZoomed] = useState(false)
 
   // Escape schließt, Body-Scroll währenddessen sperren.
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prev
-    }
-  }, [onClose])
+  useDialogEscape(onClose)
 
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center overflow-auto bg-black/90 p-4"
+      role="dialog"
+      aria-modal="true"
       onClick={onClose}
     >
       <button

@@ -60,15 +60,21 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
    jeder Angemeldete darf einfügen **und lesen** – die Feedback-Liste `/feedback` ist öffentlich;
    keine delete-Policy, Löschen läuft nur über die RPC aus 0007). Idempotent.
 8. `supabase/migrations/0007_feedback_admin.sql` ausführen (legt `app_config` + die
-   `security definer`-RPC `delete_feedback(p_id, p_key)` für passwortgeschütztes Löschen an) und
-   **danach einmalig das Lösch-Passwort setzen** (auskommentiertes `insert into public.app_config …`
-   im File, Passwort ersetzen). Ohne gesetztes Passwort ist Löschen gesperrt. Idempotent.
+   `security definer`-RPC `delete_feedback(p_id, p_key)` für passwortgeschütztes Löschen an).
+   Das Passwort **gehasht** setzen – siehe Schritt 11 (0010 stellt die RPC auf bcrypt-Vergleich
+   um; ein hier noch im Klartext gesetztes Passwort matcht danach nicht mehr). Idempotent.
 9. `supabase/migrations/0008_difficulty_special_grades.sql` ausführen (ersetzt die Rescale-
    Trigger-Funktion aus 0004, damit sie die Sonderstufen-Codes 8 = `?` / 9 = `!` korrekt auf
    ihren Wertungs-Faktor 4 bzw. 6 mappt). Keine Schema-Änderung an der Spalte. Idempotent.
 10. `supabase/migrations/0009_boulders_member_edit.sql` ausführen (stellt die Policies
    `boulders_update`/`boulders_delete` auf `is_session_member` um – **jeder Teilnehmer** darf nun
    jeden Boulder bearbeiten/löschen, nicht mehr nur Ersteller/Host). Idempotent.
+11. `supabase/migrations/0010_feedback_admin_hash.sql` ausführen (aktiviert `pgcrypto` und stellt
+   `delete_feedback` auf einen bcrypt-**Hash**-Vergleich um – das Lösch-Passwort liegt nicht mehr
+   im Klartext in `app_config`) und **danach einmalig das Lösch-Passwort gehasht setzen**
+   (auskommentiertes `insert … crypt('…', gen_salt('bf'))` im File, Passwort ersetzen). Ohne
+   gesetztes Passwort ist Löschen gesperrt. Idempotent. In der App wird das Passwort beim ersten
+   Löschen abgefragt und nur **im Speicher** der Sitzung gemerkt (nicht im `localStorage`).
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.

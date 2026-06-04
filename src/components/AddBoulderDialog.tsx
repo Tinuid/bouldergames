@@ -4,6 +4,7 @@ import { BOULDER_COLORS } from '../lib/colors'
 import { DIFFICULTIES } from '../lib/difficulty'
 import type { Boulder } from '../types'
 import { Camera, Picture, X } from './icons'
+import { useDialogEscape } from '../hooks/useDialogEscape'
 
 export interface BoulderFormValues {
   difficulty: number | null
@@ -65,6 +66,9 @@ export default function AddBoulderDialog({
     setPreviewUrl(url)
     return () => URL.revokeObjectURL(url)
   }, [image])
+
+  // Escape schließt, Body-Scroll sperren – nur solange das Sheet offen ist.
+  useDialogEscape(onClose, open)
 
   if (!open) return null
 
@@ -134,7 +138,13 @@ export default function AddBoulderDialog({
 
   return (
     <div className="sheet-scrim" onClick={onClose}>
-      <form className="sheet" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
+      <form
+        className="sheet"
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={submit}
+      >
         <div className="sheet-grip" />
         <div className="font-display text-[21px] font-extrabold tracking-[-0.02em]">
           {isEdit ? 'Boulder bearbeiten' : 'Boulder hinzufügen'}

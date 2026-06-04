@@ -1,9 +1,10 @@
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { colorSwatch } from '../lib/colors'
 import { difficultyLabel } from '../lib/difficulty'
 import { STATUS_LABELS } from '../lib/scoring'
 import type { Boulder, Participant, Result, ResultStatus } from '../types'
 import { X } from './icons'
+import { useDialogEscape } from '../hooks/useDialogEscape'
 
 /**
  * Vollbild-Overlay mit den Boulder-Ergebnissen eines Spielers (per Klick im Leaderboard
@@ -99,18 +100,7 @@ export default function PlayerDetail({
   onClose: () => void
 }) {
   // Escape schließt, Body-Scroll währenddessen sperren (wie ImageLightbox).
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prev
-    }
-  }, [onClose])
+  useDialogEscape(onClose)
 
   // Vergleich nur sinnvoll, wenn man selbst Teilnehmer und nicht der gezeigte Spieler ist.
   const canCompare = meParticipant != null && meParticipant.id !== participant.id

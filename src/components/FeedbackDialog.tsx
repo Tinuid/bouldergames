@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { submitFeedback } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
+import { useDialogEscape } from '../hooks/useDialogEscape'
 
 // Dialog zum Abschicken von freiem Feedback (Name + Text). Wird über den
 // Floating-Button auf der Startseite geöffnet. Schreibt in die feedback-Tabelle
@@ -27,6 +28,9 @@ export default function FeedbackDialog({
     setError(null)
     setSent(false)
   }, [open])
+
+  // Escape schließt, Body-Scroll sperren – nur solange das Sheet offen ist.
+  useDialogEscape(onClose, open)
 
   if (!open) return null
 
@@ -55,7 +59,13 @@ export default function FeedbackDialog({
 
   return (
     <div className="sheet-scrim" onClick={onClose}>
-      <form className="sheet" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
+      <form
+        className="sheet"
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={submit}
+      >
         <div className="sheet-grip" />
         <h2 className="mb-4 font-display text-[21px] font-extrabold tracking-[-0.02em]">Feedback</h2>
 
