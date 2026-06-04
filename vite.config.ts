@@ -23,7 +23,7 @@ export default defineConfig({
         description: 'Tracke Boulder-Challenges mit deiner Crew in Echtzeit.',
         theme_color: '#F4F0E8',
         background_color: '#F4F0E8',
-        display: 'standalone',
+        display: 'fullscreen',
         orientation: 'portrait',
         start_url: '/',
         icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }],
