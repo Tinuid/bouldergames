@@ -54,6 +54,9 @@ export default function AddBoulderDialog({
     setError(null)
     if (cameraInputRef.current) cameraInputRef.current.value = ''
     if (galleryInputRef.current) galleryInputRef.current.value = ''
+    // boulder?.difficulty/color bewusst NICHT in den Deps: nur bei Öffnen bzw. Boulder-Wechsel
+    // vorbelegen – sonst überschriebe eine externe (Realtime-)Änderung die laufende Eingabe.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, boulder?.id])
 
   // Vorschau-URL zum neu gewählten Bild verwalten und sauber wieder freigeben.

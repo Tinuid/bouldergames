@@ -35,6 +35,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>
 }
 
+// Provider + zugehöriger Hook bewusst in einer Datei (gängiges Context-Muster). Die
+// Fast-Refresh-Regel greift nur beim Hot-Reload dieser einen Datei – akzeptiert.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth(): AuthState {
   return useContext(AuthContext)
 }
