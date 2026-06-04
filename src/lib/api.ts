@@ -71,8 +71,15 @@ export async function createSession(params: {
       .single<Session>()
 
     if (!error && data) {
-      // Ersteller direkt als Teilnehmer aufnehmen.
-      await joinSession(data.id, params.hostId, params.hostName)
+      // Ersteller direkt als Teilnehmer aufnehmen. Schlägt das fehl, die eben
+      // erstellte Session best-effort wieder löschen, damit keine verwaiste
+      // Session ohne Host-Teilnehmer zurückbleibt.
+      try {
+        await joinSession(data.id, params.hostId, params.hostName)
+      } catch (joinErr) {
+        await supabase.from('sessions').delete().eq('id', data.id)
+        throw joinErr
+      }
       return data
     }
     lastError = error
@@ -242,9 +249,9 @@ export async function addBoulder(params: {
   return data
 }
 
-// Boulder nachträglich ändern (nur Ersteller oder Host, via RLS erzwungen). Im
-// Multiplikator-Modus rechnet ein DB-Trigger bei Grad-Änderung die Punkte aller
-// Ergebnisse neu (siehe supabase/migrations/0004_boulder_points_rescale.sql).
+// Boulder nachträglich ändern (jeder Teilnehmer, via RLS erzwungen – siehe
+// Migration 0009). Im Multiplikator-Modus rechnet ein DB-Trigger bei Grad-Änderung
+// die Punkte aller Ergebnisse neu (siehe supabase/migrations/0004_boulder_points_rescale.sql).
 export async function updateBoulder(params: {
   boulderId: string
   difficulty: number | null
@@ -265,13 +272,13 @@ export async function updateBoulder(params: {
     .single<Boulder>()
   if (error) throw error
   if (!data) {
-    throw new Error('Nichts geändert – fehlende Berechtigung (nur Ersteller oder Host).')
+    throw new Error('Nichts geändert – fehlende Berechtigung (kein Teilnehmer dieser Challenge).')
   }
   return data
 }
 
-// Boulder löschen (nur Ersteller oder Host, via RLS boulders_delete erzwungen).
-// results hängen per Cascade am Boulder und verschwinden mit.
+// Boulder löschen (jeder Teilnehmer, via RLS boulders_delete erzwungen – siehe
+// Migration 0009). results hängen per Cascade am Boulder und verschwinden mit.
 export async function deleteBoulder(boulderId: string): Promise<void> {
   // .select() zurückfordern, um echtes Löschen zu erkennen: Ein per RLS
   // blockiertes DELETE wirft KEINEN Fehler, betrifft aber 0 Zeilen.
@@ -282,7 +289,7 @@ export async function deleteBoulder(boulderId: string): Promise<void> {
     .select('id')
   if (error) throw error
   if (!data || data.length === 0) {
-    throw new Error('Nichts gelöscht – fehlende Berechtigung (nur Ersteller oder Host).')
+    throw new Error('Nichts gelöscht – fehlende Berechtigung (kein Teilnehmer dieser Challenge).')
   }
 }
 

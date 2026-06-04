@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { colorSwatch } from '../lib/colors'
 import { difficultyLabel } from '../lib/difficulty'
 import { STATUS_LABELS } from '../lib/scoring'
-import type { Boulder, Participant, Result, ResultStatus, ScoringConfig } from '../types'
+import type { Boulder, Participant, Result, ResultStatus } from '../types'
 import { X } from './icons'
 
 /**
@@ -96,7 +96,6 @@ export default function PlayerDetail({
   meParticipant: Participant | null
   boulders: Boulder[]
   results: Result[]
-  scoring: ScoringConfig
   onClose: () => void
 }) {
   // Escape schließt, Body-Scroll währenddessen sperren (wie ImageLightbox).

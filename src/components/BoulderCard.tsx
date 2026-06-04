@@ -20,7 +20,8 @@ export default function BoulderCard({
   allResults: Result[]
   scoring: ScoringConfig
   onSaveResult: (status: ResultStatus, attempts: number) => void
-  // Nur gesetzt, wenn der aktuelle Nutzer den Boulder bearbeiten darf (Ersteller oder Host).
+  // Öffnet den Bearbeiten-Dialog. Jeder Teilnehmer darf Boulder bearbeiten (RLS, Migration 0009),
+  // daher reicht SessionView dies stets durch.
   onEdit?: () => void
 }) {
   const tops = allResults.filter((r) => r.status === 'top' || r.status === 'flash').length

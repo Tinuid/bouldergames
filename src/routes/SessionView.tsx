@@ -50,6 +50,14 @@ export default function SessionView() {
   const [query, setQuery] = useState('')
   const [hideDone, setHideDone] = useState(false)
   const [viewedPlayer, setViewedPlayer] = useState<Participant | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  // Fehler-Toast nach kurzer Zeit automatisch ausblenden.
+  useEffect(() => {
+    if (!saveError) return
+    const t = setTimeout(() => setSaveError(null), 5000)
+    return () => clearTimeout(t)
+  }, [saveError])
 
   const myParticipant = useMemo(
     () => participants.find((p) => p.user_id === userId) ?? null,
@@ -172,6 +180,14 @@ export default function SessionView() {
       refresh()
     } catch (err) {
       console.error('Ergebnis speichern fehlgeschlagen', err)
+      // Nutzer informieren (z.B. schlechtes WLAN in der Halle) und den optimistischen
+      // Editor-Stand via refresh() auf den echten DB-Wert zurücksetzen.
+      setSaveError(
+        err instanceof Error
+          ? `Nicht gespeichert: ${err.message}`
+          : 'Ergebnis konnte nicht gespeichert werden – bitte erneut versuchen.',
+      )
+      refresh()
     }
   }
 
@@ -426,9 +442,20 @@ export default function SessionView() {
           meParticipant={myParticipant}
           boulders={boulders}
           results={results}
-          scoring={scoring}
           onClose={() => setViewedPlayer(null)}
         />
+      )}
+
+      {saveError && (
+        <div className="fixed inset-x-0 bottom-5 z-[70] flex justify-center px-5">
+          <div
+            role="alert"
+            className="flex max-w-md items-center gap-2 rounded-btn border border-bad/40 bg-bad-soft px-4 py-3 text-[14px] font-semibold text-bad shadow-lg"
+            onClick={() => setSaveError(null)}
+          >
+            {saveError}
+          </div>
+        </div>
       )}
     </div>
   )

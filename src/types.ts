@@ -40,7 +40,6 @@ export interface Session {
   flash_points: number
   top_points: number
   attempt_cost: number
-  free_success: boolean
   penalty_mode: PenaltyMode
   status: 'active' | 'archived'
   created_at: string
@@ -51,7 +50,6 @@ export interface Participant {
   session_id: string
   user_id: string
   display_name: string
-  color: string | null
   joined_at: string
 }
 

@@ -24,7 +24,7 @@ export default function AddBoulderDialog({
   open: boolean
   onClose: () => void
   onSubmit: (values: BoulderFormValues) => Promise<void>
-  // Nur im Edit-Modus relevant: löscht den Boulder (Ersteller/Host).
+  // Nur im Edit-Modus relevant: löscht den Boulder (jeder Teilnehmer, siehe Migration 0009).
   onDelete?: () => Promise<void>
   // Gesetzt ⇒ Bearbeiten-Modus (Felder vorbelegt). null/undefined ⇒ Anlegen.
   boulder?: Boulder | null
@@ -106,6 +106,10 @@ export default function AddBoulderDialog({
     try {
       await onSubmit({ difficulty: diff, color, image, removeImage })
       onClose()
+    } catch (err) {
+      // Bild-Upload/Speichern fehlgeschlagen: Dialog offen lassen und Grund zeigen
+      // (analog handleDelete), statt den Fehler stumm zu schlucken.
+      setError(err instanceof Error ? err.message : 'Speichern fehlgeschlagen.')
     } finally {
       setSaving(false)
     }
