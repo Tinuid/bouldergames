@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { colorSwatch } from '../lib/colors'
 import { difficultyLabel } from '../lib/difficulty'
 import { STATUS_LABELS } from '../lib/scoring'
 import type { Boulder, Participant, Result, ResultStatus, ScoringConfig } from '../types'
-import { Check, X } from './icons'
+import { X } from './icons'
 
 /**
  * Vollbild-Overlay mit den Boulder-Ergebnissen eines Spielers (per Klick im Leaderboard
- * geöffnet). Listet alle Boulder mit nicht-`open`-Ergebnis (inkl. "nicht geschafft").
- * Der "Vergleichen"-Toggle stellt – sofern man selbst Teilnehmer und nicht der gezeigte
- * Spieler ist – alle Boulder der Challenge Spieler vs. eigene Ergebnisse gegenüber.
+ * geöffnet). Ist man selbst Teilnehmer und nicht der gezeigte Spieler, werden die Ergebnisse
+ * standardmäßig den eigenen gegenübergestellt (alle Boulder der Challenge, Spieler vs. Du).
+ * Andernfalls (eigene Zeile angeklickt oder Betrachter ist kein Teilnehmer) zeigt das Overlay
+ * eine Einzel-Liste der vom Spieler versuchten Boulder (inkl. "nicht geschafft").
  *
  * Punkte kommen fertig aus `results.points`; hier wird nichts neu gerechnet.
  * Schließt per X oder Escape (Body-Scroll wird währenddessen gesperrt, wie ImageLightbox).
@@ -98,8 +99,6 @@ export default function PlayerDetail({
   scoring: ScoringConfig
   onClose: () => void
 }) {
-  const [compare, setCompare] = useState(false)
-
   // Escape schließt, Body-Scroll währenddessen sperren (wie ImageLightbox).
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -174,21 +173,9 @@ export default function PlayerDetail({
               <X />
             </button>
           </div>
-
-          {canCompare && (
-            <button
-              type="button"
-              className={`chip mt-3.5 flex-row items-center justify-center gap-2 py-2.5 text-[13px] font-semibold ${compare ? 'is-active' : ''}`}
-              onClick={() => setCompare((v) => !v)}
-              aria-pressed={compare}
-            >
-              {compare && <Check className="text-[15px]" />}
-              Vergleichen
-            </button>
-          )}
         </header>
 
-        {compare ? (
+        {canCompare ? (
           // Vergleichs-Modus: alle Boulder der Challenge, Spieler vs. eigene Ergebnisse.
           <div className="flex flex-col gap-2">
             <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 px-1">
