@@ -14,10 +14,13 @@ export default function Leaderboard({
   participants,
   results,
   currentUserId,
+  onSelectPlayer,
 }: {
   participants: Participant[]
   results: Result[]
   currentUserId: string | null
+  // Optional: Klick auf eine Zeile öffnet die Detailansicht des Spielers.
+  onSelectPlayer?: (participant: Participant) => void
 }) {
   const rows = useMemo<Row[]>(() => {
     const byParticipant = new Map<string, Row>()
@@ -67,33 +70,41 @@ export default function Leaderboard({
           return (
             <li
               key={row.participant.id}
-              className={`flex items-center gap-3 rounded-sm2 px-3 py-2.5 ${
+              className={`rounded-sm2 ${
                 isMe ? 'bg-ok-soft shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ok)_40%,transparent)]' : ''
               } ${isMe && bump ? 'animate-bump' : ''}`}
             >
-              <span
-                className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full font-num text-[14px] font-bold ${
-                  RANK_CLASSES[i] ?? 'bg-surface-3 text-ink'
-                }`}
+              <button
+                type="button"
+                disabled={!onSelectPlayer}
+                onClick={() => onSelectPlayer?.(row.participant)}
+                aria-label={`Details zu ${row.participant.display_name}`}
+                className="flex w-full items-center gap-3 rounded-sm2 px-3 py-2.5 text-left transition enabled:hover:bg-surface-2"
               >
-                {i + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 font-display text-[17px] font-bold">
-                  <span className="truncate">{row.participant.display_name}</span>
-                  {isMe && (
-                    <span className="rounded-md bg-ok-soft px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-ok">
-                      du
-                    </span>
-                  )}
+                <span
+                  className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full font-num text-[14px] font-bold ${
+                    RANK_CLASSES[i] ?? 'bg-surface-3 text-ink'
+                  }`}
+                >
+                  {i + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 font-display text-[17px] font-bold">
+                    <span className="truncate">{row.participant.display_name}</span>
+                    {isMe && (
+                      <span className="rounded-md bg-ok-soft px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-ok">
+                        du
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[12.5px] text-muted">
+                    {row.tops} Tops · {row.flashes} Flashes
+                  </div>
                 </div>
-                <div className="text-[12.5px] text-muted">
-                  {row.tops} Tops · {row.flashes} Flashes
-                </div>
-              </div>
-              <span className="font-num text-[30px] font-bold leading-none tracking-[-0.02em] tabular-nums">
-                {row.points}
-              </span>
+                <span className="font-num text-[30px] font-bold leading-none tracking-[-0.02em] tabular-nums">
+                  {row.points}
+                </span>
+              </button>
             </li>
           )
         })}

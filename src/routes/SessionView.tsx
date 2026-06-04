@@ -14,7 +14,13 @@ import {
 import { deleteBoulderImage, uploadBoulderImage } from '../lib/images'
 import { forgetSession, rememberSession } from '../lib/localHistory'
 import { difficultyLabel } from '../lib/difficulty'
-import { scoringFromSession, type Boulder, type PenaltyMode, type ResultStatus } from '../types'
+import {
+  scoringFromSession,
+  type Boulder,
+  type Participant,
+  type PenaltyMode,
+  type ResultStatus,
+} from '../types'
 import type { BoulderFormValues } from '../components/AddBoulderDialog'
 import { Bolt, Check, ChevronLeft, More, Plus, Trash } from '../components/icons'
 
@@ -26,6 +32,7 @@ const PENALTY_LABELS: Record<PenaltyMode, string> = {
 import Leaderboard from '../components/Leaderboard'
 import BoulderCard from '../components/BoulderCard'
 import AddBoulderDialog from '../components/AddBoulderDialog'
+import PlayerDetail from '../components/PlayerDetail'
 import ShareSession from '../components/ShareSession'
 
 export default function SessionView() {
@@ -42,6 +49,7 @@ export default function SessionView() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [hideDone, setHideDone] = useState(false)
+  const [viewedPlayer, setViewedPlayer] = useState<Participant | null>(null)
 
   const myParticipant = useMemo(
     () => participants.find((p) => p.user_id === userId) ?? null,
@@ -305,7 +313,12 @@ export default function SessionView() {
       </div>
 
       <div className="mb-[26px]">
-        <Leaderboard participants={participants} results={results} currentUserId={userId} />
+        <Leaderboard
+          participants={participants}
+          results={results}
+          currentUserId={userId}
+          onSelectPlayer={setViewedPlayer}
+        />
       </div>
 
       <section className="flex flex-col gap-3">
@@ -405,6 +418,17 @@ export default function SessionView() {
             </button>
           </div>
         </div>
+      )}
+
+      {viewedPlayer && (
+        <PlayerDetail
+          participant={viewedPlayer}
+          meParticipant={myParticipant}
+          boulders={boulders}
+          results={results}
+          scoring={scoring}
+          onClose={() => setViewedPlayer(null)}
+        />
       )}
     </div>
   )
