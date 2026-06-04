@@ -142,30 +142,32 @@ export default function AddBoulderDialog({
             {requireDifficulty ? '(Pflicht – Punkte-Faktor)' : '(optional)'}
           </span>
         </div>
-        {/* 1–7 plus die Sonderstufen "?"/"!"; bei 9 Optionen umbricht die Zeile (7 + 2). */}
-        <div className="grid grid-cols-7 gap-2">
-          {DIFFICULTIES.map((d) => {
-            const value = String(d.code)
-            const selected = difficulty === value
-            return (
-              <button
-                key={d.code}
-                type="button"
-                // Im optionalen Modus lässt sich die Auswahl durch erneutes Tippen aufheben.
-                onClick={() => setDifficulty(selected && !requireDifficulty ? '' : value)}
-                aria-pressed={selected}
-                aria-label={d.label === '?' || d.label === '!' ? `Schwierigkeit ${d.label}` : `Grad ${d.label}`}
-                className={`flex aspect-square items-center justify-center rounded-xl border font-num text-[22px] font-bold transition active:scale-90 ${
-                  selected
-                    ? 'border-accent bg-accent text-accent-ink'
-                    : 'border-border-strong bg-surface-2 text-ink'
-                }`}
-              >
-                {d.label}
-              </button>
-            )
-          })}
-        </div>
+        {/* 9 Stufen (1–7 plus "?"/"!") in zwei zentrierten Reihen: oben 5, unten 4. */}
+        {[DIFFICULTIES.slice(0, 5), DIFFICULTIES.slice(5)].map((row, rowIndex) => (
+          <div key={rowIndex} className={`flex justify-center gap-2${rowIndex > 0 ? ' mt-2' : ''}`}>
+            {row.map((d) => {
+              const value = String(d.code)
+              const selected = difficulty === value
+              return (
+                <button
+                  key={d.code}
+                  type="button"
+                  // Im optionalen Modus lässt sich die Auswahl durch erneutes Tippen aufheben.
+                  onClick={() => setDifficulty(selected && !requireDifficulty ? '' : value)}
+                  aria-pressed={selected}
+                  aria-label={d.label === '?' || d.label === '!' ? `Schwierigkeit ${d.label}` : `Grad ${d.label}`}
+                  className={`flex aspect-square w-[calc((100%-2rem)/5)] items-center justify-center rounded-xl border font-num text-[22px] font-bold transition active:scale-90 ${
+                    selected
+                      ? 'border-accent bg-accent text-accent-ink'
+                      : 'border-border-strong bg-surface-2 text-ink'
+                  }`}
+                >
+                  {d.label}
+                </button>
+              )
+            })}
+          </div>
+        ))}
 
         <div className="mb-[11px] mt-[18px] font-display text-[13px] font-semibold text-muted">Farbe</div>
         <div className="grid grid-cols-7 gap-2.5">
