@@ -7,14 +7,16 @@ import {
   deleteBoulder,
   deleteSession,
   joinSession,
+  leaveSession,
   updateBoulder,
   upsertResult,
 } from '../lib/api'
 import { deleteBoulderImage, uploadBoulderImage } from '../lib/images'
 import { forgetSession, rememberSession } from '../lib/localHistory'
+import { difficultyLabel } from '../lib/difficulty'
 import { scoringFromSession, type Boulder, type PenaltyMode, type ResultStatus } from '../types'
 import type { BoulderFormValues } from '../components/AddBoulderDialog'
-import { Bolt, Check, ChevronLeft, Plus } from '../components/icons'
+import { Bolt, Check, ChevronLeft, More, Plus, Trash } from '../components/icons'
 
 const PENALTY_LABELS: Record<PenaltyMode, string> = {
   top_floor: 'Top nie negativ',
@@ -37,6 +39,9 @@ export default function SessionView() {
   const [editingBoulder, setEditingBoulder] = useState<Boulder | null>(null)
   const [joinName, setJoinName] = useState('')
   const [joining, setJoining] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [hideDone, setHideDone] = useState(false)
 
   const myParticipant = useMemo(
     () => participants.find((p) => p.user_id === userId) ?? null,
@@ -69,6 +74,23 @@ export default function SessionView() {
     }
     return { byBoulder, mine }
   }, [results, myParticipant])
+
+  // Sichtbare Boulder nach Suche (Grad oder Farbe) und Filter "erledigte ausblenden".
+  // "Erledigt" = eigenes Ergebnis ist flash/top (ein Fail gilt nicht als erledigt).
+  const visibleBoulders = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return boulders.filter((b) => {
+      if (hideDone) {
+        const status = mine.get(b.id)?.status
+        if (status === 'flash' || status === 'top') return false
+      }
+      if (!q) return true
+      const grade = difficultyLabel(b.difficulty)?.toLowerCase() ?? ''
+      const color = b.color?.toLowerCase() ?? ''
+      return grade.includes(q) || color.includes(q)
+    })
+  }, [boulders, query, hideDone, mine])
+  const filtering = query.trim() !== '' || hideDone
 
   if (loading) {
     return <div className="flex min-h-full items-center justify-center text-muted">Lädt …</div>
@@ -192,6 +214,22 @@ export default function SessionView() {
     refresh()
   }
 
+  async function handleLeave() {
+    if (!myParticipant) return
+    const confirmed = window.confirm(
+      'Challenge verlassen? Deine Ergebnisse in dieser Challenge gehen verloren. Die Challenge bleibt für die anderen bestehen.',
+    )
+    if (!confirmed) return
+    try {
+      await leaveSession(myParticipant.id)
+      forgetSession(session!.id)
+      navigate('/')
+    } catch (err) {
+      console.error('Challenge verlassen fehlgeschlagen', err)
+      alert(err instanceof Error ? err.message : 'Verlassen fehlgeschlagen.')
+    }
+  }
+
   async function handleDelete() {
     const confirmed = window.confirm(
       'Challenge wirklich beenden und löschen? Alle Boulder und Ergebnisse gehen unwiderruflich verloren.',
@@ -217,9 +255,23 @@ export default function SessionView() {
           <ChevronLeft className="text-[18px]" />
           Übersicht
         </Link>
-        <button className="text-[15px] font-semibold text-bad" onClick={handleDelete}>
-          Löschen
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            className="text-[15px] font-semibold text-muted hover:text-ink"
+            onClick={handleLeave}
+          >
+            Verlassen
+          </button>
+          <button
+            type="button"
+            className="flex h-8 w-8 items-center justify-center rounded-[9px] text-faint transition hover:bg-surface-2 hover:text-ink"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Weitere Aktionen"
+            title="Weitere Aktionen"
+          >
+            <More className="text-[20px]" />
+          </button>
+        </div>
       </div>
 
       <h1 className="mb-4 font-display text-[34px] font-extrabold leading-none tracking-[-0.025em]">
@@ -258,7 +310,9 @@ export default function SessionView() {
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between px-0.5">
-          <h2 className="section-label">Boulder ({boulders.length})</h2>
+          <h2 className="section-label">
+            Boulder ({filtering ? `${visibleBoulders.length} / ${boulders.length}` : boulders.length})
+          </h2>
           <button
             className="flex items-center gap-1 text-[12px] font-bold text-accent"
             onClick={openAddBoulder}
@@ -268,8 +322,28 @@ export default function SessionView() {
           </button>
         </div>
 
-        {boulders.map((b) => {
-          const canEdit = b.created_by === userId || session.host_id === userId
+        {boulders.length > 0 && (
+          <div className="flex flex-col gap-2.5">
+            <input
+              className="input"
+              placeholder="Suchen (Grad oder Farbe) …"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              inputMode="search"
+            />
+            <button
+              type="button"
+              className={`chip flex-row items-center justify-center gap-2 py-2.5 text-[13px] font-semibold ${hideDone ? 'is-active' : ''}`}
+              onClick={() => setHideDone((v) => !v)}
+              aria-pressed={hideDone}
+            >
+              {hideDone && <Check className="text-[15px]" />}
+              Erledigte ausblenden
+            </button>
+          </div>
+        )}
+
+        {visibleBoulders.map((b) => {
           return (
             <BoulderCard
               key={b.id}
@@ -280,10 +354,14 @@ export default function SessionView() {
               onSaveResult={(status, attempts) =>
                 handleSaveResult(b.id, status, attempts, b.difficulty)
               }
-              onEdit={canEdit ? () => openEditBoulder(b) : undefined}
+              onEdit={() => openEditBoulder(b)}
             />
           )
         })}
+
+        {boulders.length > 0 && visibleBoulders.length === 0 && (
+          <p className="px-0.5 py-2 text-[14px] text-muted">Keine Boulder passen zum Filter.</p>
+        )}
 
         <button
           className="flex w-full items-center justify-center gap-2 rounded-card border-[1.5px] border-dashed border-border-strong bg-transparent p-[15px] font-display text-[15px] font-bold text-muted transition hover:border-accent hover:text-accent"
@@ -302,6 +380,32 @@ export default function SessionView() {
         boulder={editingBoulder}
         requireDifficulty={scoring.mode === 'multiplier'}
       />
+
+      {menuOpen && (
+        <div className="sheet-scrim" onClick={() => setMenuOpen(false)}>
+          <div className="sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-grip" />
+            <button
+              type="button"
+              className="flex w-full items-center gap-2.5 rounded-btn px-1 py-3.5 text-[16px] font-semibold text-bad transition hover:bg-surface-2"
+              onClick={() => {
+                setMenuOpen(false)
+                handleDelete()
+              }}
+            >
+              <Trash className="text-[20px]" />
+              Challenge löschen
+            </button>
+            <button
+              type="button"
+              className="btn-secondary mt-1 w-full"
+              onClick={() => setMenuOpen(false)}
+            >
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

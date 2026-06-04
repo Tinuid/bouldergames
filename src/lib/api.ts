@@ -162,6 +162,23 @@ export async function joinSession(
   return data
 }
 
+// Challenge verlassen: nur die eigene Teilnehmer-Zeile löschen (RLS participants_delete
+// erlaubt user_id = auth.uid()). Eigene Ergebnisse fallen per on-delete-cascade weg; die
+// Challenge bleibt für alle anderen bestehen.
+export async function leaveSession(participantId: string): Promise<void> {
+  // .select() wie bei deleteSession: ein per RLS blockiertes DELETE wirft keinen Fehler,
+  // betrifft aber 0 Zeilen.
+  const { data, error } = await supabase
+    .from('participants')
+    .delete()
+    .eq('id', participantId)
+    .select('id')
+  if (error) throw error
+  if (!data || data.length === 0) {
+    throw new Error('Verlassen fehlgeschlagen – die Teilnahme konnte nicht entfernt werden.')
+  }
+}
+
 export async function getMyParticipant(
   sessionId: string,
   userId: string,

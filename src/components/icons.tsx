@@ -194,6 +194,16 @@ export function Picture(p: IconProps) {
   )
 }
 
+export function More(p: IconProps) {
+  return (
+    <svg {...base} {...p}>
+      <circle cx="12" cy="5" r="1.6" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="19" r="1.6" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 export function Trash(p: IconProps) {
   return (
     <svg {...base} {...p}>

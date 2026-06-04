@@ -66,6 +66,9 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
 9. `supabase/migrations/0008_difficulty_special_grades.sql` ausführen (ersetzt die Rescale-
    Trigger-Funktion aus 0004, damit sie die Sonderstufen-Codes 8 = `?` / 9 = `!` korrekt auf
    ihren Wertungs-Faktor 4 bzw. 6 mappt). Keine Schema-Änderung an der Spalte. Idempotent.
+10. `supabase/migrations/0009_boulders_member_edit.sql` ausführen (stellt die Policies
+   `boulders_update`/`boulders_delete` auf `is_session_member` um – **jeder Teilnehmer** darf nun
+   jeden Boulder bearbeiten/löschen, nicht mehr nur Ersteller/Host). Idempotent.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.
@@ -134,10 +137,11 @@ Pfadsegment beginnen – die Storage-RLS in `0002` erzwingt das. Ablauf beim Anl
 hochladen, dann `addBoulder` mit dem zurückgegebenen Pfad. `BoulderCard` zeigt ein Thumbnail, das
 `ImageLightbox` (eigene Komponente, keine externe Lib) zum Zoomen öffnet.
 
-**Boulder nachträglich bearbeiten.** Ersteller oder Host (RLS `boulders_update`) können Grad/Farbe/
-Foto eines Boulders ändern. `AddBoulderDialog` dient als Anlegen- **und** Bearbeiten-Dialog (Prop
-`boulder` gesetzt ⇒ Edit-Modus, Felder vorbelegt); `BoulderCard` zeigt dafür einen ✎-Button, wenn
-`SessionView` ein `onEdit` reicht (nur bei Berechtigung). `updateBoulder` schreibt die Änderung;
+**Boulder nachträglich bearbeiten.** **Jeder Teilnehmer** (RLS `boulders_update`/`boulders_delete`
+via `is_session_member`, siehe Migration `0009`) kann Grad/Farbe/Foto **jedes** Boulders ändern oder
+ihn löschen – nicht mehr nur Ersteller/Host. `AddBoulderDialog` dient als Anlegen- **und**
+Bearbeiten-Dialog (Prop `boulder` gesetzt ⇒ Edit-Modus, Felder vorbelegt); `BoulderCard` zeigt dafür
+einen ✎-Button, sobald `SessionView` ein `onEdit` reicht (jetzt immer). `updateBoulder` schreibt die Änderung;
 ein neues Foto wird hochgeladen und das alte best-effort via `deleteBoulderImage` aufgeräumt. Im
 Multiplikator-Modus hängen die Punkte am Grad – die Neuberechnung **aller** Ergebnisse (auch
 fremder) übernimmt der DB-Trigger aus `0004` serverseitig, weil die `results_update`-RLS einem

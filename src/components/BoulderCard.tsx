@@ -34,7 +34,7 @@ export default function BoulderCard({
         {imageUrl && (
           <button
             type="button"
-            className="h-[34px] w-[34px] shrink-0 overflow-hidden rounded-[11px] ring-1 ring-border-strong"
+            className="h-[64px] w-[64px] shrink-0 overflow-hidden rounded-[14px] ring-1 ring-border-strong"
             onClick={() => setLightboxOpen(true)}
             aria-label="Foto vergrößern"
           >
