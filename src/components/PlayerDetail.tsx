@@ -211,15 +211,15 @@ export default function PlayerDetail({
               </span>
             </div>
             {boulders.length === 0 && (
-              <p className="px-1 py-2 text-[14px] text-muted">Noch keine Boulder in dieser Challenge.</p>
+              <p className="px-1 py-2 text-[14px] text-muted">
+                Noch keine Boulder in dieser Challenge.
+              </p>
             )}
           </div>
         ) : (
           // Normal-Modus: nur die vom Spieler versuchten Boulder.
           <div className="flex flex-col gap-2">
-            <h2 className="section-label px-1">
-              Ergebnisse ({playedBoulders.length})
-            </h2>
+            <h2 className="section-label px-1">Ergebnisse ({playedBoulders.length})</h2>
             {playedBoulders.map((b) => {
               const r = theirByBoulder.get(b.id)!
               return (

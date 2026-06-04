@@ -51,7 +51,10 @@ export default function JoinSession() {
   return (
     <div className="animate-screen-in mx-auto flex min-h-full max-w-md flex-col px-5 pb-11 pt-14">
       <div className="mb-3.5">
-        <Link to="/" className="inline-flex items-center gap-0.5 text-[15px] font-semibold text-muted hover:text-ink">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-0.5 text-[15px] font-semibold text-muted hover:text-ink"
+        >
           <ChevronLeft className="text-[18px]" />
           Zurück
         </Link>

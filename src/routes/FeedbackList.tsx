@@ -81,7 +81,11 @@ export default function FeedbackList() {
       const wrong = err instanceof Error && /passwort/i.test(err.message)
       if (wrong) setUnlockedKey(null)
       setDeleteError(
-        wrong ? 'Falsches Passwort.' : err instanceof Error ? err.message : 'Löschen fehlgeschlagen.',
+        wrong
+          ? 'Falsches Passwort.'
+          : err instanceof Error
+            ? err.message
+            : 'Löschen fehlgeschlagen.',
       )
     } finally {
       setDeleting(false)
@@ -105,7 +109,11 @@ export default function FeedbackList() {
         <h1 className="font-display text-[34px] font-extrabold leading-none tracking-[-0.025em]">
           Feedback
         </h1>
-        <button type="button" className="btn-secondary !min-h-0 !px-4 !py-2.5 !text-[15px]" onClick={() => setWriteOpen(true)}>
+        <button
+          type="button"
+          className="btn-secondary !min-h-0 !px-4 !py-2.5 !text-[15px]"
+          onClick={() => setWriteOpen(true)}
+        >
           Feedback geben
         </button>
       </div>
@@ -153,10 +161,7 @@ export default function FeedbackList() {
 
       {pendingDelete && (
         <div className="sheet-scrim" onClick={closeDelete}>
-          <div
-            className="sheet !max-w-sm"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="sheet !max-w-sm" onClick={(e) => e.stopPropagation()}>
             <div className="sheet-grip" />
             <h2 className="mb-2 font-display text-[21px] font-extrabold tracking-[-0.02em]">
               Feedback löschen?

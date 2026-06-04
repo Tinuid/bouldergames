@@ -43,6 +43,7 @@ Die Anpassung gehört in denselben Commit wie die Änderung (Commit-Konvention i
 Die App braucht eine `.env` (Vorlage: `.env.example`) mit `VITE_SUPABASE_URL` und
 `VITE_SUPABASE_ANON_KEY`. Vite liest `.env` **nur beim Serverstart** – nach Änderungen den
 Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard erledigt sein:
+
 1. **Anonymous Sign-ins aktivieren** (Authentication → Providers). Sonst: HTTP 422
    `anonymous_provider_disabled`, und die App bleibt am Auth-Bootstrap hängen.
 2. `supabase/migrations/0001_init.sql` einmalig im SQL-Editor ausführen.
@@ -67,14 +68,14 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
    Trigger-Funktion aus 0004, damit sie die Sonderstufen-Codes 8 = `?` / 9 = `!` korrekt auf
    ihren Wertungs-Faktor 4 bzw. 6 mappt). Keine Schema-Änderung an der Spalte. Idempotent.
 10. `supabase/migrations/0009_boulders_member_edit.sql` ausführen (stellt die Policies
-   `boulders_update`/`boulders_delete` auf `is_session_member` um – **jeder Teilnehmer** darf nun
-   jeden Boulder bearbeiten/löschen, nicht mehr nur Ersteller/Host). Idempotent.
+    `boulders_update`/`boulders_delete` auf `is_session_member` um – **jeder Teilnehmer** darf nun
+    jeden Boulder bearbeiten/löschen, nicht mehr nur Ersteller/Host). Idempotent.
 11. `supabase/migrations/0010_feedback_admin_hash.sql` ausführen (aktiviert `pgcrypto` und stellt
-   `delete_feedback` auf einen bcrypt-**Hash**-Vergleich um – das Lösch-Passwort liegt nicht mehr
-   im Klartext in `app_config`) und **danach einmalig das Lösch-Passwort gehasht setzen**
-   (auskommentiertes `insert … crypt('…', gen_salt('bf'))` im File, Passwort ersetzen). Ohne
-   gesetztes Passwort ist Löschen gesperrt. Idempotent. In der App wird das Passwort beim ersten
-   Löschen abgefragt und nur **im Speicher** der Sitzung gemerkt (nicht im `localStorage`).
+    `delete_feedback` auf einen bcrypt-**Hash**-Vergleich um – das Lösch-Passwort liegt nicht mehr
+    im Klartext in `app_config`) und **danach einmalig das Lösch-Passwort gehasht setzen**
+    (auskommentiertes `insert … crypt('…', gen_salt('bf'))` im File, Passwort ersetzen). Ohne
+    gesetztes Passwort ist Löschen gesperrt. Idempotent. In der App wird das Passwort beim ersten
+    Löschen abgefragt und nur **im Speicher** der Sitzung gemerkt (nicht im `localStorage`).
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.

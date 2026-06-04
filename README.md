@@ -16,11 +16,11 @@ Punktesystem und **Live-Leaderboard** – jede:r am eigenen Handy, in Echtzeit.
 
 Jeder Versuch kostet Punkte – auch der erfolgreiche.
 
-| Ergebnis | Formel (Defaults 30 / 25 / 5) | Beispiel |
-| --- | --- | --- |
-| Flash (Top im 1. Versuch) | `flash − 1×kosten` | 30 − 5 = **25** |
-| Top im 2. Versuch | `top − 2×kosten` | 25 − 10 = **15** |
-| 3× ohne Top | `0 − 3×kosten` | **−15** |
+| Ergebnis                  | Formel (Defaults 30 / 25 / 5) | Beispiel         |
+| ------------------------- | ----------------------------- | ---------------- |
+| Flash (Top im 1. Versuch) | `flash − 1×kosten`            | 30 − 5 = **25**  |
+| Top im 2. Versuch         | `top − 2×kosten`              | 25 − 10 = **15** |
+| 3× ohne Top               | `0 − 3×kosten`                | **−15**          |
 
 ## Tech-Stack
 

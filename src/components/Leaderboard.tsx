@@ -8,7 +8,11 @@ interface Row {
   flashes: number
 }
 
-const RANK_CLASSES = ['bg-gold text-[#3a2a06]', 'bg-silver text-[#2a2d33]', 'bg-bronze text-[#2e1a0c]']
+const RANK_CLASSES = [
+  'bg-gold text-[#3a2a06]',
+  'bg-silver text-[#2a2d33]',
+  'bg-bronze text-[#2e1a0c]',
+]
 
 export default function Leaderboard({
   participants,
@@ -74,7 +78,9 @@ export default function Leaderboard({
             <li
               key={row.participant.id}
               className={`rounded-sm2 ${
-                isMe ? 'bg-ok-soft shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ok)_40%,transparent)]' : ''
+                isMe
+                  ? 'bg-ok-soft shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ok)_40%,transparent)]'
+                  : ''
               } ${isMe && bump ? 'animate-bump' : ''}`}
             >
               <button

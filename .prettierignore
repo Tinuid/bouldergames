@@ -1,0 +1,9 @@
+# Design-Handoff: Fremdcode/Mockups, nicht Teil der App – nicht umformatieren
+design_handoff_boulder_challenges/
+design_handoff_boulder_logo/
+
+# Generierte/automatisch gepflegte Dateien
+package-lock.json
+dist/
+dev-dist/
+coverage/

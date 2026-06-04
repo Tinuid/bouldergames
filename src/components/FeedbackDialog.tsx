@@ -6,13 +6,7 @@ import { useDialogEscape } from '../hooks/useDialogEscape'
 // Dialog zum Abschicken von freiem Feedback (Name + Text). Wird über den
 // Floating-Button auf der Startseite geöffnet. Schreibt in die feedback-Tabelle
 // (per RLS nur einfügbar, nicht lesbar – siehe 0006_feedback.sql).
-export default function FeedbackDialog({
-  open,
-  onClose,
-}: {
-  open: boolean
-  onClose: () => void
-}) {
+export default function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { userId } = useAuth()
   const [name, setName] = useState('')
   const [message, setMessage] = useState('')
@@ -67,7 +61,9 @@ export default function FeedbackDialog({
         onSubmit={submit}
       >
         <div className="sheet-grip" />
-        <h2 className="mb-4 font-display text-[21px] font-extrabold tracking-[-0.02em]">Feedback</h2>
+        <h2 className="mb-4 font-display text-[21px] font-extrabold tracking-[-0.02em]">
+          Feedback
+        </h2>
 
         {sent ? (
           <div className="flex flex-col gap-4">

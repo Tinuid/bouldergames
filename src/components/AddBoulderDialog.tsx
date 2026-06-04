@@ -169,7 +169,11 @@ export default function AddBoulderDialog({
                   // Im optionalen Modus lässt sich die Auswahl durch erneutes Tippen aufheben.
                   onClick={() => setDifficulty(selected && !requireDifficulty ? '' : value)}
                   aria-pressed={selected}
-                  aria-label={d.label === '?' || d.label === '!' ? `Schwierigkeit ${d.label}` : `Grad ${d.label}`}
+                  aria-label={
+                    d.label === '?' || d.label === '!'
+                      ? `Schwierigkeit ${d.label}`
+                      : `Grad ${d.label}`
+                  }
                   className={`flex aspect-square w-[calc((100%-2rem)/5)] items-center justify-center rounded-xl border font-num text-[22px] font-bold transition active:scale-90 ${
                     selected
                       ? 'border-accent bg-accent text-accent-ink'
@@ -183,7 +187,9 @@ export default function AddBoulderDialog({
           </div>
         ))}
 
-        <div className="mb-[11px] mt-[18px] font-display text-[13px] font-semibold text-muted">Farbe</div>
+        <div className="mb-[11px] mt-[18px] font-display text-[13px] font-semibold text-muted">
+          Farbe
+        </div>
         <div className="grid grid-cols-7 gap-2.5">
           {BOULDER_COLORS.map((c) => {
             const selected = color === c.name

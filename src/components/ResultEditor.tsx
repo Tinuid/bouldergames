@@ -10,7 +10,12 @@ const OPTIONS: {
   // aktive Variante (inaktiv = neutral)
   activeCls: string
 }[] = [
-  { status: 'flash', label: 'Flash', icon: <Bolt />, activeCls: 'border-accent bg-accent text-accent-ink' },
+  {
+    status: 'flash',
+    label: 'Flash',
+    icon: <Bolt />,
+    activeCls: 'border-accent bg-accent text-accent-ink',
+  },
   { status: 'top', label: 'Top', icon: <Check />, activeCls: 'border-ok bg-ok text-white' },
   { status: 'fail', label: 'Nicht', icon: <X />, activeCls: 'border-bad bg-bad-soft text-bad' },
 ]

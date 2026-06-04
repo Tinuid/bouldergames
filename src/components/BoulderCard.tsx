@@ -62,7 +62,9 @@ export default function BoulderCard({
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {tops > 0 && <span className="whitespace-nowrap text-[13px] text-muted">{tops} Tops</span>}
+          {tops > 0 && (
+            <span className="whitespace-nowrap text-[13px] text-muted">{tops} Tops</span>
+          )}
           {onEdit && (
             <button
               type="button"

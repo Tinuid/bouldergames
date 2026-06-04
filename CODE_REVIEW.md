@@ -33,6 +33,7 @@ dokumentiert. Hauptschwächen liegen nicht im Code-Stil, sondern im **Vertrauens
 ## 🔴 Kritisch
 
 ### 1. Jeder Nutzer kann jede fremde Challenge unwiderruflich löschen
+
 - **Wo:** `supabase/migrations/0001_init.sql:161-162` (+ `Home.tsx:121-155`, `api.ts:128`)
 - **Problem:** `sessions_delete` erlaubt das Löschen jedem `is_session_member`. Gleichzeitig
   listet `Home` über `listSessions()` **alle** aktiven Sessions inkl. `join_code` öffentlich auf
@@ -49,6 +50,7 @@ dokumentiert. Hauptschwächen liegen nicht im Code-Stil, sondern im **Vertrauens
 ## 🟡 Mittel
 
 ### 2. Punkte werden client-seitig berechnet und ungeprüft persistiert → Cheating
+
 - **Wo:** `api.ts:300-313`, RLS `results_insert/update` in `0001_init.sql:194-200`
 - **Problem:** `computePoints` läuft im Client, das Ergebnis landet in `results.points`. Die RLS
   prüft nur **Eigentum** (`owns_participant`), nicht die **Korrektheit** des Punktwerts. Ein
@@ -61,6 +63,7 @@ dokumentiert. Hauptschwächen liegen nicht im Code-Stil, sondern im **Vertrauens
   serverseitiger Trigger wäre möglich (vgl. Rescale-Trigger 0004/0008), aktuell aber nicht nötig.
 
 ### 3. Öffentliche Session-Liste hebelt das Code-basierte Zugangsmodell aus
+
 - **Wo:** `Home.tsx:121-155`, `api.ts:91-104`
 - **Problem:** CLAUDE.md beschreibt Zugang "faktisch über Kenntnis des Codes". Tatsächlich zeigt
   die Startseite Name + Code + Spielerzahl jeder aktiven Challenge. Privacy-/Designwiderspruch
@@ -71,6 +74,7 @@ dokumentiert. Hauptschwächen liegen nicht im Code-Stil, sondern im **Vertrauens
   gekoppelt).
 
 ### 7. Feedback: öffentlich lesbar, plaintext-Passwort, kein Rate-Limit
+
 - **Wo:** `0006_feedback.sql`, `0007_feedback_admin.sql`, `FeedbackList.tsx:62-89`
 - **Problem:**
   - Jeder Angemeldete kann alle Feedbacks lesen (`feedback_select using(true)`) und unbegrenzt
@@ -90,6 +94,7 @@ dokumentiert. Hauptschwächen liegen nicht im Code-Stil, sondern im **Vertrauens
 ## 🟢 Niedrig / Nice-to-have
 
 ### 10. `useEffect`-Abhängigkeiten im Leaderboard
+
 - **Wo:** `Leaderboard.tsx:50-62`
 - **Problem:** Der "Bump"-Effekt hängt nur an `[myRow?.points]`, `myRow` wird aber bei jedem
   Render neu via `.find` berechnet. Funktioniert, würde aber `react-hooks/exhaustive-deps`
@@ -97,6 +102,7 @@ dokumentiert. Hauptschwächen liegen nicht im Code-Stil, sondern im **Vertrauens
 - **Status:** ☑ erledigt (1.4.0) – `myRow` mit `useMemo` stabilisiert, Effekt-Dep auf `[myRow]`.
 
 ### 11. Doppelte Fetches
+
 - **Wo:** `useRealtimeSession.ts:81-97` + z.B. `SessionView.tsx:171`
 - **Problem:** Mutationen rufen `refresh()` **und** lösen via Realtime ein erneutes Laden
   derselben Tabelle aus. Bewusst für sofortiges Feedback, aber doppelt. Für MVP-Größen
@@ -104,6 +110,7 @@ dokumentiert. Hauptschwächen liegen nicht im Code-Stil, sondern im **Vertrauens
 - **Status:** ☑ gewollt – bewusste Abwägung für sofortiges UI-Feedback.
 
 ### 12. Accessibility der Bottom-Sheets
+
 - **Wo:** `AddBoulderDialog`, `FeedbackDialog`, Menü-Sheet in `SessionView.tsx:397`
 - **Problem:** Kein `role="dialog"`/`aria-modal`, kein Focus-Trap, kein Escape-to-close (nur
   `PlayerDetail`/`ImageLightbox` machen das vorbildlich). Tastatur-/Screenreader-Nutzer
@@ -113,6 +120,7 @@ dokumentiert. Hauptschwächen liegen nicht im Code-Stil, sondern im **Vertrauens
   `ImageLightbox`/`PlayerDetail` auf den Hook umgestellt.
 
 ### 13. Tooling: kein Linter/Formatter
+
 - **Problem:** Keine ESLint-/Prettier-Konfiguration. Bei sonst sehr konsistentem Stil wäre ein
   Linter (inkl. `react-hooks`-Plugin) günstig, um #10 u.ä. automatisch zu fangen.
 - **Status:** ☑ erledigt (1.4.0) – ESLint 9 (Flat-Config, `typescript-eslint` + `react-hooks` +
@@ -137,6 +145,7 @@ dokumentiert. Hauptschwächen liegen nicht im Code-Stil, sondern im **Vertrauens
 ## Performance
 
 Unkritisch und bewusst einfach gehalten:
+
 - Realtime lädt bei jeder Änderung die **ganze** betroffene Tabelle neu (`useRealtimeSession`).
   Für Gruppengrößen ok; würde bei sehr großen Sessions skalieren müssen.
 - Keine N+1-Probleme; `listSessions` nutzt `participants(count)` korrekt aggregiert.

@@ -75,25 +75,28 @@ export function useRealtimeSession(sessionId: string | undefined): SessionData {
 
     const channel = supabase
       .channel(`session:${sessionId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'participants', filter },
-        () => listParticipants(sessionId).then(setParticipants).catch(() => {}),
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter }, () =>
+        listParticipants(sessionId)
+          .then(setParticipants)
+          .catch(() => {}),
       )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'boulders', filter },
-        () => listBoulders(sessionId).then(setBoulders).catch(() => {}),
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'boulders', filter }, () =>
+        listBoulders(sessionId)
+          .then(setBoulders)
+          .catch(() => {}),
       )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'results', filter },
-        () => listResults(sessionId).then(setResults).catch(() => {}),
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'results', filter }, () =>
+        listResults(sessionId)
+          .then(setResults)
+          .catch(() => {}),
       )
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `id=eq.${sessionId}` },
-        () => getSessionById(sessionId).then((s) => s && setSession(s)).catch(() => {}),
+        () =>
+          getSessionById(sessionId)
+            .then((s) => s && setSession(s))
+            .catch(() => {}),
       )
       .subscribe()
 

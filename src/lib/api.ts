@@ -135,11 +135,7 @@ export async function getSessionById(id: string): Promise<Session | null> {
 export async function deleteSession(sessionId: string): Promise<void> {
   // .select() zurückfordern, um echtes Löschen zu erkennen: Ein per RLS
   // blockiertes DELETE wirft KEINEN Fehler, betrifft aber 0 Zeilen.
-  const { data, error } = await supabase
-    .from('sessions')
-    .delete()
-    .eq('id', sessionId)
-    .select('id')
+  const { data, error } = await supabase.from('sessions').delete().eq('id', sessionId).select('id')
   if (error) throw error
   if (!data || data.length === 0) {
     throw new Error(
@@ -282,11 +278,7 @@ export async function updateBoulder(params: {
 export async function deleteBoulder(boulderId: string): Promise<void> {
   // .select() zurückfordern, um echtes Löschen zu erkennen: Ein per RLS
   // blockiertes DELETE wirft KEINEN Fehler, betrifft aber 0 Zeilen.
-  const { data, error } = await supabase
-    .from('boulders')
-    .delete()
-    .eq('id', boulderId)
-    .select('id')
+  const { data, error } = await supabase.from('boulders').delete().eq('id', boulderId).select('id')
   if (error) throw error
   if (!data || data.length === 0) {
     throw new Error('Nichts gelöscht – fehlende Berechtigung (kein Teilnehmer dieser Challenge).')

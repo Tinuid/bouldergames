@@ -18,7 +18,11 @@ export default function ShareSession({ code }: { code: string }) {
   async function share() {
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Boulder Challenge', text: `Tritt bei mit Code ${code}`, url: joinUrl })
+        await navigator.share({
+          title: 'Boulder Challenge',
+          text: `Tritt bei mit Code ${code}`,
+          url: joinUrl,
+        })
       } catch {
         /* abgebrochen */
       }

@@ -91,7 +91,10 @@ export default function CreateSession() {
   return (
     <div className="animate-screen-in mx-auto flex min-h-full max-w-md flex-col px-5 pb-11 pt-14">
       <div className="mb-3.5">
-        <Link to="/" className="inline-flex items-center gap-0.5 text-[15px] font-semibold text-muted hover:text-ink">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-0.5 text-[15px] font-semibold text-muted hover:text-ink"
+        >
           <ChevronLeft className="text-[18px]" />
           Zurück
         </Link>
@@ -171,7 +174,13 @@ export default function CreateSession() {
             value={flash}
             onChange={setFlash}
           />
-          <RuleRow icon={<Check />} tone="top" label="Punkte für Top" value={top} onChange={setTop} />
+          <RuleRow
+            icon={<Check />}
+            tone="top"
+            label="Punkte für Top"
+            value={top}
+            onChange={setTop}
+          />
           <RuleRow
             icon={<X />}
             tone="miss"
@@ -235,7 +244,13 @@ function SegOption({
   onClick: () => void
 }) {
   return (
-    <button type="button" role="tab" aria-selected={active} onClick={onClick} className={`seg-opt${active ? ' is-active' : ''}`}>
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={`seg-opt${active ? ' is-active' : ''}`}
+    >
       <span className="font-display text-[16px] font-bold">{title}</span>
       <span className={`text-[12px] ${active ? 'text-accent-ink/80' : 'text-muted'}`}>{sub}</span>
     </button>
@@ -275,7 +290,12 @@ function RuleRow({
       </span>
       <span className="flex-1 text-[15px] font-medium">{label}</span>
       <div className="stepper">
-        <button type="button" className="step-btn" onClick={() => set(value - 1)} aria-label="weniger">
+        <button
+          type="button"
+          className="step-btn"
+          onClick={() => set(value - 1)}
+          aria-label="weniger"
+        >
           <Down className="text-[16px]" />
         </button>
         <span className="step-val">{value}</span>

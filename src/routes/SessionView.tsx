@@ -146,7 +146,9 @@ export default function SessionView() {
     }
     return (
       <div className="animate-screen-in mx-auto flex min-h-full max-w-md flex-col justify-center gap-4 p-6">
-        <h1 className="font-display text-[34px] font-extrabold tracking-[-0.025em]">{session.name}</h1>
+        <h1 className="font-display text-[34px] font-extrabold tracking-[-0.025em]">
+          {session.name}
+        </h1>
         <p className="text-muted">Tritt der Challenge bei, um mitzumachen.</p>
         <form className="flex flex-col gap-3" onSubmit={doJoin}>
           <input
@@ -344,7 +346,8 @@ export default function SessionView() {
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between px-0.5">
           <h2 className="section-label">
-            Boulder ({filtering ? `${visibleBoulders.length} / ${boulders.length}` : boulders.length})
+            Boulder (
+            {filtering ? `${visibleBoulders.length} / ${boulders.length}` : boulders.length})
           </h2>
           <button
             className="flex items-center gap-1 text-[12px] font-bold text-accent"
@@ -416,7 +419,12 @@ export default function SessionView() {
 
       {menuOpen && (
         <div className="sheet-scrim" onClick={closeMenu}>
-          <div className="sheet" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="sheet"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="sheet-grip" />
             <button
               type="button"
@@ -429,11 +437,7 @@ export default function SessionView() {
               <Trash className="text-[20px]" />
               Challenge löschen
             </button>
-            <button
-              type="button"
-              className="btn-secondary mt-1 w-full"
-              onClick={closeMenu}
-            >
+            <button type="button" className="btn-secondary mt-1 w-full" onClick={closeMenu}>
               Abbrechen
             </button>
           </div>

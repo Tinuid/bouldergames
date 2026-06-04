@@ -22,9 +22,7 @@ export default function App() {
   }
 
   if (loading) {
-    return (
-      <div className="flex min-h-full items-center justify-center p-6 text-muted">Lädt …</div>
-    )
+    return <div className="flex min-h-full items-center justify-center p-6 text-muted">Lädt …</div>
   }
 
   return (
