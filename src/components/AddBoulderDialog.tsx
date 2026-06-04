@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { boulderImageUrl } from '../lib/images'
 import { BOULDER_COLORS } from '../lib/colors'
+import { DIFFICULTIES } from '../lib/difficulty'
 import type { Boulder } from '../types'
 import { Camera, Picture, X } from './icons'
 
@@ -141,24 +142,26 @@ export default function AddBoulderDialog({
             {requireDifficulty ? '(Pflicht – Punkte-Faktor)' : '(optional)'}
           </span>
         </div>
+        {/* 1–7 plus die Sonderstufen "?"/"!"; bei 9 Optionen umbricht die Zeile (7 + 2). */}
         <div className="grid grid-cols-7 gap-2">
-          {[1, 2, 3, 4, 5, 6, 7].map((n) => {
-            const value = String(n)
+          {DIFFICULTIES.map((d) => {
+            const value = String(d.code)
             const selected = difficulty === value
             return (
               <button
-                key={n}
+                key={d.code}
                 type="button"
                 // Im optionalen Modus lässt sich die Auswahl durch erneutes Tippen aufheben.
                 onClick={() => setDifficulty(selected && !requireDifficulty ? '' : value)}
                 aria-pressed={selected}
+                aria-label={d.label === '?' || d.label === '!' ? `Schwierigkeit ${d.label}` : `Grad ${d.label}`}
                 className={`flex aspect-square items-center justify-center rounded-xl border font-num text-[22px] font-bold transition active:scale-90 ${
                   selected
                     ? 'border-accent bg-accent text-accent-ink'
                     : 'border-border-strong bg-surface-2 text-ink'
                 }`}
               >
-                {n}
+                {d.label}
               </button>
             )
           })}

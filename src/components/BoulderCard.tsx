@@ -3,6 +3,7 @@ import ResultEditor from './ResultEditor'
 import ImageLightbox from './ImageLightbox'
 import { boulderImageUrl } from '../lib/images'
 import { colorSwatch } from '../lib/colors'
+import { difficultyLabel } from '../lib/difficulty'
 import type { Boulder, Result, ResultStatus, ScoringConfig } from '../types'
 import { Edit } from './icons'
 
@@ -45,7 +46,7 @@ export default function BoulderCard({
         </span>
         <div className="min-w-0 flex-1">
           <div className="font-display text-[17px] font-bold">
-            {boulder.difficulty != null ? `Grad ${boulder.difficulty}` : 'Boulder'}
+            {boulder.difficulty != null ? `Grad ${difficultyLabel(boulder.difficulty)}` : 'Boulder'}
           </div>
           {boulder.color && (
             <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-muted">

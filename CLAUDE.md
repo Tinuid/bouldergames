@@ -63,6 +63,9 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
    `security definer`-RPC `delete_feedback(p_id, p_key)` für passwortgeschütztes Löschen an) und
    **danach einmalig das Lösch-Passwort setzen** (auskommentiertes `insert into public.app_config …`
    im File, Passwort ersetzen). Ohne gesetztes Passwort ist Löschen gesperrt. Idempotent.
+9. `supabase/migrations/0008_difficulty_special_grades.sql` ausführen (ersetzt die Rescale-
+   Trigger-Funktion aus 0004, damit sie die Sonderstufen-Codes 8 = `?` / 9 = `!` korrekt auf
+   ihren Wertungs-Faktor 4 bzw. 6 mappt). Keine Schema-Änderung an der Spalte. Idempotent.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.
@@ -104,6 +107,15 @@ Flash auf Grad 4 = `(flashPoints − attemptCost) × 4`). Im Multiplikator-Modus
 Anlegen eines Boulders **Pflicht** (`AddBoulderDialog`-Prop `requireDifficulty`); fehlt er dennoch,
 rechnet `computePoints` mit Faktor 1. Darum muss `difficulty` bis in `upsertResult` durchgereicht
 werden.
+
+**Schwierigkeiten zentralisiert.** Die wählbaren Stufen leben als einzige Quelle der Wahrheit in
+`src/lib/difficulty.ts` (`DIFFICULTIES`): die Grade 1–7 sowie die Sonderstufen `?` und `!`. In
+`boulders.difficulty` (int) steht der **Code** – für 1–7 ist er identisch mit dem Grad, `?` = 8,
+`!` = 9. Anzeige-Label (`difficultyLabel`) und Wertungs-Faktor (`difficultyFactor`) sind davon
+entkoppelt: `?` zählt 4, `!` zählt 6. Eigene Codes verhindern, dass `?`/`!` als Grad 4/6 missgedeutet
+werden. Neue Stufen **nur hier** ergänzen – und das Code→Faktor-Mapping in
+`0008_difficulty_special_grades.sql` (Rescale-Trigger) spiegeln, da der Server bei Grad-Änderung
+ebenfalls über den Faktor reskaliert.
 
 **Datenzugriff zentralisiert.** Alle Supabase-Queries liegen in `src/lib/api.ts` – Routen und
 Komponenten rufen diese Funktionen auf, statt selbst `supabase.from(...)` zu nutzen. Wichtige

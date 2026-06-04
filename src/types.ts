@@ -59,6 +59,8 @@ export interface Boulder {
   id: string
   session_id: string
   seq: number
+  // Schwierigkeits-Code (siehe src/lib/difficulty.ts): 1–7 = Grad, 8 = "?", 9 = "!".
+  // null = ohne Grad. Anzeige via difficultyLabel, Wertungs-Faktor via difficultyFactor.
   difficulty: number | null
   color: string | null
   // Objekt-Pfad im Storage-Bucket 'boulder-images' (nicht die volle URL), z.B.

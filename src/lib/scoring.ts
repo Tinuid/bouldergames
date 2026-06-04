@@ -1,4 +1,5 @@
 import type { ResultStatus, ScoringConfig } from '../types'
+import { difficultyFactor } from './difficulty'
 
 /**
  * Punkteberechnung. `attempts` ist die Gesamtzahl der Versuche inkl. des erfolgreichen;
@@ -23,7 +24,9 @@ import type { ResultStatus, ScoringConfig } from '../types'
  *  - misses:    Flash 30 · Top 1 Fehlv. 20 · Top 6 Fehlv. -5 · Fail(3) -15
  *
  * Im Multiplikator-Modus (`mode === 'multiplier'`) wird das (ggf. gedeckelte) Ergebnis
- * mit dem Schwierigkeitsgrad multipliziert (fehlender Grad = Faktor 1).
+ * mit dem Schwierigkeits-Faktor multipliziert (fehlender Grad = Faktor 1). `difficulty`
+ * ist der gespeicherte Code; das Code→Faktor-Mapping liegt in difficulty.ts (Grade 1–7
+ * = sich selbst, Sonderstufen "?"=4 / "!"=6).
  */
 export function computePoints(
   status: ResultStatus,
@@ -57,8 +60,9 @@ export function computePoints(
   }
 
   if (config.mode === 'multiplier') {
-    const factor = difficulty && difficulty > 0 ? difficulty : 1
-    return base * factor
+    // `difficulty` ist der gespeicherte Code; der Faktor kommt aus difficulty.ts
+    // (Grade 1–7 = sich selbst, Sonderstufen "?"=4 / "!"=6, fehlend = 1).
+    return base * difficultyFactor(difficulty)
   }
   return base
 }

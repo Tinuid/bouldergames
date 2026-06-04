@@ -88,6 +88,15 @@ describe('computePoints im Multiplikator-Modus (Grad × Ergebnis)', () => {
     const strict = { ...cfg, penaltyMode: 'strict' as const }
     expect(computePoints('top', 6, strict, 4)).toBe(-20)
   })
+
+  // Sonderstufen: Code 8 = "?" zählt 4, Code 9 = "!" zählt 6 (siehe difficulty.ts).
+  it('Flash auf "?" (Code 8) = 30 × 4 = 120', () => {
+    expect(computePoints('flash', 1, cfg, 8)).toBe(120)
+  })
+
+  it('Flash auf "!" (Code 9) = 30 × 6 = 180', () => {
+    expect(computePoints('flash', 1, cfg, 9)).toBe(180)
+  })
 })
 
 describe('normalizeResult', () => {
