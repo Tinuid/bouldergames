@@ -162,11 +162,12 @@ export default function SessionView() {
   useEffect(() => {
     if (!highlightBoulderId) return
     const raf = requestAnimationFrame(() => {
+      // Sofort (ohne Smooth-Scroll) auf die richtige Höhe – das Hinunterscrollen war anstrengend.
       document
         .getElementById(`boulder-card-${highlightBoulderId}`)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        ?.scrollIntoView({ block: 'center' })
     })
-    const t = setTimeout(() => setHighlightBoulderId(null), 700)
+    const t = setTimeout(() => setHighlightBoulderId(null), 1200)
     return () => {
       cancelAnimationFrame(raf)
       clearTimeout(t)

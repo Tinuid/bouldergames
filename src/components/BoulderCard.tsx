@@ -35,7 +35,7 @@ export default function BoulderCard({
   return (
     <div
       id={`boulder-card-${boulder.id}`}
-      className={`card scroll-mt-20 !px-[15px] !pb-[13px] !pt-[15px] ${highlight ? 'animate-bump' : ''}`}
+      className={`card scroll-mt-20 !px-[15px] !pb-[13px] !pt-[15px] ${highlight ? 'animate-flash' : ''}`}
     >
       <div className="mb-[13px] flex items-center gap-[13px]">
         {imageUrl && (

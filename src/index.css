@@ -196,11 +196,27 @@ body {
   }
 }
 
+/* Deutlich sichtbares Aufleuchten: Akzent-Ring + Tönung halten kurz und blenden aus.
+   Genutzt, wenn man aus der Spieler-Detailansicht zu einem Boulder springt. */
+@keyframes bcFlash {
+  0%,
+  55% {
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 2px var(--accent), var(--shadow);
+  }
+  100% {
+    box-shadow: 0 0 0 2px transparent, var(--shadow);
+  }
+}
+
 .animate-screen-in {
   animation: bcIn 0.34s cubic-bezier(0.22, 0.7, 0.3, 1);
 }
 .animate-bump {
   animation: bcBump 0.65s ease;
+}
+.animate-flash {
+  animation: bcFlash 1.1s ease;
 }
 
 /* ════════════════ REDUCED MOTION ════════════════ */
