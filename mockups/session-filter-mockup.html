@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Boulder Challenges – Session-Seite (Ist-Zustand)</title>
+
+    <!--
+      MOCKUP für Claude Design – bildet die Session-Seite (SessionView) im
+      AKTUELLEN Stand 1:1 nach (Arbeitsvorlage zum Umgestalten).
+      Der Filter ist hier wie in der App: ein Freitext-Suchfeld
+      ("Suchen (Grad oder Farbe) …") plus ein Toggle-Chip "Erledigte ausblenden".
+      Alle Farben/Radii/Fonts sind die echten Chalk-Theme-Tokens aus src/index.css.
+    -->
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* ════════════════ CHALK THEME TOKENS (Light) – aus src/index.css ════════════════ */
+      :root {
+        color-scheme: light;
+        --bg: #f4f0e8;
+        --surface: #fcfbf7;
+        --surface-2: #efeade;
+        --surface-3: #e7e1d2;
+        --border: #e4decf;
+        --border-strong: #d6cebb;
+        --ink: #221f19;
+        --muted: #8c8576;
+        --faint: #b6ae9e;
+        --accent: #e2522a;
+        --accent-ink: #ffffff;
+        --accent-soft: rgba(226, 82, 42, 0.12);
+        --ok: #1e8a52;
+        --ok-soft: rgba(30, 138, 82, 0.12);
+        --bad: #c23b3b;
+        --bad-soft: rgba(194, 59, 59, 0.1);
+        --gold: #d69a1e;
+        --silver: #a7aaae;
+        --bronze: #b9743e;
+
+        --radius: 14px;
+        --radius-sm: 10px;
+        --radius-btn: 11px;
+        --shadow: 0 1px 2px rgba(40, 33, 20, 0.04);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: 'Hanken Grotesk', system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+        display: flex;
+        justify-content: center;
+        min-height: 100vh;
+      }
+
+      .display {
+        font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+      }
+
+      /* ─────────── Layout (max-w-md = 448px) ─────────── */
+      .screen {
+        width: 100%;
+        max-width: 448px;
+        padding: 56px 20px 44px;
+      }
+
+      /* ─────────── Topbar ─────────── */
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+      .back,
+      .leave {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--muted);
+        text-decoration: none;
+        background: none;
+        border: 0;
+        cursor: pointer;
+      }
+      .back:hover,
+      .leave:hover {
+        color: var(--ink);
+      }
+      .icon-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 32px;
+        width: 32px;
+        border-radius: 9px;
+        border: 0;
+        background: none;
+        color: var(--faint);
+        cursor: pointer;
+        transition: 0.15s;
+      }
+      .icon-btn:hover {
+        background: var(--surface-2);
+        color: var(--ink);
+      }
+      .topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      h1.title {
+        margin: 0 0 16px;
+        font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+        font-size: 34px;
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: -0.025em;
+      }
+
+      /* ─────────── Share / Code ─────────── */
+      .share {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      .code-chip {
+        cursor: pointer;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-strong);
+        background: var(--surface-2);
+        padding: 11px 16px;
+        font-size: 19px;
+        font-weight: 700;
+        letter-spacing: 0.22em;
+        color: var(--ink);
+        transition: 0.15s;
+      }
+      .code-chip:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .share-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--muted);
+        background: none;
+        border: 0;
+        cursor: pointer;
+      }
+      .share-link:hover {
+        color: var(--accent);
+      }
+
+      /* ─────────── Scoring-Zusammenfassung ─────────── */
+      .scoring {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 6px;
+        margin-bottom: 22px;
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--muted);
+      }
+      .scoring .sep {
+        color: var(--faint);
+      }
+      .scoring .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .scoring .ok {
+        color: var(--ok);
+        font-weight: 600;
+      }
+
+      /* ─────────── Card / Panel ─────────── */
+      .card {
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+      .section-label {
+        font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.13em;
+        color: var(--faint);
+        margin: 0;
+      }
+
+      /* ─────────── Leaderboard ─────────── */
+      .leaderboard {
+        padding: 6px;
+        margin-bottom: 26px;
+      }
+      .leaderboard h2 {
+        padding: 14px 12px 10px;
+      }
+      .lb-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .lb-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border-radius: var(--radius-sm);
+      }
+      .lb-row.me {
+        background: var(--ok-soft);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 40%, transparent);
+      }
+      .rank {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 30px;
+        width: 30px;
+        flex-shrink: 0;
+        border-radius: 50%;
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .rank.g1 {
+        background: var(--gold);
+        color: #3a2a06;
+      }
+      .rank.g2 {
+        background: var(--silver);
+        color: #2a2d33;
+      }
+      .rank.g3 {
+        background: var(--bronze);
+        color: #2e1a0c;
+      }
+      .rank.gx {
+        background: var(--surface-3);
+        color: var(--ink);
+      }
+      .lb-main {
+        min-width: 0;
+        flex: 1;
+      }
+      .lb-name {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+        font-size: 17px;
+        font-weight: 700;
+      }
+      .badge-du {
+        border-radius: 6px;
+        background: var(--ok-soft);
+        padding: 2px 6px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ok);
+      }
+      .lb-sub {
+        font-size: 12.5px;
+        color: var(--muted);
+      }
+      .lb-points {
+        font-size: 30px;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -0.02em;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ─────────── Boulder-Section-Kopf ─────────── */
+      .sec-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 2px;
+        margin-bottom: 12px;
+      }
+      .add-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--accent);
+        background: none;
+        border: 0;
+        cursor: pointer;
+      }
+
+      /* ════════════════ FILTER (Ist-Zustand: Suchfeld + Toggle-Chip) ════════════════ */
+      .filter {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      /* .input aus src/index.css */
+      .input {
+        width: 100%;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-strong);
+        background: var(--surface);
+        padding: 15px 16px;
+        font-size: 16px;
+        font-family: 'Hanken Grotesk', system-ui, sans-serif;
+        color: var(--ink);
+        outline: none;
+        transition: 0.15s;
+      }
+      .input::placeholder {
+        color: var(--faint);
+      }
+      .input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-soft);
+      }
+      /* .chip (Toggle "Erledigte ausblenden"), wie in SessionView mit flex-row override */
+      .chip-toggle {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-strong);
+        background: var(--surface-2);
+        color: var(--ink);
+        padding: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.15s;
+      }
+      .chip-toggle.is-active {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--accent-ink);
+      }
+
+      /* ─────────── Boulder-Card ─────────── */
+      .boulders {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .b-card {
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        padding: 15px 15px 13px;
+      }
+      .b-head {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        margin-bottom: 13px;
+      }
+      .b-num {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 34px;
+        width: 34px;
+        flex-shrink: 0;
+        border-radius: 11px;
+        background: var(--surface-3);
+        font-size: 15px;
+        font-weight: 700;
+      }
+      .b-info {
+        min-width: 0;
+        flex: 1;
+      }
+      .b-grade {
+        font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+        font-size: 17px;
+        font-weight: 700;
+      }
+      .b-color {
+        margin-top: 2px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .dot {
+        display: inline-block;
+        height: 11px;
+        width: 11px;
+        border-radius: 50%;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+      }
+      .b-tops {
+        font-size: 13px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      /* Result-Editor (flash/top/nicht) */
+      .res {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .res-opt {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-strong);
+        background: var(--surface-2);
+        color: var(--ink);
+        padding: 10px 6px;
+        font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: 0.12s;
+      }
+      .res-opt.flash-on {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--accent-ink);
+      }
+      .res-opt.top-on {
+        border-color: var(--ok);
+        background: var(--ok);
+        color: #fff;
+      }
+      .res-opt.fail-on {
+        border-color: var(--bad);
+        background: var(--bad-soft);
+        color: var(--bad);
+      }
+      .res-points {
+        margin-top: 10px;
+        text-align: right;
+        font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+      .res-points b {
+        font-weight: 700;
+      }
+      .res-points .pos {
+        color: var(--ok);
+      }
+      .res-points .neg {
+        color: var(--bad);
+      }
+
+      /* Add-Boulder gestrichelter Button */
+      .add-dashed {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border-radius: var(--radius);
+        border: 1.5px dashed var(--border-strong);
+        background: transparent;
+        padding: 15px;
+        font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--muted);
+        cursor: pointer;
+        transition: 0.15s;
+        margin-top: 10px;
+      }
+      .add-dashed:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      svg {
+        display: block;
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="screen">
+      <!-- Topbar -->
+      <div class="topbar">
+        <a class="back" href="#">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          Übersicht
+        </a>
+        <div class="topbar-right">
+          <button class="leave">Verlassen</button>
+          <button class="icon-btn" aria-label="Weitere Aktionen" title="Weitere Aktionen">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="5" cy="12" r="2" />
+              <circle cx="12" cy="12" r="2" />
+              <circle cx="19" cy="12" r="2" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <h1 class="title">Donnerstags-Crew</h1>
+
+      <!-- Share / Code -->
+      <div class="share">
+        <button class="code-chip" title="Code kopieren">7F4K2</button>
+        <button class="share-link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="18" cy="5" r="3" />
+            <circle cx="6" cy="12" r="3" />
+            <circle cx="18" cy="19" r="3" />
+            <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" stroke-linecap="round" />
+          </svg>
+          Teilen
+        </button>
+      </div>
+
+      <!-- Scoring-Zusammenfassung -->
+      <div class="scoring">
+        <span class="pill">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--accent)"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" /></svg>
+          10 Flash
+        </span>
+        <span class="sep">·</span>
+        <span class="pill">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7" /></svg>
+          7 Top
+        </span>
+        <span class="sep">·</span>
+        <span>−1/Fehlversuch</span>
+        <span class="sep">·</span>
+        <span class="ok">Top nie negativ</span>
+      </div>
+
+      <!-- Leaderboard -->
+      <div class="card leaderboard">
+        <h2 class="section-label">Leaderboard</h2>
+        <ol class="lb-list">
+          <li class="lb-row">
+            <span class="rank g1">1</span>
+            <div class="lb-main">
+              <div class="lb-name">Mira</div>
+              <div class="lb-sub">9 Tops · 4 Flashes</div>
+            </div>
+            <span class="lb-points">68</span>
+          </li>
+          <li class="lb-row me">
+            <span class="rank g2">2</span>
+            <div class="lb-main">
+              <div class="lb-name">Tinu <span class="badge-du">du</span></div>
+              <div class="lb-sub">8 Tops · 3 Flashes</div>
+            </div>
+            <span class="lb-points">61</span>
+          </li>
+          <li class="lb-row">
+            <span class="rank g3">3</span>
+            <div class="lb-main">
+              <div class="lb-name">Jonas</div>
+              <div class="lb-sub">6 Tops · 2 Flashes</div>
+            </div>
+            <span class="lb-points">47</span>
+          </li>
+          <li class="lb-row">
+            <span class="rank gx">4</span>
+            <div class="lb-main">
+              <div class="lb-name">Lea</div>
+              <div class="lb-sub">4 Tops · 1 Flash</div>
+            </div>
+            <span class="lb-points">29</span>
+          </li>
+        </ol>
+      </div>
+
+      <!-- Boulder-Section-Kopf -->
+      <div class="sec-head">
+        <h2 class="section-label">Boulder (3)</h2>
+        <button class="add-btn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
+          Hinzufügen
+        </button>
+      </div>
+
+      <!-- ════════ FILTER (Ist-Zustand): Suchfeld + Toggle-Chip ════════ -->
+      <div class="filter">
+        <input class="input" type="search" placeholder="Suchen (Grad oder Farbe) …" />
+        <button class="chip-toggle" aria-pressed="false">Erledigte ausblenden</button>
+      </div>
+
+      <!-- Boulder-Cards -->
+      <div class="boulders">
+        <!-- Card 1: offen -->
+        <div class="b-card">
+          <div class="b-head">
+            <span class="b-num">3</span>
+            <div class="b-info">
+              <div class="b-grade">Grad 4</div>
+              <div class="b-color"><span class="dot" style="background:#E5484D"></span>rot</div>
+            </div>
+            <span class="b-tops">2 Tops</span>
+          </div>
+          <div class="res">
+            <button class="res-opt">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" /></svg>
+              Flash
+            </button>
+            <button class="res-opt">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7" /></svg>
+              Top
+            </button>
+            <button class="res-opt">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+              Nicht
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 2: Top aktiv -->
+        <div class="b-card">
+          <div class="b-head">
+            <span class="b-num">7</span>
+            <div class="b-info">
+              <div class="b-grade">Grad 4</div>
+              <div class="b-color"><span class="dot" style="background:#F97316"></span>orange</div>
+            </div>
+            <span class="b-tops">3 Tops</span>
+          </div>
+          <div class="res">
+            <button class="res-opt">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" /></svg>
+              Flash
+            </button>
+            <button class="res-opt top-on">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7" /></svg>
+              Top
+            </button>
+            <button class="res-opt">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+              Nicht
+            </button>
+          </div>
+          <div class="res-points">Punkte: <b class="pos">8</b></div>
+        </div>
+
+        <!-- Card 3: offen -->
+        <div class="b-card">
+          <div class="b-head">
+            <span class="b-num">11</span>
+            <div class="b-info">
+              <div class="b-grade">Grad 4</div>
+              <div class="b-color"><span class="dot" style="background:#A855F7"></span>lila</div>
+            </div>
+          </div>
+          <div class="res">
+            <button class="res-opt">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" /></svg>
+              Flash
+            </button>
+            <button class="res-opt">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7" /></svg>
+              Top
+            </button>
+            <button class="res-opt">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+              Nicht
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add-Boulder -->
+      <button class="add-dashed">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
+        Boulder hinzufügen
+      </button>
+    </main>
+  </body>
+</html>

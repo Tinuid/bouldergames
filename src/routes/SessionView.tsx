@@ -14,7 +14,8 @@ import {
 } from '../lib/api'
 import { deleteBoulderImage, uploadBoulderImage } from '../lib/images'
 import { forgetSession, rememberSession } from '../lib/localHistory'
-import { difficultyLabel } from '../lib/difficulty'
+import { DIFFICULTIES } from '../lib/difficulty'
+import { BOULDER_COLORS, colorSwatch } from '../lib/colors'
 import {
   scoringFromSession,
   type Boulder,
@@ -51,7 +52,8 @@ export default function SessionView() {
   const closeMenu = useCallback(() => setMenuOpen(false), [])
   // Escape schließt das Menü-Sheet, Body-Scroll sperren – nur solange offen.
   useDialogEscape(closeMenu, menuOpen)
-  const [query, setQuery] = useState('')
+  const [filterDifficulty, setFilterDifficulty] = useState<number | null>(null)
+  const [filterColor, setFilterColor] = useState<string | null>(null)
   const [hideDone, setHideDone] = useState(false)
   const [viewedPlayer, setViewedPlayer] = useState<Participant | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -95,22 +97,53 @@ export default function SessionView() {
     return { byBoulder, mine }
   }, [results, myParticipant])
 
-  // Sichtbare Boulder nach Suche (Grad oder Farbe) und Filter "erledigte ausblenden".
+  // Nur die Grade/Farben als Filter-Optionen anbieten, die in der Session vorkommen –
+  // in der Reihenfolge der zentralen Quellen (difficulty.ts / colors.ts).
+  const availableDifficulties = useMemo(() => {
+    const present = new Set(
+      boulders.map((b) => b.difficulty).filter((d): d is number => d != null),
+    )
+    return DIFFICULTIES.filter((d) => present.has(d.code))
+  }, [boulders])
+  const availableColors = useMemo(() => {
+    const present = new Set(
+      boulders.map((b) => b.color).filter((c): c is string => c != null),
+    )
+    return BOULDER_COLORS.filter((c) => present.has(c.name))
+  }, [boulders])
+
+  // Aktiven Filter zurücksetzen, sobald seine Option nicht mehr vorkommt
+  // (Boulder gelöscht/umgestuft) – verhindert eine leere Liste ohne sichtbaren Grund.
+  useEffect(() => {
+    if (filterDifficulty != null && !availableDifficulties.some((d) => d.code === filterDifficulty)) {
+      setFilterDifficulty(null)
+    }
+  }, [filterDifficulty, availableDifficulties])
+  useEffect(() => {
+    if (filterColor != null && !availableColors.some((c) => c.name === filterColor)) {
+      setFilterColor(null)
+    }
+  }, [filterColor, availableColors])
+
+  // Sichtbare Boulder nach Grad-/Farb-Auswahl und Filter "erledigte ausblenden".
   // "Erledigt" = eigenes Ergebnis ist flash/top (ein Fail gilt nicht als erledigt).
   const visibleBoulders = useMemo(() => {
-    const q = query.trim().toLowerCase()
     return boulders.filter((b) => {
       if (hideDone) {
         const status = mine.get(b.id)?.status
         if (status === 'flash' || status === 'top') return false
       }
-      if (!q) return true
-      const grade = difficultyLabel(b.difficulty)?.toLowerCase() ?? ''
-      const color = b.color?.toLowerCase() ?? ''
-      return grade.includes(q) || color.includes(q)
+      if (filterDifficulty != null && b.difficulty !== filterDifficulty) return false
+      if (filterColor != null && b.color !== filterColor) return false
+      return true
     })
-  }, [boulders, query, hideDone, mine])
-  const filtering = query.trim() !== '' || hideDone
+  }, [boulders, filterDifficulty, filterColor, hideDone, mine])
+  const filtering = filterDifficulty != null || filterColor != null || hideDone
+  const resetFilters = useCallback(() => {
+    setFilterDifficulty(null)
+    setFilterColor(null)
+    setHideDone(false)
+  }, [])
 
   if (loading) {
     return <div className="flex min-h-full items-center justify-center text-muted">Lädt …</div>
@@ -359,14 +392,87 @@ export default function SessionView() {
         </div>
 
         {boulders.length > 0 && (
-          <div className="flex flex-col gap-2.5">
-            <input
-              className="input"
-              placeholder="Suchen (Grad oder Farbe) …"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              inputMode="search"
-            />
+          <div className="flex flex-col gap-3">
+            {availableDifficulties.length > 0 && (
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="font-display text-[13px] font-semibold text-muted">Grad</span>
+                  {filtering && (
+                    <button
+                      type="button"
+                      className="text-[13px] font-semibold text-accent"
+                      onClick={resetFilters}
+                    >
+                      Zurücksetzen
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {availableDifficulties.map((d) => {
+                    const selected = filterDifficulty === d.code
+                    return (
+                      <button
+                        key={d.code}
+                        type="button"
+                        onClick={() => setFilterDifficulty(selected ? null : d.code)}
+                        aria-pressed={selected}
+                        aria-label={
+                          d.label === '?' || d.label === '!'
+                            ? `Schwierigkeit ${d.label}`
+                            : `Grad ${d.label}`
+                        }
+                        className={`flex h-[30px] w-[30px] items-center justify-center rounded-lg border font-num text-[14px] font-bold transition active:scale-90 ${
+                          selected
+                            ? 'border-accent bg-accent text-accent-ink'
+                            : 'border-border-strong bg-surface-2 text-ink'
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {availableColors.length > 0 && (
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="font-display text-[13px] font-semibold text-muted">Farbe</span>
+                  {filtering && availableDifficulties.length === 0 && (
+                    <button
+                      type="button"
+                      className="text-[13px] font-semibold text-accent"
+                      onClick={resetFilters}
+                    >
+                      Zurücksetzen
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {availableColors.map((c) => {
+                    const selected = filterColor === c.name
+                    return (
+                      <button
+                        key={c.name}
+                        type="button"
+                        onClick={() => setFilterColor(selected ? null : c.name)}
+                        title={c.name}
+                        aria-label={c.name}
+                        aria-pressed={selected}
+                        className={`h-6 w-6 rounded-full transition active:scale-90 ${
+                          selected
+                            ? 'scale-110 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.14),0_0_0_2px_var(--surface),0_0_0_4px_var(--accent)]'
+                            : 'shadow-[inset_0_0_0_1px_rgba(0,0,0,0.14)]'
+                        }`}
+                        style={{ background: colorSwatch(c.name) }}
+                      />
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             <button
               type="button"
               className={`chip flex-row items-center justify-center gap-2 py-2.5 text-[13px] font-semibold ${hideDone ? 'is-active' : ''}`}
