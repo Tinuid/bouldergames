@@ -56,6 +56,7 @@ export default function SessionView() {
   const [filterColor, setFilterColor] = useState<string | null>(null)
   const [hideDone, setHideDone] = useState(false)
   const [viewedPlayer, setViewedPlayer] = useState<Participant | null>(null)
+  const [highlightBoulderId, setHighlightBoulderId] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
 
   // Fehler-Toast nach kurzer Zeit automatisch ausblenden.
@@ -144,6 +145,33 @@ export default function SessionView() {
     setFilterColor(null)
     setHideDone(false)
   }, [])
+
+  // Aus der Spieler-Detailansicht zu einem Boulder springen: Detail schließen, Filter
+  // zurücksetzen (sonst ist der Boulder evtl. ausgeblendet und nicht im DOM), dann markieren.
+  const goToBoulder = useCallback(
+    (boulderId: string) => {
+      resetFilters()
+      setViewedPlayer(null)
+      setHighlightBoulderId(boulderId)
+    },
+    [resetFilters],
+  )
+
+  // Nach dem Anspringen zum Boulder scrollen und das Aufleuchten nach der Animation wieder
+  // zurücknehmen (damit die animate-bump-Klasse beim nächsten Mal erneut auslösen kann).
+  useEffect(() => {
+    if (!highlightBoulderId) return
+    const raf = requestAnimationFrame(() => {
+      document
+        .getElementById(`boulder-card-${highlightBoulderId}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+    const t = setTimeout(() => setHighlightBoulderId(null), 700)
+    return () => {
+      cancelAnimationFrame(raf)
+      clearTimeout(t)
+    }
+  }, [highlightBoulderId])
 
   if (loading) {
     return <div className="flex min-h-full items-center justify-center text-muted">Lädt …</div>
@@ -497,6 +525,7 @@ export default function SessionView() {
                 handleSaveResult(b.id, status, attempts, b.difficulty)
               }
               onEdit={() => openEditBoulder(b)}
+              highlight={b.id === highlightBoulderId}
             />
           )
         })}
@@ -557,6 +586,7 @@ export default function SessionView() {
           boulders={boulders}
           results={results}
           onClose={() => setViewedPlayer(null)}
+          onSelectBoulder={goToBoulder}
         />
       )}
 

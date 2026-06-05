@@ -14,6 +14,7 @@ export default function BoulderCard({
   scoring,
   onSaveResult,
   onEdit,
+  highlight,
 }: {
   boulder: Boulder
   myResult: Result | undefined
@@ -23,6 +24,8 @@ export default function BoulderCard({
   // Öffnet den Bearbeiten-Dialog. Jeder Teilnehmer darf Boulder bearbeiten (RLS, Migration 0009),
   // daher reicht SessionView dies stets durch.
   onEdit?: () => void
+  // Lässt die Karte einmal kurz aufleuchten (z.B. nach dem Anspringen aus der Spieler-Detailansicht).
+  highlight?: boolean
 }) {
   const tops = allResults.filter((r) => r.status === 'top' || r.status === 'flash').length
   const dot = colorSwatch(boulder.color)
@@ -30,7 +33,10 @@ export default function BoulderCard({
   const [lightboxOpen, setLightboxOpen] = useState(false)
 
   return (
-    <div className="card !px-[15px] !pb-[13px] !pt-[15px]">
+    <div
+      id={`boulder-card-${boulder.id}`}
+      className={`card scroll-mt-20 !px-[15px] !pb-[13px] !pt-[15px] ${highlight ? 'animate-bump' : ''}`}
+    >
       <div className="mb-[13px] flex items-center gap-[13px]">
         {imageUrl && (
           <button

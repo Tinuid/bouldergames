@@ -92,12 +92,15 @@ export default function PlayerDetail({
   boulders,
   results,
   onClose,
+  onSelectBoulder,
 }: {
   participant: Participant
   meParticipant: Participant | null
   boulders: Boulder[]
   results: Result[]
   onClose: () => void
+  // Klick auf eine Boulder-Zeile: meldet den Boulder; der Aufrufer schließt und springt hin.
+  onSelectBoulder?: (boulderId: string) => void
 }) {
   // Escape schließt, Body-Scroll währenddessen sperren (wie ImageLightbox).
   useDialogEscape(onClose)
@@ -182,9 +185,13 @@ export default function PlayerDetail({
               const theirWins = tp != null && (mp == null || tp > mp)
               const iWin = mp != null && (tp == null || mp > tp)
               return (
-                <div
+                <button
                   key={b.id}
-                  className="card grid grid-cols-[1fr_auto_auto] items-center gap-2 !px-3 !py-2.5"
+                  type="button"
+                  disabled={!onSelectBoulder}
+                  onClick={() => onSelectBoulder?.(b.id)}
+                  aria-label={`Zu Boulder ${b.seq} springen`}
+                  className="card grid w-full grid-cols-[1fr_auto_auto] items-center gap-2 !px-3 !py-2.5 text-left transition enabled:hover:bg-surface-2"
                 >
                   <BoulderTag boulder={b} />
                   <div className="w-[88px]">
@@ -193,7 +200,7 @@ export default function PlayerDetail({
                   <div className="w-[88px]">
                     <ResultCell result={mine} highlight={iWin} />
                   </div>
-                </div>
+                </button>
               )
             })}
             {/* Summen-Zeile */}
@@ -223,7 +230,14 @@ export default function PlayerDetail({
             {playedBoulders.map((b) => {
               const r = theirByBoulder.get(b.id)!
               return (
-                <div key={b.id} className="card flex items-center gap-3 !px-3 !py-2.5">
+                <button
+                  key={b.id}
+                  type="button"
+                  disabled={!onSelectBoulder}
+                  onClick={() => onSelectBoulder?.(b.id)}
+                  aria-label={`Zu Boulder ${b.seq} springen`}
+                  className="card flex w-full items-center gap-3 !px-3 !py-2.5 text-left transition enabled:hover:bg-surface-2"
+                >
                   <div className="min-w-0 flex-1">
                     <BoulderTag boulder={b} />
                   </div>
@@ -236,7 +250,7 @@ export default function PlayerDetail({
                   <span className="w-[44px] text-right font-num text-[20px] font-bold tabular-nums">
                     {r.points}
                   </span>
-                </div>
+                </button>
               )
             })}
             {playedBoulders.length === 0 && (
