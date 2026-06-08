@@ -76,6 +76,11 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
     (auskommentiertes `insert … crypt('…', gen_salt('bf'))` im File, Passwort ersetzen). Ohne
     gesetztes Passwort ist Löschen gesperrt. Idempotent. In der App wird das Passwort beim ersten
     Löschen abgefragt und nur **im Speicher** der Sitzung gemerkt (nicht im `localStorage`).
+12. `supabase/migrations/0011_shared_scoring.sql` ausführen (legt die `sessions.shared_scoring`-
+    Spalte an: Default `false`; sowie die `security definer`-RPC `can_score_others(sess)` und
+    erweitert die `results_insert`/`results_update`-Policies um `or can_score_others(session_id)`,
+    damit bei aktivierter Option **jeder Teilnehmer** Ergebnisse für **alle** Mitspieler schreiben
+    darf). Idempotent.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.
@@ -153,6 +158,21 @@ ein neues Foto wird hochgeladen und das alte best-effort via `deleteBoulderImage
 Multiplikator-Modus hängen die Punkte am Grad – die Neuberechnung **aller** Ergebnisse (auch
 fremder) übernimmt der DB-Trigger aus `0004` serverseitig, weil die `results_update`-RLS einem
 Nicht-Host das Schreiben fremder Ergebnisse verbietet.
+
+**Ergebnisse für andere eintragen (optional).** Pro Session beim Erstellen wählbar
+(`sessions.shared_scoring`, Toggle in `CreateSession`). Ist es aus (Default), trägt jeder nur
+eigene Ergebnisse ein – `BoulderCard` zeigt dann unverändert nur den eigenen `ResultEditor`. Ist
+es an, darf **jeder Teilnehmer** Ergebnisse für **alle** Mitspieler schreiben; serverseitig
+erzwingt das die RLS-Funktion `can_score_others(sess)` (Mitglied **und** `shared_scoring=true`),
+um die `results_insert`/`results_update`-Policies erweitert (Migration `0011`). Im UI rendert
+`BoulderCard` unter der eigenen Zeile je eine **kompakte** `ResultEditor`-Zeile pro weiterem
+Teilnehmer (`compact`/`label`-Props: Name links, Icon-Buttons rechts). Sichtbar nur, wenn der
+gerätelokale Toggle **„Andere ausblenden"** abgewählt ist – dieser ist pro Session in
+`localStorage` (`bg:hideOthers:<sessionId>`) gemerkt und **standardmäßig an**, damit wer nur für
+sich einträgt die aufgeräumte Standardansicht behält. `upsertResult` nimmt die `participantId`
+bereits entgegen; `handleSaveResult` in `SessionView` reicht sie nur durch. Bewusst **keine
+Gäste** (Teilnehmer ohne Gerät) – ein später doch beitretender Gast würde eine doppelte Identität
+erzeugen.
 
 **Realtime per Re-Fetch.** `src/hooks/useRealtimeSession.ts` lädt eine komplette Session
 (Stammdaten + Teilnehmer + Boulder + Ergebnisse) und abonniert `postgres_changes` für

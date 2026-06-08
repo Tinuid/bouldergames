@@ -50,6 +50,8 @@ export async function createSession(params: {
   hostId: string
   hostName: string
   scoring: ScoringConfig
+  // true: jeder Teilnehmer darf Ergebnisse für alle Mitspieler eintragen (siehe Migration 0011).
+  sharedScoring?: boolean
 }): Promise<Session> {
   // Bis zu wenige Versuche, falls ein Code zufällig schon vergeben ist.
   let lastError: unknown = null
@@ -66,6 +68,7 @@ export async function createSession(params: {
         top_points: params.scoring.topPoints,
         attempt_cost: params.scoring.attemptCost,
         penalty_mode: params.scoring.penaltyMode,
+        shared_scoring: params.sharedScoring ?? false,
       })
       .select()
       .single<Session>()

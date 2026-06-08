@@ -71,6 +71,28 @@ export default function SessionView() {
     [participants, userId],
   )
 
+  // Teilnehmer für die Pro-Spieler-Eingabe: ich zuerst, dann die übrigen (Beitritts-Reihenfolge).
+  const orderedParticipants = useMemo(() => {
+    if (!myParticipant) return participants
+    return [myParticipant, ...participants.filter((p) => p.id !== myParticipant.id)]
+  }, [participants, myParticipant])
+
+  // "andere ausblenden" – gerätelokaler Toggle pro Session (Default an = aufgeräumte Ansicht,
+  // identisch zum Verhalten ohne shared_scoring). Wer für andere einträgt, blendet sie ein.
+  const [hideOthers, setHideOthers] = useState(true)
+  useEffect(() => {
+    if (!sessionId) return
+    const v = localStorage.getItem(`bg:hideOthers:${sessionId}`)
+    if (v != null) setHideOthers(v === '1')
+  }, [sessionId])
+  const toggleHideOthers = useCallback(() => {
+    setHideOthers((v) => {
+      const next = !v
+      if (sessionId) localStorage.setItem(`bg:hideOthers:${sessionId}`, next ? '1' : '0')
+      return next
+    })
+  }, [sessionId])
+
   // Session im gerätelokalen Verlauf merken, sobald sie geladen ist.
   useEffect(() => {
     if (session && myParticipant) {
@@ -83,19 +105,27 @@ export default function SessionView() {
     }
   }, [session, myParticipant])
 
-  // Index: boulderId -> Results, und (boulderId+participantId) -> Result
-  const { byBoulder, mine } = useMemo(() => {
+  // Index: boulderId -> Results, (boulderId+participantId) -> Result für mich, und
+  // boulderId -> (participantId -> Result) für die Pro-Spieler-Eingabe (shared_scoring).
+  const { byBoulder, mine, byBoulderParticipant } = useMemo(() => {
     const byBoulder = new Map<string, typeof results>()
     const mine = new Map<string, (typeof results)[number]>()
+    const byBoulderParticipant = new Map<string, Map<string, (typeof results)[number]>>()
     for (const r of results) {
       const arr = byBoulder.get(r.boulder_id) ?? []
       arr.push(r)
       byBoulder.set(r.boulder_id, arr)
+      let perP = byBoulderParticipant.get(r.boulder_id)
+      if (!perP) {
+        perP = new Map()
+        byBoulderParticipant.set(r.boulder_id, perP)
+      }
+      perP.set(r.participant_id, r)
       if (myParticipant && r.participant_id === myParticipant.id) {
         mine.set(r.boulder_id, r)
       }
     }
-    return { byBoulder, mine }
+    return { byBoulder, mine, byBoulderParticipant }
   }, [results, myParticipant])
 
   // Nur die Grade/Farben als Filter-Optionen anbieten, die in der Session vorkommen –
@@ -192,6 +222,8 @@ export default function SessionView() {
 
   if (!session) return null
   const scoring = scoringFromSession(session)
+  const sharedScoring = session.shared_scoring
+  const showOthers = sharedScoring && !hideOthers
 
   // Noch nicht beigetreten (z.B. über geteilten Link geöffnet) -> Name abfragen.
   if (!myParticipant) {
@@ -230,6 +262,7 @@ export default function SessionView() {
 
   async function handleSaveResult(
     boulderId: string,
+    participantId: string,
     status: ResultStatus,
     attempts: number,
     difficulty: number | null,
@@ -239,7 +272,7 @@ export default function SessionView() {
       await upsertResult({
         sessionId: session!.id,
         boulderId,
-        participantId: myParticipant.id,
+        participantId,
         status,
         attempts,
         scoring,
@@ -511,6 +544,18 @@ export default function SessionView() {
               {hideDone && <Check className="text-[15px]" />}
               Erledigte ausblenden
             </button>
+
+            {sharedScoring && (
+              <button
+                type="button"
+                className={`chip flex-row items-center justify-center gap-2 py-2.5 text-[13px] font-semibold ${hideOthers ? 'is-active' : ''}`}
+                onClick={toggleHideOthers}
+                aria-pressed={hideOthers}
+              >
+                {hideOthers && <Check className="text-[15px]" />}
+                Andere ausblenden
+              </button>
+            )}
           </div>
         )}
 
@@ -523,10 +568,17 @@ export default function SessionView() {
               allResults={byBoulder.get(b.id) ?? []}
               scoring={scoring}
               onSaveResult={(status, attempts) =>
-                handleSaveResult(b.id, status, attempts, b.difficulty)
+                handleSaveResult(b.id, myParticipant.id, status, attempts, b.difficulty)
               }
               onEdit={() => openEditBoulder(b)}
               highlight={b.id === highlightBoulderId}
+              participants={orderedParticipants}
+              resultsByParticipant={byBoulderParticipant.get(b.id)}
+              myParticipantId={myParticipant.id}
+              showOthers={showOthers}
+              onSaveResultFor={(participantId, status, attempts) =>
+                handleSaveResult(b.id, participantId, status, attempts, b.difficulty)
+              }
             />
           )
         })}

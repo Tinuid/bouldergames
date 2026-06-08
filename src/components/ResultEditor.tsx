@@ -25,12 +25,18 @@ export default function ResultEditor({
   scoring,
   difficulty = null,
   onSave,
+  label,
+  compact = false,
 }: {
   result: Result | undefined
   scoring: ScoringConfig
   // Schwierigkeitsgrad des Boulders – im Multiplikator-Modus der Punkte-Faktor.
   difficulty?: number | null
   onSave: (status: ResultStatus, attempts: number) => void
+  // Kompakte Variante für Fremd-Zeilen (Ergebnis für andere eintragen): Name links,
+  // platzsparende Icon-Buttons rechts, ohne Punkte-Vorschau.
+  label?: string
+  compact?: boolean
 }) {
   const [status, setStatus] = useState<ResultStatus>(result?.status ?? 'open')
   const [attempts, setAttempts] = useState<number>(result?.attempts ?? 1)
@@ -68,6 +74,59 @@ export default function ResultEditor({
   const misses = status === 'top' ? attempts - 1 : attempts
   // Untergrenze für attempts je Status (Top braucht mind. 1 Fehlversuch).
   const minAttempts = status === 'top' ? 2 : 1
+
+  if (compact) {
+    return (
+      <div className="flex flex-col gap-2 border-t border-border py-2.5">
+        <div className="flex items-center gap-2">
+          <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{label}</span>
+          <div className="flex gap-1.5">
+            {OPTIONS.map((o) => {
+              const active = status === o.status
+              return (
+                <button
+                  key={o.status}
+                  onClick={() => selectStatus(o.status)}
+                  aria-label={o.label}
+                  title={o.label}
+                  aria-pressed={active}
+                  className={`flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border text-[16px] transition ${
+                    active ? o.activeCls : 'border-border-strong bg-surface-2 text-ink'
+                  }`}
+                >
+                  {o.icon}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {showStepper && (
+          <div className="flex items-center justify-end gap-1.5">
+            <span className="mr-1 text-[12.5px] text-muted">Fehlversuche</span>
+            <button
+              className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] border border-border-strong bg-surface-2 text-ink transition hover:border-accent hover:text-accent disabled:opacity-35 disabled:hover:border-border-strong disabled:hover:text-ink"
+              onClick={() => apply(status, Math.max(minAttempts, attempts - 1))}
+              disabled={misses <= 0}
+              aria-label="Weniger Fehlversuche"
+            >
+              <Minus className="text-[15px]" />
+            </button>
+            <span className="min-w-[22px] text-center font-num text-[15px] font-bold tabular-nums">
+              {misses}
+            </span>
+            <button
+              className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] border border-border-strong bg-surface-2 text-ink transition hover:border-accent hover:text-accent"
+              onClick={() => apply(status, attempts + 1)}
+              aria-label="Mehr Fehlversuche"
+            >
+              <Plus className="text-[15px]" />
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col">

@@ -41,6 +41,9 @@ export interface Session {
   top_points: number
   attempt_cost: number
   penalty_mode: PenaltyMode
+  // true: jeder Teilnehmer darf Ergebnisse für ALLE Mitspieler eintragen/ändern
+  // (RLS-Funktion can_score_others, Migration 0011). Default false.
+  shared_scoring: boolean
   status: 'active' | 'archived'
   created_at: string
 }

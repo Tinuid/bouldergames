@@ -4,7 +4,7 @@ import ImageLightbox from './ImageLightbox'
 import { boulderImageUrl } from '../lib/images'
 import { colorSwatch } from '../lib/colors'
 import { difficultyLabel } from '../lib/difficulty'
-import type { Boulder, Result, ResultStatus, ScoringConfig } from '../types'
+import type { Boulder, Participant, Result, ResultStatus, ScoringConfig } from '../types'
 import { Edit } from './icons'
 
 export default function BoulderCard({
@@ -15,6 +15,11 @@ export default function BoulderCard({
   onSaveResult,
   onEdit,
   highlight,
+  participants,
+  resultsByParticipant,
+  myParticipantId,
+  showOthers = false,
+  onSaveResultFor,
 }: {
   boulder: Boulder
   myResult: Result | undefined
@@ -26,6 +31,14 @@ export default function BoulderCard({
   onEdit?: () => void
   // Lässt die Karte einmal kurz aufleuchten (z.B. nach dem Anspringen aus der Spieler-Detailansicht).
   highlight?: boolean
+  // Für andere eintragen (shared_scoring, Migration 0011): alle Teilnehmer (sortiert, ich zuerst),
+  // deren Ergebnisse für diesen Boulder und der Speicher-Callback je Teilnehmer. showOthers steuert,
+  // ob die Fremd-Zeilen sichtbar sind (gerätelokaler "andere ausblenden"-Toggle in SessionView).
+  participants?: Participant[]
+  resultsByParticipant?: Map<string, Result>
+  myParticipantId?: string
+  showOthers?: boolean
+  onSaveResultFor?: (participantId: string, status: ResultStatus, attempts: number) => void
 }) {
   const tops = allResults.filter((r) => r.status === 'top' || r.status === 'flash').length
   const dot = colorSwatch(boulder.color)
@@ -91,6 +104,22 @@ export default function BoulderCard({
         difficulty={boulder.difficulty}
         onSave={onSaveResult}
       />
+
+      {showOthers &&
+        onSaveResultFor &&
+        participants
+          ?.filter((p) => p.id !== myParticipantId)
+          .map((p) => (
+            <ResultEditor
+              key={p.id}
+              compact
+              label={p.display_name}
+              result={resultsByParticipant?.get(p.id)}
+              scoring={scoring}
+              difficulty={boulder.difficulty}
+              onSave={(status, attempts) => onSaveResultFor(p.id, status, attempts)}
+            />
+          ))}
 
       {imageUrl && lightboxOpen && (
         <ImageLightbox src={imageUrl} onClose={() => setLightboxOpen(false)} />

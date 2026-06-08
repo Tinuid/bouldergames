@@ -40,6 +40,7 @@ export default function CreateSession() {
   const [top, setTop] = useState(DEFAULT_SCORING.topPoints)
   const [cost, setCost] = useState(DEFAULT_SCORING.attemptCost)
   const [penaltyMode, setPenaltyMode] = useState<PenaltyMode>(DEFAULT_SCORING.penaltyMode)
+  const [sharedScoring, setSharedScoring] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -72,6 +73,7 @@ export default function CreateSession() {
         hostId: userId,
         hostName,
         scoring: { mode, flashPoints: flash, topPoints: top, attemptCost: cost, penaltyMode },
+        sharedScoring,
       })
       rememberSession({
         sessionId: session.id,
@@ -219,6 +221,23 @@ export default function CreateSession() {
             <b className="text-ink">{exTop1}</b> · Top, 8 Fehlversuche ={' '}
             <b className="text-ink">{exTopMany}</b> · 3× nicht geschafft ={' '}
             <b className="text-ink">{exFail}</b>.
+          </p>
+        </div>
+
+        <div className="panel mb-[18px]">
+          <div className="panel-title mb-3.5">Eintragen</div>
+          <button
+            type="button"
+            aria-pressed={sharedScoring}
+            onClick={() => setSharedScoring((v) => !v)}
+            className={`chip w-full flex-row items-center justify-center gap-2 py-2.5 text-[13px] font-semibold${sharedScoring ? ' is-active' : ''}`}
+          >
+            {sharedScoring && <Check className="text-[15px]" />}
+            Für andere eintragen erlauben
+          </button>
+          <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
+            Jeder Teilnehmer darf Ergebnisse für alle Mitspieler eintragen – praktisch, wenn einer
+            mit dem Handy für die Gruppe mitschreibt. Ohne Haken trägt jeder nur für sich selbst ein.
           </p>
         </div>
 
