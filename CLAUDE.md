@@ -81,6 +81,16 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
     erweitert die `results_insert`/`results_update`-Policies um `or can_score_others(session_id)`,
     damit bei aktivierter Option **jeder Teilnehmer** Ergebnisse für **alle** Mitspieler schreiben
     darf). Idempotent.
+13. `supabase/migrations/0012_session_cleanup.sql` ausführen (legt die `security definer`-RPC
+    `cleanup_stale_sessions()` an, die verwaiste Sessions löscht und die `image_path`s der
+    gelöschten Boulder zurückgibt; nur für `service_role` ausführbar). Idempotent. **Danach** die
+    Edge Function `cleanup-stale-sessions` deployen und schedulen – siehe Schritt 14.
+14. Edge Function fürs Aufräumen deployen (erstmaliges Edge-Function-Setup im Projekt, braucht die
+    Supabase CLI): `supabase functions deploy cleanup-stale-sessions --no-verify-jwt`, dann das
+    Schutz-Secret setzen: `supabase secrets set CLEANUP_SECRET=<langer-zufallswert>`. Zuletzt einen
+    täglichen Cron einrichten (Supabase Dashboard → Integrations → Cron, oder `pg_cron` + `pg_net`),
+    der die Function-URL mit Header `Authorization: Bearer <CLEANUP_SECRET>` aufruft, z.B. 03:00.
+    Ohne gesetztes `CLEANUP_SECRET` (bzw. ohne passenden Header) antwortet die Function mit 401.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.
@@ -181,6 +191,18 @@ komplett neu geladen (bewusst einfach gehalten; ausreichend für Gruppengrößen
 zusätzlich `refresh()` für sofortiges Feedback. Realtime ist in der Migration über
 `alter publication supabase_realtime` + `replica identity full` aktiviert.
 
+**Automatisches Aufräumen verwaister Sessions.** Da ohne Accounts nichts je gelöscht wird, räumt ein
+nächtlicher Cron alte Sessions weg. Die Logik steckt in der `security definer`-RPC
+`cleanup_stale_sessions()` (Migration `0012`): sie löscht alle Sessions, auf die **eines** der
+Kriterien zutrifft – inaktiv > 14 Tage (jüngste Aktivität über `results`/`boulders`/`participants`),
+leer (keine Teilnehmer, mit 1h Grace-Period) oder älter als 6 Wochen – und gibt die `image_path`s der
+gelöschten Boulder zurück. Der `on delete cascade` räumt `participants`/`boulders`/`results` mit, **nicht**
+aber den Storage-Bucket – darum entfernt die Edge Function `supabase/functions/cleanup-stale-sessions`
+die zurückgegebenen Fotos batchweise aus `boulder-images`. Pfade-Sammeln und Löschen laufen in **einer**
+Transaktion in der RPC (kein Race). Die Function läuft mit `service_role` (umgeht RLS) und ist über das
+Secret `CLEANUP_SECRET` (Bearer-Header) geschützt; deployt mit `--no-verify-jwt`, getriggert per Cron
+(Setup-Schritte 13/14 oben). **Nicht** abgedeckt: verwaiste anonyme `auth.users` wachsen weiter.
+
 **Verlauf gerätelokal.** Ohne Accounts merkt sich `src/lib/localHistory.ts` besuchte Sessions in
 `localStorage` (für die "Zuletzt gespielt"-Liste auf `Home`).
 
@@ -220,4 +242,5 @@ Keine DELETE-Policy für `results` (einzelne Ergebnisse löschen fehlt); Archivi
 (`status='archived'`) ist im UI nicht umgesetzt – nur hartes Löschen durch jeden Teilnehmer
 (`sessions_delete` via `is_session_member`, Cascade); Host-Korrektur fremder Ergebnisse ist per RLS erlaubt, aber im UI
 nicht umgesetzt; keine Pro-Boulder-Detailansicht ("wer hat was"), keine Challenge-Modi, keine
-Offline-Eingabe mit Sync.
+Offline-Eingabe mit Sync. Kein Aufräumen verwaister anonymer `auth.users` (die wachsen monoton; das
+Session-Cleanup aus `0012` löscht sie **nicht** mit).
