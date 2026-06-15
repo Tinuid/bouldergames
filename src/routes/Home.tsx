@@ -1,61 +1,18 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getHistory, forgetSession, type HistoryEntry } from '../lib/localHistory'
-import { listSessions, type SessionSummary } from '../lib/api'
-import { supabase } from '../lib/supabase'
 import BrandMark from '../components/BrandMark'
 import VersionBadge from '../components/VersionBadge'
 import FeedbackDialog from '../components/FeedbackDialog'
-import { ChevronRight, Picture, Plus, Share, Users, X } from '../components/icons'
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('de-DE', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
-}
+import { Picture, Plus, Share, Users, X } from '../components/icons'
 
 export default function Home() {
   const [history, setHistory] = useState<HistoryEntry[]>([])
-  const [sessions, setSessions] = useState<SessionSummary[]>([])
-  const [sessionsLoading, setSessionsLoading] = useState(true)
-  const [sessionsError, setSessionsError] = useState<string | null>(null)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
     setHistory(getHistory())
-  }, [])
-
-  // Übersicht aller aktiven Challenges – einmal laden und bei Änderungen an der
-  // sessions-Tabelle neu laden (gleiches Re-Fetch-Muster wie useRealtimeSession).
-  useEffect(() => {
-    let active = true
-    async function load() {
-      try {
-        const data = await listSessions()
-        if (active) {
-          setSessions(data)
-          setSessionsError(null)
-        }
-      } catch (err) {
-        if (active) setSessionsError(err instanceof Error ? err.message : 'Laden fehlgeschlagen.')
-      } finally {
-        if (active) setSessionsLoading(false)
-      }
-    }
-    load()
-
-    const channel = supabase
-      .channel('lobby-sessions')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, () => load())
-      .subscribe()
-
-    return () => {
-      active = false
-      supabase.removeChannel(channel)
-    }
   }, [])
 
   function remove(id: string) {
@@ -117,42 +74,6 @@ export default function Home() {
           </ul>
         </section>
       )}
-
-      <section>
-        <h2 className="section-label mb-2.5 px-0.5">Alle Challenges</h2>
-
-        {sessionsLoading && <p className="text-sm text-muted">Lädt …</p>}
-
-        {sessionsError && <p className="text-sm text-bad">{sessionsError}</p>}
-
-        {!sessionsLoading && !sessionsError && sessions.length === 0 && (
-          <p className="text-sm text-muted">Noch keine Challenges. Erstelle die erste!</p>
-        )}
-
-        <ul className="flex flex-col gap-2.5">
-          {sessions.map((s) => (
-            <li key={s.id} className="card !p-4">
-              <button
-                className="flex w-full items-center justify-between gap-3 text-left"
-                onClick={() => navigate(`/s/${s.id}`)}
-              >
-                <div className="min-w-0">
-                  <div className="truncate font-display text-[17px] font-bold tracking-[-0.01em]">
-                    {s.name}
-                  </div>
-                  <div className="mt-0.5 text-[13px] text-muted">
-                    Code {s.join_code} · {formatDate(s.created_at)}
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-1.5">
-                  <span className="text-[13px] text-muted">{s.participantCount} Spieler</span>
-                  <ChevronRight className="text-[17px] text-faint" />
-                </div>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
 
       <footer className="mt-auto pt-4">
         <VersionBadge />

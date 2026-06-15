@@ -92,27 +92,6 @@ export async function createSession(params: {
   throw lastError ?? new Error('Session konnte nicht erstellt werden.')
 }
 
-export interface SessionSummary extends Session {
-  participantCount: number
-}
-
-// Alle aktiven Challenges (für die öffentliche Übersicht auf der Startseite).
-// RLS erlaubt das Lesen aller Sessions; Zugang besteht hier bewusst ohne Code.
-export async function listSessions(): Promise<SessionSummary[]> {
-  const { data, error } = await supabase
-    .from('sessions')
-    .select('*, participants(count)')
-    .eq('status', 'active')
-    .order('created_at', { ascending: false })
-  if (error) throw error
-  return (data ?? []).map((row) => {
-    const { participants, ...session } = row as Session & {
-      participants: { count: number }[]
-    }
-    return { ...session, participantCount: participants?.[0]?.count ?? 0 }
-  })
-}
-
 export async function getSessionByCode(code: string): Promise<Session | null> {
   const { data, error } = await supabase
     .from('sessions')

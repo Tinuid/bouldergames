@@ -42,8 +42,11 @@ dokumentiert. Hauptschwächen liegen nicht im Code-Stil, sondern im **Vertrauens
   Ergebnisse mit. Total-Datenverlust durch beliebige Dritte.
 - **Vorschlag:** `sessions_delete` auf `is_session_host(id)` einschränken (nur Ersteller löscht
   die ganze Session); Verlassen bleibt über `participants_delete`.
-- **Status:** ☑ gewollt – bewusst offen gehalten (kleine Vertrauensgruppe). Wird evtl. in einer
-  späteren Version auf `is_session_host` eingeschränkt; an #3 (öffentliche Lobby) gekoppelt.
+- **Status:** ⚠ teilweise entschärft (1.8.0) – die **Voraussetzung** (öffentliche Liste fremder
+  Codes auf `Home`) ist entfernt (siehe #3), Fremde finden also normalerweise keine fremde
+  Challenge mehr. Das RLS-Löschrecht selbst bleibt **unverändert** (`sessions_delete` via
+  `is_session_member`): Wer einen Code kennt, kann weiter beitreten und löschen. Echte Härtung
+  (Einschränkung auf `is_session_host`) bewusst weiter offen.
 
 ---
 
@@ -70,8 +73,12 @@ dokumentiert. Hauptschwächen liegen nicht im Code-Stil, sondern im **Vertrauens
   (und Voraussetzung für Finding #1).
 - **Vorschlag:** Entweder Lobby bewusst als Feature framen (dann RLS-Löschrechte verschärfen, #1)
   oder Liste entfernen und nur den gerätelokalen Verlauf zeigen.
-- **Status:** ☑ gewollt – aktuell als offene Lobby gewollt; spätere Anpassung möglich (an #1
-  gekoppelt).
+- **Status:** ☑ UI-seitig erledigt (1.8.0) – die „Alle Challenges"-Liste auf `Home` ist entfernt
+  (samt `listSessions()`/`SessionSummary` und Lobby-Realtime-Channel); Beitritt läuft nur noch
+  über Code (`/join`) bzw. den gerätelokalen Verlauf. **Restlücke:** Die RLS bleibt
+  `sessions_select using(true)` – ein technisch versierter Nutzer kann per direkter Supabase-Query
+  weiterhin alle Sessions inkl. `join_code` auslesen. Echtes Schließen (select auf Mitglieder +
+  Code-Lookup über `security definer`-RPC) bewusst offen.
 
 ### 7. Feedback: öffentlich lesbar, plaintext-Passwort, kein Rate-Limit
 
@@ -148,7 +155,8 @@ Unkritisch und bewusst einfach gehalten:
 
 - Realtime lädt bei jeder Änderung die **ganze** betroffene Tabelle neu (`useRealtimeSession`).
   Für Gruppengrößen ok; würde bei sehr großen Sessions skalieren müssen.
-- Keine N+1-Probleme; `listSessions` nutzt `participants(count)` korrekt aggregiert.
+- Keine N+1-Probleme. (Die frühere `listSessions`-Aggregation via `participants(count)` ist mit
+  der öffentlichen Lobby in 1.8.0 entfernt, siehe #3.)
 - Bilder werden client-seitig auf 1600px/JPEG 0.82 verkleinert (`images.ts`) und nur als Pfad
   gespeichert – gute Entscheidung gegen aufgeblähte Realtime-Payloads.
 - Indizes auf `*_session` und `feedback.created_at` vorhanden.
@@ -160,10 +168,22 @@ Unkritisch und bewusst einfach gehalten:
 Nach Durchsprache (2026-06-04) sind die größeren Sicherheits-/Designthemen bewusste
 Produktentscheidungen und bleiben vorerst offen (siehe Status oben):
 
-1. 🔴 **#1** Lösch-Recht für Sessions – **gewollt**, evtl. spätere Version (an #3 gekoppelt).
+1. 🔴 **#1** Lösch-Recht für Sessions – **teilweise entschärft (1.8.0)**: Voraussetzung (Lobby)
+   weg, RLS-Löschrecht weiter offen.
 2. 🟡 **#2** Punkte-Vertrauensmodell – **gewollt / akzeptiertes Risiko**.
-3. 🟡 **#3** Öffentliche Lobby – **gewollt**, spätere Anpassung möglich.
+3. 🟡 **#3** Öffentliche Lobby – **UI-seitig erledigt (1.8.0)**; RLS-Restlücke bewusst offen.
 4. 🟡 **#7** Feedback-Härtung – Plaintext behoben (1.4.0); Rate-Limit bewusst offen.
+
+---
+
+## Erledigt (Version 1.8.0)
+
+- **#3** Öffentliche „Alle Challenges"-Liste auf `Home` entfernt (`Home.tsx`): keine fremden
+  Namen/Codes mehr sichtbar, Beitritt nur noch über Code (`/join`) oder den gerätelokalen
+  Verlauf. Toter Code mit raus: `listSessions()` + Interface `SessionSummary` (`api.ts`), der
+  Lobby-Realtime-Channel und nicht mehr genutzte Imports. Damit ist auch die **Voraussetzung**
+  für #1 (Auffinden fremder Challenges) entschärft. RLS unverändert – die `sessions_select`-
+  Restlücke bleibt bewusst offen (siehe #3/#1).
 
 ---
 
