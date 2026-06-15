@@ -85,12 +85,20 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
     `cleanup_stale_sessions()` an, die verwaiste Sessions löscht und die `image_path`s der
     gelöschten Boulder zurückgibt; nur für `service_role` ausführbar). Idempotent. **Danach** die
     Edge Function `cleanup-stale-sessions` deployen und schedulen – siehe Schritt 14.
-14. Edge Function fürs Aufräumen deployen (erstmaliges Edge-Function-Setup im Projekt, braucht die
-    Supabase CLI): `supabase functions deploy cleanup-stale-sessions --no-verify-jwt`, dann das
-    Schutz-Secret setzen: `supabase secrets set CLEANUP_SECRET=<langer-zufallswert>`. Zuletzt einen
-    täglichen Cron einrichten (Supabase Dashboard → Integrations → Cron, oder `pg_cron` + `pg_net`),
-    der die Function-URL mit Header `Authorization: Bearer <CLEANUP_SECRET>` aufruft, z.B. 03:00.
-    Ohne gesetztes `CLEANUP_SECRET` (bzw. ohne passenden Header) antwortet die Function mit 401.
+14. Edge Function `cleanup-stale-sessions` deployen und schedulen. Im Projekt ist **kein** Supabase-CLI
+    eingerichtet – der erprobte Weg läuft komplett über das **Dashboard**:
+    a. **Edge Functions → Deploy a new function → Via Editor**: Name `cleanup-stale-sessions`,
+       Inhalt von `supabase/functions/cleanup-stale-sessions/index.ts` einfügen, **„Verify JWT" AUS**
+       (Cron hat kein User-JWT), Deploy. `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` sind automatisch da.
+    b. **Edge Functions → Secrets**: `CLEANUP_SECRET` = langer Zufallswert setzen. Ohne gesetztes Secret
+       (bzw. ohne passenden Header) antwortet die Function mit 401 – das ist der Missbrauchsschutz.
+    c. **Database → Extensions**: `pg_cron` **und** `pg_net` aktivieren (sonst existiert `cron.job` nicht
+       und die Cron-UI scheitert).
+    d. **Integrations → Cron**: täglicher Job (z.B. `0 3 * * *`), Type *Edge Function* →
+       `cleanup-stale-sessions`, HTTP-Header `Authorization: Bearer <CLEANUP_SECRET>`.
+    (Alternativ via CLI: `supabase functions deploy cleanup-stale-sessions --no-verify-jwt` +
+    `supabase secrets set CLEANUP_SECRET=…`.) Verifizieren: Aufruf ohne Secret → 401; DB-Logik im
+    SQL-Editor in `begin; … select public.cleanup_stale_sessions(); … rollback;` trocken testen.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.
