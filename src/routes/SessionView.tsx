@@ -33,6 +33,7 @@ const PENALTY_LABELS: Record<PenaltyMode, string> = {
 }
 import Leaderboard from '../components/Leaderboard'
 import BoulderCard from '../components/BoulderCard'
+import BoulderRanking from '../components/BoulderRanking'
 import AddBoulderDialog from '../components/AddBoulderDialog'
 import PlayerDetail from '../components/PlayerDetail'
 import ShareSession from '../components/ShareSession'
@@ -58,6 +59,7 @@ export default function SessionView() {
   const [filterColor, setFilterColor] = useState<string | null>(null)
   const [hideDone, setHideDone] = useState(false)
   const [viewedPlayer, setViewedPlayer] = useState<Participant | null>(null)
+  const [rankingBoulder, setRankingBoulder] = useState<Boulder | null>(null)
   const [highlightBoulderId, setHighlightBoulderId] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
 
@@ -574,6 +576,7 @@ export default function SessionView() {
                 handleSaveResult(b.id, myParticipant.id, status, attempts, b.difficulty)
               }
               onEdit={() => openEditBoulder(b)}
+              onOpenRanking={() => setRankingBoulder(b)}
               highlight={b.id === highlightBoulderId}
               participants={orderedParticipants}
               resultsByParticipant={byBoulderParticipant.get(b.id)}
@@ -658,6 +661,16 @@ export default function SessionView() {
             setSettingsOpen(false)
             refresh()
           }}
+        />
+      )}
+
+      {rankingBoulder && (
+        <BoulderRanking
+          boulder={rankingBoulder}
+          participants={orderedParticipants}
+          resultsByParticipant={byBoulderParticipant.get(rankingBoulder.id)}
+          currentUserId={userId}
+          onClose={() => setRankingBoulder(null)}
         />
       )}
 

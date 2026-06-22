@@ -14,6 +14,7 @@ export default function BoulderCard({
   scoring,
   onSaveResult,
   onEdit,
+  onOpenRanking,
   highlight,
   participants,
   resultsByParticipant,
@@ -29,6 +30,8 @@ export default function BoulderCard({
   // Öffnet den Bearbeiten-Dialog. Jeder Teilnehmer darf Boulder bearbeiten (RLS, Migration 0009),
   // daher reicht SessionView dies stets durch.
   onEdit?: () => void
+  // Öffnet die Rangliste aller Teilnehmer für diesen Boulder (Klick auf den Boulder-Kopf).
+  onOpenRanking?: () => void
   // Lässt die Karte einmal kurz aufleuchten (z.B. nach dem Anspringen aus der Spieler-Detailansicht).
   highlight?: boolean
   // Für andere eintragen (shared_scoring, Migration 0011): alle Teilnehmer (sortiert, ich zuerst),
@@ -61,25 +64,36 @@ export default function BoulderCard({
             <img src={imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
           </button>
         )}
-        <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-surface-3 font-num text-[15px] font-bold">
-          {boulder.seq}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="font-display text-[17px] font-bold">
-            {boulder.difficulty != null ? `Grad ${difficultyLabel(boulder.difficulty)}` : 'Boulder'}
-          </div>
-          {boulder.color && (
-            <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-muted">
-              {dot && (
-                <span
-                  className="inline-block h-[11px] w-[11px] rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)]"
-                  style={{ background: dot }}
-                />
-              )}
-              {boulder.color}
-            </div>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={onOpenRanking}
+          disabled={!onOpenRanking}
+          aria-label="Rangliste anzeigen"
+          title="Rangliste anzeigen"
+          className={`-my-1 flex min-w-0 flex-1 items-center gap-[13px] rounded-[12px] border border-border px-2 py-1 text-left transition enabled:hover:border-border-strong enabled:hover:bg-surface-2 enabled:active:scale-[0.99] disabled:border-transparent disabled:px-0`}
+        >
+          <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-surface-3 font-num text-[15px] font-bold">
+            {boulder.seq}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-display text-[17px] font-bold">
+              {boulder.difficulty != null
+                ? `Grad ${difficultyLabel(boulder.difficulty)}`
+                : 'Boulder'}
+            </span>
+            {boulder.color && (
+              <span className="mt-0.5 flex items-center gap-1.5 text-[13px] text-muted">
+                {dot && (
+                  <span
+                    className="inline-block h-[11px] w-[11px] rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)]"
+                    style={{ background: dot }}
+                  />
+                )}
+                {boulder.color}
+              </span>
+            )}
+          </span>
+        </button>
         <div className="flex shrink-0 items-center gap-2">
           {tops > 0 && (
             <span className="whitespace-nowrap text-[13px] text-muted">{tops} Tops</span>
