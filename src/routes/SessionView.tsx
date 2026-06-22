@@ -24,7 +24,7 @@ import {
   type ResultStatus,
 } from '../types'
 import type { BoulderFormValues } from '../components/AddBoulderDialog'
-import { Bolt, Check, ChevronLeft, More, Plus, Trash } from '../components/icons'
+import { Bolt, Check, ChevronLeft, Edit, More, Plus, Trash } from '../components/icons'
 
 const PENALTY_LABELS: Record<PenaltyMode, string> = {
   top_floor: 'Top nie negativ',
@@ -36,6 +36,7 @@ import BoulderCard from '../components/BoulderCard'
 import AddBoulderDialog from '../components/AddBoulderDialog'
 import PlayerDetail from '../components/PlayerDetail'
 import ShareSession from '../components/ShareSession'
+import EditSessionDialog from '../components/EditSessionDialog'
 
 export default function SessionView() {
   const { sessionId } = useParams()
@@ -49,6 +50,7 @@ export default function SessionView() {
   const [joinName, setJoinName] = useState('')
   const [joining, setJoining] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const closeMenu = useCallback(() => setMenuOpen(false), [])
   // Escape schließt das Menü-Sheet, Body-Scroll sperren – nur solange offen.
   useDialogEscape(closeMenu, menuOpen)
@@ -223,6 +225,7 @@ export default function SessionView() {
   if (!session) return null
   const scoring = scoringFromSession(session)
   const sharedScoring = session.shared_scoring
+  const isHost = session.host_id === userId
   const showOthers = sharedScoring && !hideOthers
 
   // Noch nicht beigetreten (z.B. über geteilten Link geöffnet) -> Name abfragen.
@@ -614,6 +617,19 @@ export default function SessionView() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="sheet-grip" />
+            {isHost && (
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-btn px-1 py-3.5 text-[16px] font-semibold transition hover:bg-surface-2"
+                onClick={() => {
+                  closeMenu()
+                  setSettingsOpen(true)
+                }}
+              >
+                <Edit className="text-[20px]" />
+                Einstellungen bearbeiten
+              </button>
+            )}
             <button
               type="button"
               className="flex w-full items-center gap-2.5 rounded-btn px-1 py-3.5 text-[16px] font-semibold text-bad transition hover:bg-surface-2"
@@ -630,6 +646,19 @@ export default function SessionView() {
             </button>
           </div>
         </div>
+      )}
+
+      {settingsOpen && isHost && (
+        <EditSessionDialog
+          session={session}
+          boulders={boulders}
+          results={results}
+          onClose={() => setSettingsOpen(false)}
+          onSaved={() => {
+            setSettingsOpen(false)
+            refresh()
+          }}
+        />
       )}
 
       {viewedPlayer && (

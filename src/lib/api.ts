@@ -126,6 +126,65 @@ export async function deleteSession(sessionId: string): Promise<void> {
   }
 }
 
+// Spieleinstellungen einer Session nachträglich ändern (nur Host, via RLS
+// sessions_update erzwungen). Eine geänderte Punkteregel berührt bestehende
+// results.points NICHT automatisch – die Neuberechnung übernimmt der Aufrufer
+// per recomputeSessionResults.
+export async function updateSession(params: {
+  sessionId: string
+  name: string
+  scoring: ScoringConfig
+  sharedScoring: boolean
+}): Promise<Session> {
+  // .select() zurückfordern, um ein per RLS blockiertes Update zu erkennen
+  // (es wirft keinen Fehler, betrifft aber 0 Zeilen).
+  const { data, error } = await supabase
+    .from('sessions')
+    .update({
+      name: params.name.trim() || 'Boulder-Challenge',
+      scoring_mode: params.scoring.mode,
+      flash_points: params.scoring.flashPoints,
+      top_points: params.scoring.topPoints,
+      attempt_cost: params.scoring.attemptCost,
+      penalty_mode: params.scoring.penaltyMode,
+      shared_scoring: params.sharedScoring,
+    })
+    .eq('id', params.sessionId)
+    .select()
+    .single<Session>()
+  if (error) throw error
+  if (!data) {
+    throw new Error('Nichts geändert – nur der Host darf die Einstellungen ändern.')
+  }
+  return data
+}
+
+// Alle bestehenden Ergebnisse einer Session mit den (geänderten) Punkteregeln neu
+// berechnen und schreiben. Reicht jedes Ergebnis durch upsertResult (onConflict →
+// In-Place-Update, keine Duplikate); der Grad des zugehörigen Boulders ist im
+// Multiplikator-Modus der Punkte-Faktor. Nur der Host darf fremde Ergebnisse
+// korrigieren (RLS results_update via is_session_host).
+export async function recomputeSessionResults(params: {
+  sessionId: string
+  results: Result[]
+  boulders: Boulder[]
+  scoring: ScoringConfig
+}): Promise<void> {
+  const difficultyByBoulder = new Map(params.boulders.map((b) => [b.id, b.difficulty]))
+  for (const r of params.results) {
+    if (!difficultyByBoulder.has(r.boulder_id)) continue
+    await upsertResult({
+      sessionId: params.sessionId,
+      boulderId: r.boulder_id,
+      participantId: r.participant_id,
+      status: r.status,
+      attempts: r.attempts,
+      scoring: params.scoring,
+      difficulty: difficultyByBoulder.get(r.boulder_id) ?? null,
+    })
+  }
+}
+
 export async function joinSession(
   sessionId: string,
   userId: string,
