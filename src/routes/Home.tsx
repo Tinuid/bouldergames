@@ -1,18 +1,49 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getHistory, forgetSession, type HistoryEntry } from '../lib/localHistory'
+import { listPublicSessions, type SessionSummary } from '../lib/api'
+import { supabase } from '../lib/supabase'
 import BrandMark from '../components/BrandMark'
 import VersionBadge from '../components/VersionBadge'
 import FeedbackDialog from '../components/FeedbackDialog'
-import { Picture, Plus, Share, Users, X } from '../components/icons'
+import ChangelogDialog from '../components/ChangelogDialog'
+import { ChevronRight, Picture, Plus, Share, Users, X } from '../components/icons'
 
 export default function Home() {
   const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [publicSessions, setPublicSessions] = useState<SessionSummary[]>([])
   const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [changelogOpen, setChangelogOpen] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
     setHistory(getHistory())
+  }, [])
+
+  // Öffentliche laufende Sessions – einmal laden und bei Änderungen an der
+  // sessions-Tabelle neu laden (gleiches Re-Fetch-Muster wie useRealtimeSession).
+  // Fehler bewusst still schlucken: die Section wird dann einfach nicht angezeigt.
+  useEffect(() => {
+    let active = true
+    async function load() {
+      try {
+        const data = await listPublicSessions()
+        if (active) setPublicSessions(data)
+      } catch {
+        if (active) setPublicSessions([])
+      }
+    }
+    load()
+
+    const channel = supabase
+      .channel('lobby-sessions')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, () => load())
+      .subscribe()
+
+    return () => {
+      active = false
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   function remove(id: string) {
@@ -29,9 +60,6 @@ export default function Home() {
           <br />
           <span className="text-accent">Challenges</span>
         </h1>
-        <p className="mx-auto mt-3.5 max-w-[30ch] text-[15px] leading-relaxed text-muted [text-wrap:balance]">
-          Tracke Flashes, Tops &amp; Versuche mit deiner Crew – in Echtzeit.
-        </p>
       </header>
 
       <div className="flex flex-col gap-2.5">
@@ -75,8 +103,42 @@ export default function Home() {
         </section>
       )}
 
-      <footer className="mt-auto pt-4">
+      {publicSessions.length > 0 && (
+        <section>
+          <h2 className="section-label mb-2.5 px-0.5">Laufende Sessions</h2>
+          <ul className="flex flex-col gap-2.5">
+            {publicSessions.map((s) => (
+              <li key={s.id} className="card !p-4">
+                <button
+                  className="flex w-full items-center justify-between gap-3 text-left"
+                  onClick={() => navigate(`/s/${s.id}`)}
+                >
+                  <div className="min-w-0">
+                    <div className="truncate font-display text-[17px] font-bold tracking-[-0.01em]">
+                      {s.name}
+                    </div>
+                    <div className="mt-0.5 text-[13px] text-muted">Code {s.join_code}</div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <span className="text-[13px] text-muted">{s.participantCount} Spieler</span>
+                    <ChevronRight className="text-[17px] text-faint" />
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <footer className="mt-auto flex flex-col items-center gap-1.5 pt-4">
         <VersionBadge />
+        <button
+          type="button"
+          className="text-xs text-faint underline underline-offset-2 transition hover:text-muted"
+          onClick={() => setChangelogOpen(true)}
+        >
+          Was ist neu?
+        </button>
       </footer>
 
       {/* Floating-Buttons unten rechts: Feedback ansehen (alle) & geben. */}
@@ -102,6 +164,7 @@ export default function Home() {
       </div>
 
       <FeedbackDialog open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
+      <ChangelogDialog open={changelogOpen} onClose={() => setChangelogOpen(false)} />
     </div>
   )
 }

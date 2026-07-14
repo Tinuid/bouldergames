@@ -44,6 +44,9 @@ export interface Session {
   // true: jeder Teilnehmer darf Ergebnisse für ALLE Mitspieler eintragen/ändern
   // (RLS-Funktion can_score_others, Migration 0011). Default false.
   shared_scoring: boolean
+  // true: erscheint auf der Startseite in der Liste laufender Sessions und ist dort
+  // ohne Code beitretbar (Migration 0013). Default false.
+  is_public: boolean
   status: 'active' | 'archived'
   created_at: string
 }

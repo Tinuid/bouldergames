@@ -30,6 +30,7 @@ export default function EditSessionDialog({
     attemptCost: initialScoring.attemptCost,
     penaltyMode: initialScoring.penaltyMode,
     sharedScoring: session.shared_scoring,
+    isPublic: session.is_public,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -66,6 +67,7 @@ export default function EditSessionDialog({
         name: values.name,
         scoring,
         sharedScoring: values.sharedScoring,
+        isPublic: values.isPublic,
       })
       if (willRecompute) {
         await recomputeSessionResults({ sessionId: session.id, results, boulders, scoring })

@@ -38,6 +38,12 @@ SemVer-Daumenregel: neues Feature → Minor (`0.3.1` → `0.4.0`), Bugfix/Kleink
 Die Anpassung gehört in denselben Commit wie die Änderung (Commit-Konvention im Repo:
 `Update version to X.Y.Z and …`). Claude soll das ungefragt erledigen, wenn es passt.
 
+**Changelog mitpflegen:** Zu jedem Version-Bump gehört ein neuer Eintrag **oben** in
+`src/lib/changelog.ts` (kurzer deutscher Nutzertext: was hat sich aus Nutzersicht geändert;
+Datum im Format TT.MM.JJJJ). Der Changelog ist bewusst **manuell gepflegt** und unabhängig von
+den Git-Commits – er wird in der App über den „Was ist neu?"-Button im Footer der Startseite
+angezeigt (`ChangelogDialog`). Auch das gehört in denselben Commit; Claude erledigt es ungefragt.
+
 ## Voraussetzungen zum Laufen (häufige Stolperfalle)
 
 Die App braucht eine `.env` (Vorlage: `.env.example`) mit `VITE_SUPABASE_URL` und
@@ -99,6 +105,10 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
     (Alternativ via CLI: `supabase functions deploy cleanup-stale-sessions --no-verify-jwt` +
     `supabase secrets set CLEANUP_SECRET=…`.) Verifizieren: Aufruf ohne Secret → 401; DB-Logik im
     SQL-Editor in `begin; … select public.cleanup_stale_sessions(); … rollback;` trocken testen.
+15. `supabase/migrations/0013_public_sessions.sql` ausführen (legt die `sessions.is_public`-Spalte
+    an: Default `false`; öffentliche Sessions erscheinen auf der Startseite in der Liste
+    „Laufende Sessions". Keine RLS-Änderung – `sessions_select` ist ohnehin `using (true)`, das
+    Flag ist ein reiner UI-Filter). Idempotent.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.
@@ -111,6 +121,15 @@ Supabase **Anonymous Sign-in** an (`AuthProvider` in `src/hooks/useAuth.tsx` →
 Die resultierende `auth.uid()` ist die stabile Identität, an der alles hängt: `sessions.host_id`,
 `participants.user_id`, `boulders.created_by`. Beitritt zu einer Session läuft rein über den
 kurzen `join_code` (kein Token).
+
+**Öffentliche Sessions (opt-in).** Pro Session wählbares Flag `sessions.is_public` (Migration
+`0013`; Toggle „Öffentlich sichtbar" in `SessionSettingsFields`, damit beim Erstellen **und**
+nachträglich im `EditSessionDialog` änderbar). Öffentliche aktive Sessions listet die Startseite
+unter „Laufende Sessions" (`listPublicSessions()` in `src/lib/api.ts`, inkl. Teilnehmerzahl via
+`participants(count)`; Realtime-Re-Fetch über den Channel `lobby-sessions`). Ein Klick führt auf
+`/s/:id` – dort greift das bestehende Inline-Beitritts-Formular für Nicht-Mitglieder. Wichtig:
+Das Flag ist ein reiner **UI-Filter**, keine Sicherheitsgrenze – die RLS `sessions_select` ist
+seit `0001` `using (true)`, jeder Angemeldete kann alle Sessions lesen.
 
 **RLS ist die echte Sicherheitsgrenze, nicht das UI.** Die Rechte ("jeder fügt Boulder hinzu,
 trägt aber nur eigene Ergebnisse ein; Host darf alles korrigieren") werden in

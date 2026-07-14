@@ -52,6 +52,8 @@ export async function createSession(params: {
   scoring: ScoringConfig
   // true: jeder Teilnehmer darf Ergebnisse für alle Mitspieler eintragen (siehe Migration 0011).
   sharedScoring?: boolean
+  // true: erscheint auf der Startseite als laufende Session (siehe Migration 0013).
+  isPublic?: boolean
 }): Promise<Session> {
   // Bis zu wenige Versuche, falls ein Code zufällig schon vergeben ist.
   let lastError: unknown = null
@@ -69,6 +71,7 @@ export async function createSession(params: {
         attempt_cost: params.scoring.attemptCost,
         penalty_mode: params.scoring.penaltyMode,
         shared_scoring: params.sharedScoring ?? false,
+        is_public: params.isPublic ?? false,
       })
       .select()
       .single<Session>()
@@ -90,6 +93,29 @@ export async function createSession(params: {
     if (error && (error as { code?: string }).code !== '23505') break
   }
   throw lastError ?? new Error('Session konnte nicht erstellt werden.')
+}
+
+export interface SessionSummary extends Session {
+  participantCount: number
+}
+
+// Alle öffentlichen aktiven Sessions (Liste "Laufende Sessions" auf der Startseite).
+// RLS erlaubt das Lesen aller Sessions; sichtbar sind hier aber nur Sessions, die
+// per is_public-Flag bewusst geteilt wurden (Migration 0013).
+export async function listPublicSessions(): Promise<SessionSummary[]> {
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('*, participants(count)')
+    .eq('status', 'active')
+    .eq('is_public', true)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []).map((row) => {
+    const { participants, ...session } = row as Session & {
+      participants: { count: number }[]
+    }
+    return { ...session, participantCount: participants?.[0]?.count ?? 0 }
+  })
 }
 
 export async function getSessionByCode(code: string): Promise<Session | null> {
@@ -135,6 +161,7 @@ export async function updateSession(params: {
   name: string
   scoring: ScoringConfig
   sharedScoring: boolean
+  isPublic: boolean
 }): Promise<Session> {
   // .select() zurückfordern, um ein per RLS blockiertes Update zu erkennen
   // (es wirft keinen Fehler, betrifft aber 0 Zeilen).
@@ -148,6 +175,7 @@ export async function updateSession(params: {
       attempt_cost: params.scoring.attemptCost,
       penalty_mode: params.scoring.penaltyMode,
       shared_scoring: params.sharedScoring,
+      is_public: params.isPublic,
     })
     .eq('id', params.sessionId)
     .select()

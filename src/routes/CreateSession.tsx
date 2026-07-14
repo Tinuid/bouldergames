@@ -21,6 +21,7 @@ export default function CreateSession() {
     attemptCost: DEFAULT_SCORING.attemptCost,
     penaltyMode: DEFAULT_SCORING.penaltyMode,
     sharedScoring: false,
+    isPublic: false,
   })
   const [hostName, setHostName] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -50,6 +51,7 @@ export default function CreateSession() {
           penaltyMode: settings.penaltyMode,
         },
         sharedScoring: settings.sharedScoring,
+        isPublic: settings.isPublic,
       })
       rememberSession({
         sessionId: session.id,

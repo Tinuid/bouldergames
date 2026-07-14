@@ -2,7 +2,7 @@ import { computePoints } from '../lib/scoring'
 import type { PenaltyMode, ScoringConfig, ScoringMode } from '../types'
 import { Bolt, Check, Down, Up, X } from './icons'
 
-// Die fünf Spieleinstellungen einer Session – geteilt von CreateSession (Anlegen)
+// Die Spieleinstellungen einer Session – geteilt von CreateSession (Anlegen)
 // und EditSessionDialog (nachträgliches Ändern durch den Host). Eine Quelle der
 // Wahrheit für Layout und Texte, damit beide Formulare nicht auseinanderlaufen.
 export interface SessionSettingsValues {
@@ -13,6 +13,7 @@ export interface SessionSettingsValues {
   attemptCost: number
   penaltyMode: PenaltyMode
   sharedScoring: boolean
+  isPublic: boolean
 }
 
 // Auswählbare Strafmodi (siehe PenaltyMode in types.ts).
@@ -44,7 +45,8 @@ export default function SessionSettingsFields({
   values: SessionSettingsValues
   onChange: (patch: Partial<SessionSettingsValues>) => void
 }) {
-  const { name, mode, flashPoints, topPoints, attemptCost, penaltyMode, sharedScoring } = values
+  const { name, mode, flashPoints, topPoints, attemptCost, penaltyMode, sharedScoring, isPublic } =
+    values
 
   // Beispielpunkte direkt aus der Punktelogik berechnen (immer konsistent mit dem Spiel).
   // Basis = klassisch (ohne Grad-Faktor), damit die Strafmodus-Beispiele den reinen Effekt zeigen.
@@ -180,6 +182,23 @@ export default function SessionSettingsFields({
         <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
           Jeder Teilnehmer darf Ergebnisse für alle Mitspieler eintragen – praktisch, wenn einer mit
           dem Handy für die Gruppe mitschreibt. Ohne Haken trägt jeder nur für sich selbst ein.
+        </p>
+      </div>
+
+      <div className="panel mb-[18px]">
+        <div className="panel-title mb-3.5">Sichtbarkeit</div>
+        <button
+          type="button"
+          aria-pressed={isPublic}
+          onClick={() => onChange({ isPublic: !isPublic })}
+          className={`chip w-full flex-row items-center justify-center gap-2 py-2.5 text-[13px] font-semibold${isPublic ? ' is-active' : ''}`}
+        >
+          {isPublic && <Check className="text-[15px]" />}
+          Öffentlich sichtbar
+        </button>
+        <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
+          Die Challenge erscheint auf der Startseite als laufende Session und jeder kann ihr von
+          dort beitreten. Ohne Haken ist sie nur über den Code erreichbar.
         </p>
       </div>
     </>
