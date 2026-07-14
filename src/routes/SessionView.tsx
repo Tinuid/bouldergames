@@ -9,6 +9,7 @@ import {
   deleteSession,
   joinSession,
   leaveSession,
+  reorderBoulders,
   updateBoulder,
   upsertResult,
 } from '../lib/api'
@@ -38,6 +39,7 @@ import AddBoulderDialog from '../components/AddBoulderDialog'
 import PlayerDetail from '../components/PlayerDetail'
 import ShareSession from '../components/ShareSession'
 import EditSessionDialog from '../components/EditSessionDialog'
+import ReorderBouldersDialog from '../components/ReorderBouldersDialog'
 
 export default function SessionView() {
   const { sessionId } = useParams()
@@ -52,6 +54,7 @@ export default function SessionView() {
   const [joining, setJoining] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [reorderOpen, setReorderOpen] = useState(false)
   const closeMenu = useCallback(() => setMenuOpen(false), [])
   // Escape schließt das Menü-Sheet, Body-Scroll sperren – nur solange offen.
   useDialogEscape(closeMenu, menuOpen)
@@ -332,6 +335,13 @@ export default function SessionView() {
       const imagePath = image ? await uploadBoulderImage(image, userId) : null
       await addBoulder({ sessionId: session!.id, userId, difficulty, color, imagePath })
     }
+    refresh()
+  }
+
+  // Neue Boulder-Reihenfolge speichern (nur Host, atomar via RPC – siehe 0014).
+  // Fehler wandern zum Dialog (Inline-Anzeige, Dialog bleibt offen).
+  async function handleReorder(orderedIds: string[]) {
+    await reorderBoulders(session!.id, orderedIds)
     refresh()
   }
 
@@ -661,6 +671,20 @@ export default function SessionView() {
             setSettingsOpen(false)
             refresh()
           }}
+          onReorderBoulders={() => {
+            // Einstellungs-Sheet schließen, Sortier-Sheet öffnen (kein Stacking).
+            setSettingsOpen(false)
+            setReorderOpen(true)
+          }}
+        />
+      )}
+
+      {isHost && (
+        <ReorderBouldersDialog
+          open={reorderOpen}
+          boulders={boulders}
+          onClose={() => setReorderOpen(false)}
+          onSave={handleReorder}
         />
       )}
 

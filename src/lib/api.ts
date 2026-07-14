@@ -342,6 +342,19 @@ export async function updateBoulder(params: {
   return data
 }
 
+// Reihenfolge aller Boulder einer Session neu setzen (nur Host – die security-
+// definer-RPC reorder_boulders prüft is_session_host, siehe Migration 0014).
+// Läuft atomar in einer RPC, weil einzelne seq-Updates an unique (session_id, seq)
+// scheitern würden. boulderIds muss ALLE Boulder der Session in Zielreihenfolge
+// enthalten; die RPC validiert das und wirft bei veralteter Liste.
+export async function reorderBoulders(sessionId: string, boulderIds: string[]): Promise<void> {
+  const { error } = await supabase.rpc('reorder_boulders', {
+    p_session_id: sessionId,
+    p_boulder_ids: boulderIds,
+  })
+  if (error) throw error
+}
+
 // Boulder löschen (jeder Teilnehmer, via RLS boulders_delete erzwungen – siehe
 // Migration 0009). results hängen per Cascade am Boulder und verschwinden mit.
 export async function deleteBoulder(boulderId: string): Promise<void> {

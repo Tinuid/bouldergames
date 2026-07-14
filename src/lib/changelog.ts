@@ -13,6 +13,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.12.0',
+    date: '14.07.2026',
+    text:
+      'Boulder umsortieren: Der Host kann in den Session-Einstellungen über „Boulder-Reihenfolge ändern" die Boulder per Ziehen am Griff neu anordnen. Erst „Speichern" übernimmt die neue Nummerierung für alle.',
+  },
+  {
     version: '1.11.0',
     date: '14.07.2026',
     text:

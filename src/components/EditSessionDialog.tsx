@@ -5,6 +5,7 @@ import { scoringFromSession, type Boulder, type Result, type Session } from '../
 import SessionSettingsFields, {
   type SessionSettingsValues,
 } from './SessionSettingsFields'
+import { GripVertical } from './icons'
 
 // Dialog, mit dem der Host die Spieleinstellungen einer bestehenden Session
 // ändert. Vorbefüllt aus der Session; teilt das Formular mit CreateSession.
@@ -14,12 +15,16 @@ export default function EditSessionDialog({
   results,
   onClose,
   onSaved,
+  onReorderBoulders,
 }: {
   session: Session
   boulders: Boulder[]
   results: Result[]
   onClose: () => void
   onSaved: () => void
+  // Öffnet den Sortier-Dialog für die Boulder-Reihenfolge (nur Host, wie dieser
+  // Dialog selbst). Ungespeicherte Einstellungs-Änderungen gehen dabei verloren.
+  onReorderBoulders: () => void
 }) {
   const initialScoring = scoringFromSession(session)
   const [values, setValues] = useState<SessionSettingsValues>({
@@ -94,6 +99,20 @@ export default function EditSessionDialog({
         </div>
 
         <SessionSettingsFields values={values} onChange={patch} />
+
+        {boulders.length >= 2 && (
+          <>
+            <div className="mb-1 mt-1 border-t border-border" />
+            <button
+              type="button"
+              className="mb-2 flex w-full items-center gap-2.5 rounded-btn px-1 py-3 text-[15px] font-semibold transition hover:bg-surface-2"
+              onClick={onReorderBoulders}
+            >
+              <GripVertical className="text-[18px]" />
+              Boulder-Reihenfolge ändern
+            </button>
+          </>
+        )}
 
         {willRecompute && (
           <p className="mb-3 text-[12.5px] leading-relaxed text-muted">

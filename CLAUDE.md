@@ -109,6 +109,10 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
     an: Default `false`; öffentliche Sessions erscheinen auf der Startseite in der Liste
     „Laufende Sessions". Keine RLS-Änderung – `sessions_select` ist ohnehin `using (true)`, das
     Flag ist ein reiner UI-Filter). Idempotent.
+16. `supabase/migrations/0014_boulder_reorder.sql` ausführen (legt die `security definer`-RPC
+    `reorder_boulders(p_session_id, p_boulder_ids)` an: vergibt `boulders.seq` atomar neu –
+    Zwei-Phasen-Renumbering gegen `unique (session_id, seq)`, Advisory-Lock wie `set_boulder_seq`,
+    Host-Check via `is_session_host`). Idempotent.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.
@@ -195,6 +199,19 @@ ein neues Foto wird hochgeladen und das alte best-effort via `deleteBoulderImage
 Multiplikator-Modus hängen die Punkte am Grad – die Neuberechnung **aller** Ergebnisse (auch
 fremder) übernimmt der DB-Trigger aus `0004` serverseitig, weil die `results_update`-RLS einem
 Nicht-Host das Schreiben fremder Ergebnisse verbietet.
+
+**Boulder-Reihenfolge ändern (nur Host).** Die sichtbare Boulder-Nummer ist `boulders.seq`;
+der Host kann sie über den Eintrag „Boulder-Reihenfolge ändern" im `EditSessionDialog`
+umsortieren (`ReorderBouldersDialog`, Drag & Drop via `@dnd-kit` – Ziehen **nur** am
+Griff-Button, damit Tippen/Scrollen nichts verschiebt; Änderungen werden lokal gesammelt
+und erst mit „Speichern" persistiert). Gespeichert wird atomar über die `security definer`-RPC
+`reorder_boulders` (Migration `0014`, Client: `reorderBoulders` in `api.ts`), weil einzelne
+`seq`-Updates am `unique (session_id, seq)` scheitern würden (Zwei-Phasen-Renumbering:
+erst +1000000, dann 1..n). Die RPC prüft `is_session_host`, nimmt denselben Advisory-Lock
+wie `set_boulder_seq` (kein Race mit gleichzeitigen Inserts) und lehnt veraltete Listen ab
+(ID-Menge muss exakt den Bouldern der Session entsprechen). Der Rescale-Trigger feuert bei
+`seq`-Updates nicht – Punkte bleiben unberührt. Die normale Boulder-Liste ist bewusst
+**nicht** ziehbar.
 
 **Ergebnisse für andere eintragen (optional).** Pro Session beim Erstellen wählbar
 (`sessions.shared_scoring`, Toggle in `CreateSession`). Ist es aus (Default), trägt jeder nur
