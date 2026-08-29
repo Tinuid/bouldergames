@@ -63,6 +63,12 @@ export interface Boulder {
   id: string
   session_id: string
   seq: number
+  // Herkunft: aus welchem Karten-Boulder wurde dieser übernommen (Migration 0017).
+  // null = frei angelegt. Bewusst nur Provenienz, kein Spiegel: Grad und Farbe sind
+  // KOPIEN und hier frei änderbar. Nur das Foto wird über die Referenz aufgelöst,
+  // weil es keine Wertung beeinflusst – und weil ein geteilter image_path vom
+  // nächtlichen Aufräumen mitgelöscht würde.
+  gym_boulder_id: string | null
   // Schwierigkeits-Code (siehe src/lib/difficulty.ts): 1–7 = Grad, 8 = "?", 9 = "!".
   // null = ohne Grad. Anzeige via difficultyLabel, Wertungs-Faktor via difficultyFactor.
   difficulty: number | null

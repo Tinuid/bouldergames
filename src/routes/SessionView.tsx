@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useRealtimeSession } from '../hooks/useRealtimeSession'
 import { useDialogEscape } from '../hooks/useDialogEscape'
@@ -9,6 +9,7 @@ import {
   deleteSession,
   joinSession,
   leaveSession,
+  listGymBouldersByIds,
   reorderBoulders,
   updateBoulder,
   upsertResult,
@@ -20,12 +21,13 @@ import { BOULDER_COLORS, colorSwatch } from '../lib/colors'
 import {
   scoringFromSession,
   type Boulder,
+  type GymBoulder,
   type Participant,
   type PenaltyMode,
   type ResultStatus,
 } from '../types'
 import type { BoulderFormValues } from '../components/AddBoulderDialog'
-import { Bolt, Check, ChevronLeft, Edit, More, Plus, Trash } from '../components/icons'
+import { Bolt, Check, ChevronLeft, Edit, More, Plan, Plus, Trash } from '../components/icons'
 
 const PENALTY_LABELS: Record<PenaltyMode, string> = {
   top_floor: 'Top nie negativ',
@@ -43,6 +45,10 @@ import ReorderBouldersDialog from '../components/ReorderBouldersDialog'
 
 export default function SessionView() {
   const { sessionId } = useParams()
+  // Rückkehr von der Karte: dort steht die Id des KARTEN-Boulders, hier suchen wir
+  // den Session-Boulder, der von ihm abstammt, und springen ihn an.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const returnToGymBoulder = searchParams.get('boulder')
   const navigate = useNavigate()
   const { userId } = useAuth()
   const { session, participants, boulders, results, loading, error, notFound, refresh } =
@@ -53,11 +59,15 @@ export default function SessionView() {
   const [joinName, setJoinName] = useState('')
   const [joining, setJoining] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [addSourceOpen, setAddSourceOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [reorderOpen, setReorderOpen] = useState(false)
   const closeMenu = useCallback(() => setMenuOpen(false), [])
   // Escape schließt das Menü-Sheet, Body-Scroll sperren – nur solange offen.
   useDialogEscape(closeMenu, menuOpen)
+  const closeAddSource = useCallback(() => setAddSourceOpen(false), [])
+  // Nie stapeln (siehe Kommentar am Menü) – daher ist immer höchstens eins offen.
+  useDialogEscape(closeAddSource, addSourceOpen)
   const [filterDifficulty, setFilterDifficulty] = useState<number | null>(null)
   const [filterColor, setFilterColor] = useState<string | null>(null)
   const [hideDone, setHideDone] = useState(false)
@@ -77,6 +87,39 @@ export default function SessionView() {
     () => participants.find((p) => p.user_id === userId) ?? null,
     [participants, userId],
   )
+
+  // Karten-Boulder zu allen übernommenen Bouldern (Migration 0017): liefert das Foto
+  // – die tragen bewusst keinen eigenen image_path, sonst löschte das nächtliche
+  // Aufräumen dieser Session das Bild im Katalog mit – und die Position für die
+  // Mini-Karte. Einmalig nachgeladen, kein Realtime-Abo: Änderungen im Katalog
+  // ziehen beim nächsten Laden nach.
+  const [gymByBoulder, setGymByBoulder] = useState<Map<string, GymBoulder>>(new Map())
+  const gymRefKey = useMemo(
+    () =>
+      boulders
+        .map((b) => b.gym_boulder_id)
+        .filter((id): id is string => id != null)
+        .sort()
+        .join(','),
+    [boulders],
+  )
+  useEffect(() => {
+    if (!gymRefKey) {
+      setGymByBoulder(new Map())
+      return
+    }
+    let cancelled = false
+    listGymBouldersByIds(gymRefKey.split(','))
+      .then((rows) => {
+        if (!cancelled) setGymByBoulder(new Map(rows.map((r) => [r.id, r])))
+      })
+      .catch(() => {
+        /* ohne Foto weiter – die Karte zeigt dann nur Grad und Farbe */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [gymRefKey])
 
   // Teilnehmer für die Pro-Spieler-Eingabe: ich zuerst, dann die übrigen (Beitritts-Reihenfolge).
   const orderedParticipants = useMemo(() => {
@@ -112,16 +155,13 @@ export default function SessionView() {
     }
   }, [session, myParticipant])
 
-  // Index: boulderId -> Results, (boulderId+participantId) -> Result für mich, und
-  // boulderId -> (participantId -> Result) für die Pro-Spieler-Eingabe (shared_scoring).
-  const { byBoulder, mine, byBoulderParticipant } = useMemo(() => {
-    const byBoulder = new Map<string, typeof results>()
+  // Index: (boulderId+participantId) -> Result für mich, und
+  // boulderId -> (participantId -> Result) für die Pro-Spieler-Eingabe (shared_scoring)
+  // sowie für die Rangliste eines Boulders.
+  const { mine, byBoulderParticipant } = useMemo(() => {
     const mine = new Map<string, (typeof results)[number]>()
     const byBoulderParticipant = new Map<string, Map<string, (typeof results)[number]>>()
     for (const r of results) {
-      const arr = byBoulder.get(r.boulder_id) ?? []
-      arr.push(r)
-      byBoulder.set(r.boulder_id, arr)
       let perP = byBoulderParticipant.get(r.boulder_id)
       if (!perP) {
         perP = new Map()
@@ -132,7 +172,7 @@ export default function SessionView() {
         mine.set(r.boulder_id, r)
       }
     }
-    return { byBoulder, mine, byBoulderParticipant }
+    return { mine, byBoulderParticipant }
   }, [results, myParticipant])
 
   // Nur die Grade/Farben als Filter-Optionen anbieten, die in der Session vorkommen –
@@ -193,6 +233,14 @@ export default function SessionView() {
     },
     [resetFilters],
   )
+
+  useEffect(() => {
+    if (!returnToGymBoulder || boulders.length === 0) return
+    const target = boulders.find((b) => b.gym_boulder_id === returnToGymBoulder)
+    // Parameter in jedem Fall entfernen, sonst springt ein Reload erneut dorthin.
+    setSearchParams({}, { replace: true })
+    if (target) goToBoulder(target.id)
+  }, [returnToGymBoulder, boulders, goToBoulder, setSearchParams])
 
   // Nach dem Anspringen zum Boulder scrollen und das Aufleuchten nach der Animation wieder
   // zurücknehmen (damit die animate-bump-Klasse beim nächsten Mal erneut auslösen kann).
@@ -300,7 +348,15 @@ export default function SessionView() {
     }
   }
 
+  // Beide Hinzufügen-Knöpfe öffnen erst die Quellenwahl: selbst anlegen oder vom
+  // Lageplan holen. Der zweite Weg führt auf die Karte im Auswahlmodus für genau
+  // diese Challenge.
   function openAddBoulder() {
+    setAddSourceOpen(true)
+  }
+
+  function openManualBoulder() {
+    setAddSourceOpen(false)
     setEditingBoulder(null)
     setDialogOpen(true)
   }
@@ -579,8 +635,23 @@ export default function SessionView() {
             <BoulderCard
               key={b.id}
               boulder={b}
+              fallbackImagePath={
+                b.gym_boulder_id ? (gymByBoulder.get(b.gym_boulder_id)?.image_path ?? null) : null
+              }
+              gymPosition={
+                b.gym_boulder_id
+                  ? (() => {
+                      const g = gymByBoulder.get(b.gym_boulder_id)
+                      return g ? { x: g.x, y: g.y } : null
+                    })()
+                  : null
+              }
+              onOpenMap={
+                b.gym_boulder_id
+                  ? () => navigate(`/karte?session=${session.id}&boulder=${b.gym_boulder_id}`)
+                  : undefined
+              }
               myResult={mine.get(b.id)}
-              allResults={byBoulder.get(b.id) ?? []}
               scoring={scoring}
               onSaveResult={(status, attempts) =>
                 handleSaveResult(b.id, myParticipant.id, status, attempts, b.difficulty)
@@ -621,6 +692,48 @@ export default function SessionView() {
         requireDifficulty={scoring.mode === 'multiplier'}
       />
 
+      {addSourceOpen && (
+        <div className="sheet-scrim" onClick={() => setAddSourceOpen(false)}>
+          <div
+            className="sheet"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sheet-grip" />
+            <div className="font-display text-[21px] font-extrabold tracking-[-0.02em]">
+              Boulder hinzufügen
+            </div>
+            <button
+              type="button"
+              className="mt-[18px] flex w-full items-center gap-2.5 rounded-btn px-1 py-3.5 text-[16px] font-semibold transition hover:bg-surface-2"
+              onClick={openManualBoulder}
+            >
+              <Plus className="text-[20px]" />
+              Selbst anlegen
+            </button>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2.5 rounded-btn px-1 py-3.5 text-[16px] font-semibold transition hover:bg-surface-2"
+              onClick={() => {
+                setAddSourceOpen(false)
+                navigate(`/karte?session=${session.id}&pick=1`)
+              }}
+            >
+              <Plan className="text-[20px]" />
+              Vom Lageplan
+            </button>
+            <button
+              type="button"
+              className="btn-secondary mt-1 w-full"
+              onClick={() => setAddSourceOpen(false)}
+            >
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      )}
+
       {menuOpen && (
         <div className="sheet-scrim" onClick={closeMenu}>
           <div
@@ -643,6 +756,17 @@ export default function SessionView() {
                 Einstellungen bearbeiten
               </button>
             )}
+            <button
+              type="button"
+              className="flex w-full items-center gap-2.5 rounded-btn px-1 py-3.5 text-[16px] font-semibold transition hover:bg-surface-2"
+              onClick={() => {
+                closeMenu()
+                navigate(`/karte?session=${session.id}`)
+              }}
+            >
+              <Plan className="text-[20px]" />
+              Auf der Karte zeigen
+            </button>
             <button
               type="button"
               className="flex w-full items-center gap-2.5 rounded-btn px-1 py-3.5 text-[16px] font-semibold text-bad transition hover:bg-surface-2"

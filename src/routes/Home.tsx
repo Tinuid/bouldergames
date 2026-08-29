@@ -7,7 +7,7 @@ import BrandMark from '../components/BrandMark'
 import VersionBadge from '../components/VersionBadge'
 import FeedbackDialog from '../components/FeedbackDialog'
 import ChangelogDialog from '../components/ChangelogDialog'
-import { ChevronRight, Map, Picture, Plus, Share, Users, X } from '../components/icons'
+import { ChevronRight, Picture, Plan, Plus, Share, Users, X } from '../components/icons'
 
 export default function Home() {
   const [history, setHistory] = useState<HistoryEntry[]>([])
@@ -72,7 +72,7 @@ export default function Home() {
           Challenge beitreten
         </Link>
         <Link to="/karte" className="btn-secondary">
-          <Map className="text-[19px]" />
+          <Plan className="text-[19px]" />
           Hallenkarte
         </Link>
       </div>

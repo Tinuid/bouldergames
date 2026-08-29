@@ -2,6 +2,7 @@ import { useState } from 'react'
 import ResultEditor from './ResultEditor'
 import ImageLightbox from './ImageLightbox'
 import { boulderImageUrl } from '../lib/images'
+import MiniMap from './lageplan/MiniMap'
 import { colorSwatch } from '../lib/colors'
 import { difficultyLabel } from '../lib/difficulty'
 import type { Boulder, Participant, Result, ResultStatus, ScoringConfig } from '../types'
@@ -10,12 +11,14 @@ import { Edit } from './icons'
 export default function BoulderCard({
   boulder,
   myResult,
-  allResults,
   scoring,
   onSaveResult,
   onEdit,
   onOpenRanking,
   highlight,
+  fallbackImagePath,
+  gymPosition,
+  onOpenMap,
   participants,
   resultsByParticipant,
   myParticipantId,
@@ -24,7 +27,6 @@ export default function BoulderCard({
 }: {
   boulder: Boulder
   myResult: Result | undefined
-  allResults: Result[]
   scoring: ScoringConfig
   onSaveResult: (status: ResultStatus, attempts: number) => void
   // Öffnet den Bearbeiten-Dialog. Jeder Teilnehmer darf Boulder bearbeiten (RLS, Migration 0009),
@@ -34,6 +36,17 @@ export default function BoulderCard({
   onOpenRanking?: () => void
   // Lässt die Karte einmal kurz aufleuchten (z.B. nach dem Anspringen aus der Spieler-Detailansicht).
   highlight?: boolean
+  // Foto des Karten-Boulders, aus dem dieser übernommen wurde (Migration 0017).
+  // Greift nur, wenn der Boulder kein eigenes Foto hat: ein hier aufgenommenes Foto
+  // gewinnt also immer. Übernommene Boulder tragen bewusst KEINEN eigenen
+  // image_path – sonst würde das nächtliche Aufräumen der Session das Bild des
+  // Karten-Boulders mitlöschen.
+  fallbackImagePath?: string | null
+  // Position des Karten-Boulders, aus dem dieser übernommen wurde – zeigt die
+  // Mini-Karte an. null/undefined ⇒ keine Karte (frei angelegter Boulder).
+  gymPosition?: { x: number; y: number } | null
+  // Öffnet den Lageplan auf diesem Boulder.
+  onOpenMap?: () => void
   // Für andere eintragen (shared_scoring, Migration 0011): alle Teilnehmer (sortiert, ich zuerst),
   // deren Ergebnisse für diesen Boulder und der Speicher-Callback je Teilnehmer. showOthers steuert,
   // ob die Fremd-Zeilen sichtbar sind (gerätelokaler "andere ausblenden"-Toggle in SessionView).
@@ -43,9 +56,12 @@ export default function BoulderCard({
   showOthers?: boolean
   onSaveResultFor?: (participantId: string, status: ResultStatus, attempts: number) => void
 }) {
-  const tops = allResults.filter((r) => r.status === 'top' || r.status === 'flash').length
+  // Bewusst nicht auf der Karte: die laufende Nummer (die Reihenfolge der Liste sagt
+  // dasselbe, und ReorderBouldersDialog zeigt sie weiterhin) und die Zahl der Tops
+  // (steht in der Rangliste hinter dem Boulder-Kopf). Beides kostete mehr Platz, als
+  // es wert war – neben Foto und Mini-Karte wurde die Zeile sonst zu eng.
   const dot = colorSwatch(boulder.color)
-  const imageUrl = boulderImageUrl(boulder.image_path)
+  const imageUrl = boulderImageUrl(boulder.image_path ?? fallbackImagePath)
   const [lightboxOpen, setLightboxOpen] = useState(false)
 
   return (
@@ -64,6 +80,18 @@ export default function BoulderCard({
             <img src={imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
           </button>
         )}
+        {gymPosition && (
+          <button
+            type="button"
+            className="h-[64px] w-[64px] shrink-0 overflow-hidden rounded-[14px] bg-bg p-1 ring-1 ring-border-strong transition enabled:active:scale-[0.97] disabled:opacity-100"
+            onClick={onOpenMap}
+            disabled={!onOpenMap}
+            aria-label="Auf der Karte zeigen"
+            title="Auf der Karte zeigen"
+          >
+            <MiniMap x={gymPosition.x} y={gymPosition.y} className="h-full w-full" />
+          </button>
+        )}
         <button
           type="button"
           onClick={onOpenRanking}
@@ -72,17 +100,14 @@ export default function BoulderCard({
           title="Rangliste anzeigen"
           className={`-my-1 flex min-w-0 flex-1 items-center gap-[13px] rounded-[12px] border border-border px-2 py-1 text-left transition enabled:hover:border-border-strong enabled:hover:bg-surface-2 enabled:active:scale-[0.99] disabled:border-transparent disabled:px-0`}
         >
-          <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-surface-3 font-num text-[15px] font-bold">
-            {boulder.seq}
-          </span>
           <span className="min-w-0 flex-1">
-            <span className="block font-display text-[17px] font-bold">
+            <span className="block whitespace-nowrap font-display text-[17px] font-bold">
               {boulder.difficulty != null
                 ? `Grad ${difficultyLabel(boulder.difficulty)}`
                 : 'Boulder'}
             </span>
             {boulder.color && (
-              <span className="mt-0.5 flex items-center gap-1.5 text-[13px] text-muted">
+              <span className="mt-0.5 flex items-center gap-1.5 truncate text-[13px] text-muted">
                 {dot && (
                   <span
                     className="inline-block h-[11px] w-[11px] rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)]"
@@ -95,9 +120,6 @@ export default function BoulderCard({
           </span>
         </button>
         <div className="flex shrink-0 items-center gap-2">
-          {tops > 0 && (
-            <span className="whitespace-nowrap text-[13px] text-muted">{tops} Tops</span>
-          )}
           {onEdit && (
             <button
               type="button"

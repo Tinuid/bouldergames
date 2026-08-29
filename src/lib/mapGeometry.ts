@@ -82,7 +82,13 @@ export function zoomOf(fit: ViewRect, view: ViewRect): number {
 
 // Begrenzt Zoom und Position: erst die Breite (Höhe folgt aus dem Seitenverhältnis),
 // dann je Achse – passt der Grundriss auf der Achse ganz hinein, wird zentriert,
-// sonst am Rand angeschlagen. So läuft man eingezoomt nie über die Karte hinaus.
+// sonst am Rand angeschlagen.
+//
+// Der Anschlag liegt bewusst NICHT an der Kante des Grundrisses, sondern eine halbe
+// Bildschirmbreite dahinter. Sonst ließe sich ein Punkt am Rand nie in die Mitte
+// schieben – man stößt mit dem Display gegen den Kartenrand, obwohl genau dort das
+// Detail-Sheet den unteren Teil verdeckt. Mit dem Zuschlag ist jeder Punkt
+// erreichbar, und weiter als "halb leer" wird der Bildschirm nie.
 export function clampView(view: ViewRect, content: ViewRect, fit: ViewRect, aspect: number): ViewRect {
   const w = Math.min(Math.max(view.w, fit.w / MAX_ZOOM), fit.w / MIN_ZOOM)
   const h = w / aspect
@@ -93,10 +99,10 @@ export function clampView(view: ViewRect, content: ViewRect, fit: ViewRect, aspe
   let y = view.y + (view.h - h) / 2
 
   if (w >= content.w) x = content.x + (content.w - w) / 2
-  else x = Math.min(Math.max(x, content.x), content.x + content.w - w)
+  else x = Math.min(Math.max(x, content.x - w / 2), content.x + content.w - w / 2)
 
   if (h >= content.h) y = content.y + (content.h - h) / 2
-  else y = Math.min(Math.max(y, content.y), content.y + content.h - h)
+  else y = Math.min(Math.max(y, content.y - h / 2), content.y + content.h - h / 2)
 
   return { x, y, w, h }
 }

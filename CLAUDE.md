@@ -122,6 +122,10 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
     gehasht setzen** (auskommentiertes `insert … crypt('…', gen_salt('bf', 10))` am Dateiende,
     Schlüssel `gym_admin_key` – bewusst ein anderer als `feedback_admin_key`). Ohne gesetztes
     Passwort ist das Bearbeiten der Karte gesperrt. Idempotent.
+19. `supabase/migrations/0017_boulder_gym_link.sql` ausführen (legt `boulders.gym_boulder_id`
+    an – die Herkunfts-Referenz auf den Hallen-Katalog –, dazu einen partiellen Unique-Index
+    gegen doppelte Übernahme in dieselbe Session und einen Index auf `participants.user_id`
+    für die Liste „meine Challenges"). Keine RLS-Änderung, keine neue RPC. Idempotent.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.
@@ -302,6 +306,45 @@ Kreis – die Punktebene ist `pointer-events: none`, sonst löste ein Pan, das a
 eine Auswahl aus. Gefilterte Punkte werden ausgegraut (nicht versteckt, sonst verliert die Karte ihre
 räumliche Aussage) und fliegen aus dem Treffer-Test.
 
+**Brücke Karte ↔ Challenge (Migration `0017`).** `boulders.gym_boulder_id` hält fest, aus welchem
+Karten-Boulder ein Session-Boulder übernommen wurde. Der Link ist **Provenienz, kein Spiegel**: Grad und
+Farbe werden beim Übernehmen **kopiert** und sind in der Challenge frei änderbar. Es darf keine View
+gebaut werden, die den Grad live aus `gym_boulders` liest – sonst verschöbe eine Grad-Korrektur im
+Katalog über den Rescale-Trigger (`0004`/`0008`) still die Punkte laufender und abgeschlossener
+Challenges.
+
+**Das Foto wird dagegen referenziert, nicht kopiert.** Übernommene Boulder tragen bewusst
+`image_path = null`; die Session-Ansicht löst das Bild über `gym_boulder_id` auf
+(`listGymBouldersByIds` → `BoulderCard`-Prop `fallbackImagePath`). Grund: `cleanup_stale_sessions()`
+(`0012`) sammelt die `boulders.image_path` gelöschter Sessions ein und die Edge Function entfernt genau
+diese Objekte aus dem Bucket – stünde dort der Pfad des Karten-Boulders, wäre dessen Foto nachts weg.
+Ein später in der Session selbst aufgenommenes Foto gewinnt und wird korrekt mitgeräumt.
+
+**Das Übernehmen läuft ohne RPC**, als normaler Insert vom Client (`addBouldersFromGym` in `api.ts`) und
+damit innerhalb der Policy `boulders_insert` (`created_by = auth.uid()` und `is_session_member`). Ein
+Mehrfach-Insert ist dabei sicher: der `before insert`-Trigger `set_boulder_seq` sieht die zuvor
+eingefügten Zeilen derselben Anweisung und nummeriert korrekt in Array-Reihenfolge durch – nachgemessen
+(10 Zeilen ⇒ `seq` 1..10). Doppelte Übernahmen fängt der partielle Unique-Index
+`uq_boulders_session_gym_boulder` ab; der Client filtert sie vorher heraus und meldet „war schon drin".
+
+**Beide Richtungen im UI.** Auf der Karte schaltet „Auswählen" in den Auswahlmodus (`MapMode`), in dem ein
+Tipp sammelt statt das Detail-Sheet zu öffnen; die Aktionsleiste sitzt im `footer`-Slot von
+`MapFilterBar`. Aus einer Challenge führt „Auf der Karte zeigen" auf `/karte?session=<id>` (Boulder
+hervorgehoben, Ausschnitt eingepasst) und „+ Hinzufügen → Vom Lageplan" auf `/karte?session=<id>&pick=1`
+(startet direkt im Auswahlmodus und fügt ohne Zwischendialog in genau diese Challenge ein). Die
+Vorauswahl für eine **neue** Challenge reist bewusst im Router-State nach `/create` und nicht in der URL –
+sie ist flüchtig und muss einen Reload nicht überleben.
+
+**Wiederfinden in der Halle.** Jeder übernommene Boulder zeigt in `BoulderCard` neben dem Foto eine
+Mini-Karte (`MiniMap`, flacher Grundriss aus `HALL_AREAS` plus ein bewusst überproportionaler Punkt);
+ein Tipp führt auf `/karte?session=<id>&boulder=<gymBoulderId>` und wählt ihn dort aus. Ohne diesen
+Rückweg nützt der Katalog in der Halle wenig.
+
+**Gesetzt wird nur über das Fadenkreuz**, nicht durch Tippen auf die Karte: mit dem Finger auf eine
+freie Stelle zu zielen ist ungenau, weil der Finger genau die Stelle verdeckt. Aus demselben Grund gibt
+es keine Zoom-Knöpfe – gezoomt wird mit zwei Fingern, am Rechner mit dem Rad, und für die Tastatur
+liegen `+`/`-`/`0` auf der fokussierten Karte.
+
 **Verschieben per zweitem Tipp, nicht per Drag.** Im Bearbeitungsmodus wird ein Punkt ausgewählt,
 „Verschieben" scharfgeschaltet und die neue Position angetippt. Ein Ein-Finger-Drag am Punkt wäre
 nicht vom Verschieben der Karte zu unterscheiden. `useSvgPanZoom` liefert `onLongPress` und
@@ -313,7 +356,7 @@ nicht vom Verschieben der Karte zu unterscheiden. `useSvgPanZoom` liefert `onLon
 **Routing/Screens.** `src/App.tsx` rendert erst nach erfolgreichem Auth-Bootstrap. Routen:
 `/` (Home), `/create`, `/join` + `/join/:code`, `/s/:sessionId` (`SessionView` – Hauptscreen;
 wird die Session über einen geteilten Link ohne vorherigen Beitritt geöffnet, zeigt er inline ein
-Namens-/Beitritts-Formular), `/karte` (`GymMap` – Hallenkarte; bewusst der einzige Screen ohne
+Namens-/Beitritts-Formular), `/karte` (`GymMap` – Hallenkarte, optional mit `?session=<id>` und `&pick=1`; bewusst der einzige Screen ohne
 `max-w-md`-Spalte: `fixed inset-0` mit eigenem Safe-Area-Padding, weil `position: fixed` das Padding
 des `body` ignoriert) und `/feedback` (`FeedbackList` – öffentliche Feedback-Liste).
 

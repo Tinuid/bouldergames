@@ -13,6 +13,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.14.0',
+    date: '29.08.2026',
+    text:
+      'Karte und Challenges wachsen zusammen: Auf der Hallenkarte kannst du jetzt über „Auswählen" mehrere Boulder antippen und daraus direkt eine neue Challenge starten oder sie zu einer laufenden hinzufügen.\n' +
+      'Umgekehrt zeigt dir eine Challenge über „Auf der Karte zeigen" (Menü oben rechts), wo ihre Boulder in der Halle hängen.\n' +
+      'Beim Hinzufügen eines Boulders kannst du wählen: selbst anlegen oder vom Lageplan holen – Grad, Farbe und Foto kommen dann mit.\n' +
+      'Jeder übernommene Boulder zeigt in der Challenge eine kleine Karte – ein Tipp darauf springt zur Stelle in der Halle.\n' +
+      'Außerdem lässt sich die App selbst nicht mehr versehentlich verzoomen – die Zwei-Finger-Geste gehört jetzt der Karte.',
+  },
+  {
     version: '1.13.0',
     date: '29.08.2026',
     text:

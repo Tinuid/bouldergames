@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useRealtimeGym } from '../hooks/useRealtimeGym'
 import { useSvgPanZoom } from '../hooks/useSvgPanZoom'
@@ -9,14 +9,18 @@ import { difficultyLabel } from '../lib/difficulty'
 import { dotRadius, nearestDot } from '../lib/mapGeometry'
 import { deleteBoulderImage, uploadBoulderImage } from '../lib/images'
 import {
+  addBouldersFromGym,
   clearGymTick,
   deleteGymBoulder,
+  getSessionById,
   isWrongPasswordError,
+  listBoulders,
   moveGymBoulder,
   setGymBoulderRemoved,
   setGymTick,
   upsertGymBoulder,
   verifyGymAdminKey,
+  type MySession,
 } from '../lib/api'
 import LageplanMap from '../components/lageplan/LageplanMap'
 import type { MapDotVM } from '../components/lageplan/MapDots'
@@ -27,12 +31,21 @@ import MapBoulderDialog, {
   type MapBoulderFormValues,
 } from '../components/lageplan/MapBoulderDialog'
 import AdminUnlockSheet from '../components/lageplan/AdminUnlockSheet'
-import { ChevronLeft, Crosshair, Maximize, Minus, More, Plus } from '../components/icons'
+import SessionPickerSheet from '../components/lageplan/SessionPickerSheet'
+import { Check, ChevronLeft, Crosshair, More, Plus, X } from '../components/icons'
 import type { GymBoulder, GymTickState } from '../types'
+
+// Browsen oder Boulder für eine Challenge einsammeln. Der Bearbeitungsmodus hängt
+// bewusst separat an adminKey – man kann auch beim Pflegen etwas auswählen.
+type MapMode = 'browse' | 'select'
 
 // Zusätzliche Trefferfläche um einen Punkt, in Bildschirm-Pixeln. Auf einem
 // Touchscreen ist exakte Kreisgeometrie zu streng.
 const TAP_SLOP_PX = 10
+
+// Stabile leere Menge: sonst bekäme die memoisierte Punktebene bei jedem Rendern
+// eine neue Referenz und würde unnötig neu zeichnen.
+const EMPTY_SET: Set<string> = new Set()
 
 function filterStorageKey(gymId: string) {
   return `bg:gymFilter:${gymId}`
@@ -45,11 +58,27 @@ export default function GymMap() {
     userId ?? undefined,
   )
 
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  // Aus einer Challenge heraus geöffnet: deren Boulder werden hervorgehoben, und
+  // "Hinzufügen" überspringt die Challenge-Auswahl.
+  const contextSessionId = searchParams.get('session')
+  const startInPickMode = searchParams.get('pick') === '1'
+  // Aus der Mini-Karte eines Challenge-Boulders: genau diesen auswählen.
+  const contextBoulderId = searchParams.get('boulder')
+
   const [filter, setFilter] = useState<MapFilter>(EMPTY_FILTER)
   const [filterOpen, setFilterOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+
+  const [mode, setMode] = useState<MapMode>(startInPickMode ? 'select' : 'browse')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [contextSession, setContextSession] = useState<{ id: string; name: string } | null>(null)
+  const [highlightIds, setHighlightIds] = useState<Set<string>>(new Set())
 
   // Bearbeitungsmodus. Der Schlüssel lebt nur hier im Speicher – nach einem Reload
   // ist er weg und wird neu abgefragt (Muster aus FeedbackList).
@@ -72,6 +101,42 @@ export default function GymMap() {
     const t = setTimeout(() => setSaveError(null), 5000)
     return () => clearTimeout(t)
   }, [saveError])
+
+  useEffect(() => {
+    if (!notice) return
+    const t = setTimeout(() => setNotice(null), 4000)
+    return () => clearTimeout(t)
+  }, [notice])
+
+  // Kontext-Challenge laden: Name für das Banner, ihre Karten-Boulder für die
+  // Hervorhebung. Bewusst einmalig – die Session-Ansicht bleibt die Stelle, an der
+  // Änderungen live ankommen.
+  useEffect(() => {
+    if (!contextSessionId) {
+      setContextSession(null)
+      setHighlightIds(new Set())
+      return
+    }
+    let cancelled = false
+    Promise.all([getSessionById(contextSessionId), listBoulders(contextSessionId)])
+      .then(([session, sessionBoulders]) => {
+        if (cancelled) return
+        if (session) setContextSession({ id: session.id, name: session.name })
+        setHighlightIds(
+          new Set(
+            sessionBoulders
+              .map((b) => b.gym_boulder_id)
+              .filter((id): id is string => id != null),
+          ),
+        )
+      })
+      .catch(() => {
+        if (!cancelled) setSaveError('Die Challenge konnte nicht geladen werden.')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [contextSessionId])
 
   // Filterwahl pro Halle gerätelokal merken.
   const gymId = gym?.id
@@ -157,6 +222,10 @@ export default function GymMap() {
           label: difficultyLabel(b.difficulty) ?? '?',
           tick,
           dimmed: !matchesFilter(filter, b, tick),
+          // Aus einer Challenge geöffnet: alles, was nicht dazugehört, tritt zurück.
+          // Nur im Browse-Modus – beim Auswählen sucht man ja gerade die anderen.
+          faded:
+            mode === 'browse' && highlightIds.size > 0 && !highlightIds.has(b.id),
           aria: [
             `Grad ${difficultyLabel(b.difficulty)}`,
             b.color,
@@ -167,21 +236,26 @@ export default function GymMap() {
             .join(', '),
         }
       }),
-    [boulders, filter, tickByBoulder],
+    [boulders, filter, tickByBoulder, mode, highlightIds],
   )
 
   const visibleDots = useMemo(() => dots.filter((d) => !d.dimmed), [dots])
 
   // Aktuelle Werte für den Tap-Handler, ohne ihn bei jeder Filteränderung neu zu
   // bauen (er hängt am Pan/Zoom-Hook).
-  const stateRef = useRef({ visibleDots, adminMode, movingId, boulders })
-  stateRef.current = { visibleDots, adminMode, movingId, boulders }
+  const stateRef = useRef({ visibleDots, adminMode, movingId, boulders, mode })
+  stateRef.current = { visibleDots, adminMode, movingId, boulders, mode }
 
   const panZoomRef = useRef<{ zoomQ: number; fitScale: number }>({ zoomQ: 1, fitScale: 1 })
 
   const handleTap = useCallback(
     (p: { x: number; y: number }) => {
-      const { visibleDots: vd, adminMode: admin, movingId: moving } = stateRef.current
+      const {
+        visibleDots: vd,
+        adminMode: admin,
+        movingId: moving,
+        mode: currentMode,
+      } = stateRef.current
       const { zoomQ, fitScale } = panZoomRef.current
 
       // Verschieben ist scharfgeschaltet: der nächste Tipp ist die neue Position.
@@ -202,27 +276,58 @@ export default function GymMap() {
 
       const pxPerUnit = fitScale * zoomQ
       const hit = nearestDot(vd, p, dotRadius(zoomQ), TAP_SLOP_PX / pxPerUnit)
-      if (hit) {
-        setSelectedId(hit.id)
+
+      // Im Auswahlmodus sammelt ein Tipp ein bzw. wieder aus – bewusst kein
+      // Detail-Sheet, sonst wäre das Tippen doppeldeutig.
+      if (currentMode === 'select') {
+        if (!hit) return
+        setSelectedIds((prev) => {
+          const next = new Set(prev)
+          if (next.has(hit.id)) next.delete(hit.id)
+          else next.add(hit.id)
+          return next
+        })
         return
       }
 
-      if (admin) {
-        setSelectedId(null)
-        setPlaceAt(p)
-        setEditing(null)
-        setDialogOpen(true)
-        return
-      }
-
-      setSelectedId(null)
+      // Gesetzt wird ausschließlich über das Fadenkreuz: mit dem Finger auf eine
+      // freie Stelle zu zielen ist ungenau (der Finger verdeckt genau die Stelle),
+      // und ein zweiter Bedienweg fürs Anlegen bringt nichts.
+      setSelectedId(hit ? hit.id : null)
     },
     [adminKey, refresh],
   )
 
   const panZoom = useSvgPanZoom({ content: LAGEPLAN_VIEWBOX, onTap: handleTap })
   panZoomRef.current = { zoomQ: panZoom.zoomQ, fitScale: panZoom.fitScale }
-  const { focusOn, zoomBy, panBy, reset } = panZoom
+  const { focusOn, fitTo, zoomBy, panBy, reset } = panZoom
+
+  // Ist ein einzelner Boulder gemeint, den einmalig auswählen – der Fokus-Effekt
+  // weiter unten holt ihn dann in die Mitte.
+  const preselectedRef = useRef(false)
+  // Wer aus einer Challenge auf einen bestimmten Boulder springt, will nach dem
+  // Schließen des Sheets wieder dorthin – nicht auf der Karte stehenbleiben.
+  // Gilt nur für genau diese eine Auswahl; danach verhält sich die Karte normal.
+  const backOnCloseRef = useRef(false)
+  useEffect(() => {
+    if (preselectedRef.current || !contextBoulderId || boulders.length === 0) return
+    if (!boulders.some((b) => b.id === contextBoulderId)) return
+    preselectedRef.current = true
+    backOnCloseRef.current = contextSessionId != null
+    setSelectedId(contextBoulderId)
+  }, [contextBoulderId, contextSessionId, boulders])
+
+  // Kommt man aus einer Challenge, einmalig auf deren Boulder einpassen. Entfällt,
+  // wenn ohnehin ein bestimmter Boulder gemeint ist.
+  const fittedRef = useRef(false)
+  useEffect(() => {
+    if (contextBoulderId) return
+    if (fittedRef.current || highlightIds.size === 0 || boulders.length === 0) return
+    const points = boulders.filter((b) => highlightIds.has(b.id)).map((b) => ({ x: b.x, y: b.y }))
+    if (points.length === 0) return
+    fittedRef.current = true
+    fitTo(points)
+  }, [highlightIds, boulders, fitTo, contextBoulderId])
 
   const selected = useMemo(
     () => boulders.find((b) => b.id === selectedId) ?? null,
@@ -257,6 +362,52 @@ export default function GymMap() {
       setSaveError(err instanceof Error ? err.message : 'Speichern fehlgeschlagen.')
       refresh()
     }
+  }
+
+  // Was auf der Karte als ausgewählt gezeichnet wird: im Auswahlmodus die Menge,
+  // sonst der eine angetippte Punkt. Memoisiert, weil die Punktebene sonst bei
+  // jedem Rendern eine neue Set-Referenz bekäme und neu zeichnen würde.
+  const dotSelection = useMemo(
+    () => (mode === 'select' ? selectedIds : selectedId ? new Set([selectedId]) : EMPTY_SET),
+    [mode, selectedIds, selectedId],
+  )
+
+  // In Auswahlreihenfolge (Set behält die Einfügereihenfolge) – daraus ergibt sich
+  // die Nummerierung der Boulder in der Challenge.
+  const selectedBoulders = useMemo(() => {
+    const byId = new Map(boulders.map((b) => [b.id, b]))
+    return [...selectedIds].map((id) => byId.get(id)).filter((b): b is GymBoulder => b != null)
+  }, [boulders, selectedIds])
+
+  function leaveSelectMode() {
+    setMode('browse')
+    setSelectedIds(new Set())
+  }
+
+  function startChallenge() {
+    // Über den Router-State statt über die URL: die Auswahl ist flüchtig und muss
+    // einen Reload von /create nicht überleben.
+    navigate('/create', { state: { gymBoulderIds: [...selectedIds] } })
+  }
+
+  async function addToSession(session: MySession | { id: string; name: string }) {
+    if (!userId) return
+    const { added, skipped } = await addBouldersFromGym({
+      sessionId: session.id,
+      userId,
+      boulders: selectedBoulders,
+    })
+
+    const parts = [added === 1 ? '1 Boulder hinzugefügt' : `${added} Boulder hinzugefügt`]
+    if (skipped > 0) parts.push(skipped === 1 ? '1 war schon drin' : `${skipped} waren schon drin`)
+    setNotice(`${parts.join(', ')} – ${session.name}`)
+
+    // Kommt man aus genau dieser Challenge, die Hervorhebung gleich nachziehen.
+    if (contextSessionId === session.id) {
+      setHighlightIds((prev) => new Set([...prev, ...selectedIds]))
+    }
+    setSelectedIds(new Set())
+    setPickerOpen(false)
   }
 
   async function handleUnlock(key: string) {
@@ -331,21 +482,55 @@ export default function GymMap() {
       }}
     >
       <header className="flex touch-manipulation items-center justify-between gap-2 px-4 py-3">
-        <Link to="/" className="flex items-center gap-1 text-[14px] font-semibold text-muted">
-          <ChevronLeft className="text-[18px]" />
-          Übersicht
+        <Link
+          to={
+            contextSession
+              ? `/s/${contextSession.id}${selectedId ? `?boulder=${selectedId}` : ''}`
+              : '/'
+          }
+          className="flex min-w-0 items-center gap-1 text-[14px] font-semibold text-muted"
+        >
+          <ChevronLeft className="shrink-0 text-[18px]" />
+          <span className="truncate">{contextSession ? 'Challenge' : 'Übersicht'}</span>
         </Link>
-        <div className="min-w-0 truncate font-display text-[16px] font-extrabold tracking-[-0.02em]">
+        <div className="min-w-0 flex-1 truncate text-center font-display text-[16px] font-extrabold tracking-[-0.02em]">
           {gym?.name ?? 'Hallenkarte'}
         </div>
-        <button
-          type="button"
-          aria-label="Mehr"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-muted"
-          onClick={() => setMenuOpen(true)}
-        >
-          <More />
-        </button>
+        {mode === 'select' ? (
+          <button
+            type="button"
+            className="flex items-center gap-1 rounded-btn bg-accent px-3 py-1.5 text-[13px] font-bold text-accent-ink"
+            onClick={leaveSelectMode}
+          >
+            <Check className="text-[15px]" />
+            Fertig
+          </button>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            {/* Wer über die Mini-Karte eines einzelnen Boulders kommt, will nachsehen,
+                nicht sammeln – dann ist der Knopf nur im Weg. */}
+            {!contextBoulderId && (
+              <button
+                type="button"
+                className="rounded-btn border border-border-strong bg-surface-2 px-3 py-1.5 text-[13px] font-bold text-ink"
+                onClick={() => {
+                  setSelectedId(null)
+                  setMode('select')
+                }}
+              >
+                Auswählen
+              </button>
+            )}
+            <button
+              type="button"
+              aria-label="Mehr"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-muted"
+              onClick={() => setMenuOpen(true)}
+            >
+              <More />
+            </button>
+          </div>
+        )}
       </header>
 
       {/* min-h-0 ist Pflicht: ohne das kollabiert h-full auf dem <svg> in einer
@@ -357,7 +542,7 @@ export default function GymMap() {
           dots={dots}
           zoomQ={panZoom.zoomQ}
           fitScale={panZoom.fitScale}
-          selectedId={selectedId}
+          selectedIds={dotSelection}
           highlightedAreaIds={filter.areas.length > 0 ? new Set(filter.areas) : undefined}
           ghost={placeAt}
           onKeyDown={(e) => {
@@ -374,11 +559,33 @@ export default function GymMap() {
           }}
         />
 
+        {/* Kommt man über die Mini-Karte eines einzelnen Boulders, ist das Banner
+            überflüssig: man will hier nichts hinzufügen, sondern nur nachsehen. */}
+        {contextSession && !adminMode && !contextBoulderId && (
+          <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-2 bg-ink px-4 py-1.5 text-[13px] font-semibold text-white">
+            <span className="min-w-0 truncate">
+              {mode === 'select' ? 'Boulder für' : 'Challenge'}: {contextSession.name}
+            </span>
+            {mode === 'browse' && (
+              <button
+                type="button"
+                className="shrink-0 underline"
+                onClick={() => {
+                  setSelectedId(null)
+                  setMode('select')
+                }}
+              >
+                Boulder hinzufügen
+              </button>
+            )}
+          </div>
+        )}
+
         {adminMode && (
           <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-2 bg-accent px-4 py-1.5 text-[13px] font-semibold text-accent-ink">
             <span className="truncate">
               {movingId
-                ? 'Neue Position antippen'
+                ? 'Neue Position antippen oder „Hierhin"'
                 : 'Bearbeitungsmodus – auf die Karte tippen, um einen Boulder zu setzen'}
             </span>
             <button
@@ -393,53 +600,42 @@ export default function GymMap() {
 
         {/* Fadenkreuz: die Karte unter ein festes Kreuz schieben ist genauer, als mit
             dem Finger zu zielen. */}
-        {adminMode && !movingId && (
+        {adminMode && mode === 'browse' && (
           <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
             <Crosshair className="text-[38px] text-accent opacity-70" />
           </div>
         )}
 
         <div className="absolute bottom-3 right-3 z-10 flex flex-col gap-2">
-          {adminMode && !movingId && (
+          {adminMode && mode === 'browse' && (
             <button
               type="button"
               className="flex h-11 items-center justify-center gap-1.5 rounded-full border border-border-strong bg-surface px-4 text-[13px] font-bold text-ink shadow-card"
               onClick={() => {
+                // Mitte des sichtbaren Ausschnitts = Position des Fadenkreuzes.
                 const c = panZoom.view
                 const p = { x: c.x + c.w / 2, y: c.y + c.h / 2 }
+                if (movingId && adminKey) {
+                  const id = movingId
+                  setMovingId(null)
+                  moveGymBoulder({ key: adminKey, id, x: p.x, y: p.y, area: areaAt(p.x, p.y) })
+                    .then(refresh)
+                    .catch((err) => {
+                      if (isWrongPasswordError(err)) setAdminKey(null)
+                      setSaveError(err instanceof Error ? err.message : 'Verschieben fehlgeschlagen.')
+                      refresh()
+                    })
+                  return
+                }
                 setPlaceAt(p)
                 setEditing(null)
                 setDialogOpen(true)
               }}
             >
-              <Plus className="text-[16px]" />
-              Hier setzen
+              {movingId ? <Crosshair className="text-[16px]" /> : <Plus className="text-[16px]" />}
+              {movingId ? 'Hierhin' : 'Hier setzen'}
             </button>
           )}
-          <button
-            type="button"
-            aria-label="Vergrößern"
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-border-strong bg-surface text-ink shadow-card"
-            onClick={() => zoomBy(1.4)}
-          >
-            <Plus className="text-[18px]" />
-          </button>
-          <button
-            type="button"
-            aria-label="Verkleinern"
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-border-strong bg-surface text-ink shadow-card"
-            onClick={() => zoomBy(1 / 1.4)}
-          >
-            <Minus className="text-[18px]" />
-          </button>
-          <button
-            type="button"
-            aria-label="Ganze Halle zeigen"
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-border-strong bg-surface text-ink shadow-card"
-            onClick={() => reset(true)}
-          >
-            <Maximize className="text-[17px]" />
-          </button>
         </div>
 
         {loading && (
@@ -449,7 +645,7 @@ export default function GymMap() {
         )}
         {error && (
           <div className="absolute inset-x-0 top-3 z-[70] flex justify-center px-5">
-            <p className="rounded-sm2 border border-bad/40 bg-bad-soft px-4 py-2 text-[13px] text-bad">
+            <p className="rounded-sm2 bg-bad px-4 py-2 text-[13px] font-semibold text-white shadow-lg">
               {error}
             </p>
           </div>
@@ -458,9 +654,21 @@ export default function GymMap() {
           <div className="absolute inset-x-0 top-3 z-[70] flex justify-center px-5">
             <p
               role="alert"
-              className="rounded-sm2 border border-bad/40 bg-bad-soft px-4 py-2 text-[13px] text-bad"
+              className="rounded-sm2 bg-bad px-4 py-2 text-[13px] font-semibold text-white shadow-lg"
             >
               {saveError}
+            </p>
+          </div>
+        )}
+
+        {notice && (
+          <div className="absolute inset-x-0 top-3 z-[70] flex justify-center px-5">
+            <p
+              role="status"
+              className="flex items-center gap-2 rounded-sm2 bg-ink px-4 py-2 text-[13px] font-semibold text-white shadow-lg"
+            >
+              <Check className="shrink-0 text-[15px] text-ok" />
+              {notice}
             </p>
           </div>
         )}
@@ -471,7 +679,22 @@ export default function GymMap() {
         <ul className="sr-only">
           {visibleDots.map((d) => (
             <li key={d.id}>
-              <button type="button" onClick={() => setSelectedId(d.id)}>
+              <button
+                type="button"
+                aria-pressed={mode === 'select' ? selectedIds.has(d.id) : undefined}
+                onClick={() => {
+                  if (mode !== 'select') {
+                    setSelectedId(d.id)
+                    return
+                  }
+                  setSelectedIds((prev) => {
+                    const next = new Set(prev)
+                    if (next.has(d.id)) next.delete(d.id)
+                    else next.add(d.id)
+                    return next
+                  })
+                }}
+              >
                 {d.aria}
               </button>
             </li>
@@ -487,9 +710,59 @@ export default function GymMap() {
         totalCount={dots.length}
         open={filterOpen}
         onOpenChange={setFilterOpen}
+        footer={
+          mode === 'select' ? (
+            <div className="flex items-center gap-2.5 border-t border-border px-5 py-3">
+              <span className="shrink-0 font-num text-[13px] font-bold tabular-nums">
+                {selectedIds.size} ausgewählt
+              </span>
+              {selectedIds.size > 0 && (
+                <button
+                  type="button"
+                  aria-label="Auswahl leeren"
+                  className="shrink-0 text-muted"
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  <X className="text-[16px]" />
+                </button>
+              )}
+              <div className="ml-auto flex gap-2">
+                {contextSession ? (
+                  <button
+                    type="button"
+                    className="rounded-btn bg-accent px-3 py-2 text-[13px] font-bold text-accent-ink disabled:opacity-40"
+                    disabled={selectedIds.size === 0}
+                    onClick={() => addToSession(contextSession).catch((err) => setSaveError(String(err)))}
+                  >
+                    Hinzufügen
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="rounded-btn border border-border-strong bg-surface-2 px-3 py-2 text-[13px] font-bold text-ink disabled:opacity-40"
+                      disabled={selectedIds.size === 0}
+                      onClick={() => setPickerOpen(true)}
+                    >
+                      Zu Challenge
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-btn bg-accent px-3 py-2 text-[13px] font-bold text-accent-ink disabled:opacity-40"
+                      disabled={selectedIds.size === 0}
+                      onClick={startChallenge}
+                    >
+                      Neue Challenge
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          ) : undefined
+        }
       />
 
-      {selected && !dialogBusy && (
+      {selected && mode === 'browse' && !dialogBusy && (
         <BoulderMapSheet
           boulders={[selected]}
           tick={tickByBoulder.get(selected.id) ?? null}
@@ -504,7 +777,16 @@ export default function GymMap() {
             setMovingId(selected.id)
             setSelectedId(null)
           }}
-          onClose={() => setSelectedId(null)}
+          onClose={() => {
+            const closedId = selected.id
+            setSelectedId(null)
+            if (backOnCloseRef.current && contextSession) {
+              backOnCloseRef.current = false
+              // Mit der Boulder-Id zurück, damit die Challenge direkt bei ihm
+              // aufsetzt und nicht oben in der Rangliste.
+              navigate(`/s/${contextSession.id}?boulder=${closedId}`)
+            }
+          }}
         />
       )}
 
@@ -545,6 +827,14 @@ export default function GymMap() {
           </div>
         </div>
       )}
+
+      <SessionPickerSheet
+        open={pickerOpen}
+        userId={userId ?? ''}
+        count={selectedIds.size}
+        onPick={addToSession}
+        onClose={() => setPickerOpen(false)}
+      />
 
       <AdminUnlockSheet
         open={unlockOpen}

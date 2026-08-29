@@ -563,3 +563,95 @@ export async function deleteGymBoulder(params: { key: string; id: string }): Pro
   if (error) throw error
   await deleteBoulderImage(data as string | null)
 }
+
+// ── Brücke Hallenkarte → Challenges (Migration 0017) ────────────────────────
+
+// Eine Session, in der ich Teilnehmer bin – inklusive meines dortigen Namens.
+export interface MySession extends Session {
+  displayName: string
+}
+
+// Meine laufenden Challenges. Bewusst über participants statt über den
+// gerätelokalen Verlauf (localHistory): der kann auf aufgeräumte oder verlassene
+// Sessions zeigen. Hier zählt die tatsächliche Mitgliedschaft – und genau die
+// verlangt auch die Policy boulders_insert (is_session_member) beim Übernehmen.
+export async function listMySessions(userId: string): Promise<MySession[]> {
+  const { data, error } = await supabase
+    .from('participants')
+    .select('display_name, sessions(*)')
+    .eq('user_id', userId)
+  if (error) throw error
+
+  return (data ?? [])
+    .map((row) => {
+      const r = row as unknown as { display_name: string; sessions: Session | null }
+      return r.sessions ? { ...r.sessions, displayName: r.display_name } : null
+    })
+    .filter((s): s is MySession => s != null && s.status === 'active')
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+}
+
+// Karten-Boulder zu einer Menge von Ids – löst die Fotos übernommener Boulder in
+// der Session-Ansicht auf. Abgeschraubte sind bewusst dabei: ihre Zeile bleibt
+// bestehen, und die alte Challenge soll das Foto behalten.
+export async function listGymBouldersByIds(ids: string[]): Promise<GymBoulder[]> {
+  if (ids.length === 0) return []
+  const { data, error } = await supabase.from('gym_boulders').select().in('id', ids)
+  if (error) throw error
+  return data ?? []
+}
+
+/**
+ * Übernimmt Karten-Boulder in eine Challenge.
+ *
+ * Läuft als ganz normaler Insert und damit innerhalb der Policy boulders_insert
+ * (created_by = auth.uid() und Mitgliedschaft) – keine security-definer-RPC, die
+ * die RLS umgehen und die Mitgliedschaft selbst nachbauen müsste.
+ *
+ * Ein Mehrfach-Insert ist sicher: der before-insert-Trigger set_boulder_seq sieht
+ * die zuvor eingefügten Zeilen derselben Anweisung und nummeriert korrekt in
+ * Array-Reihenfolge durch (nachgemessen).
+ *
+ * Grad und Farbe werden KOPIERT, image_path bleibt null – das Foto kommt in der
+ * Anzeige über gym_boulder_id (siehe Kommentar an Boulder.gym_boulder_id).
+ */
+export async function addBouldersFromGym(params: {
+  sessionId: string
+  userId: string
+  // In Auswahlreihenfolge – daraus ergibt sich die Nummerierung.
+  boulders: GymBoulder[]
+}): Promise<{ added: number; skipped: number }> {
+  // Schon übernommene überspringen, damit ein zweiter Versuch nicht am partiellen
+  // Unique-Index scheitert, sondern eine verständliche Rückmeldung ergibt.
+  const existing = await listBoulders(params.sessionId)
+  const already = new Set(
+    existing.map((b) => b.gym_boulder_id).filter((id): id is string => id != null),
+  )
+  const todo = params.boulders.filter((b) => !already.has(b.id))
+  const skipped = params.boulders.length - todo.length
+  if (todo.length === 0) return { added: 0, skipped }
+
+  const { data, error } = await supabase
+    .from('boulders')
+    .insert(
+      todo.map((g) => ({
+        session_id: params.sessionId,
+        created_by: params.userId,
+        difficulty: g.difficulty,
+        color: g.color,
+        image_path: null,
+        gym_boulder_id: g.id,
+      })),
+    )
+    .select('id')
+
+  if (error) {
+    // 23505 = unique_violation: jemand anderes war in derselben Sekunde schneller.
+    if ((error as { code?: string }).code === '23505') {
+      throw new Error('Einer der Boulder ist schon in dieser Challenge.')
+    }
+    throw error
+  }
+
+  return { added: data?.length ?? 0, skipped }
+}

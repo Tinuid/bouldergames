@@ -39,6 +39,9 @@ interface Props {
   // Vom Filter ausgeschlossen: bleibt als Ortsmarke sichtbar, ist aber nicht
   // antippbar (der Treffer-Test überspringt solche Punkte).
   dimmed?: boolean
+  // Gehört nicht zur Challenge, aus der die Karte geöffnet wurde. Nur zurückgenommen
+  // dargestellt – anders als dimmed weiterhin vollständig und antippbar.
+  faded?: boolean
   // Symbol im Marken-Badge zeigen. Unterhalb einer gewissen Bildschirmgröße wäre
   // es nur noch Matsch – dann trägt die Farbe allein die Information.
   showBadgeGlyph?: boolean
@@ -55,6 +58,7 @@ function MapDot({
   idPrefix,
   selected = false,
   dimmed = false,
+  faded = false,
   showBadgeGlyph = true,
   ariaLabel,
 }: Props) {
@@ -63,7 +67,7 @@ function MapDot({
   const badgeY = y - r * 0.78
 
   return (
-    <g opacity={dimmed ? 0.18 : 1} role="img" aria-label={ariaLabel}>
+    <g opacity={dimmed ? 0.18 : faded ? 0.28 : 1} role="img" aria-label={ariaLabel}>
       {/* Trennring in Papierfarbe: lässt sich überlappende Punkte als getrennte
           Scheiben lesen, ohne dass wir clustern müssten. */}
       <circle cx={x} cy={y} r={r + r * 0.09} fill="var(--bg)" />

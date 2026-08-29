@@ -40,6 +40,15 @@ body,
   height: 100%;
 }
 
+/* Kein Seiten-Zoom per Pinch oder Doppeltipp: die App hat feste, für kleine Displays
+   ausgelegte Layouts, und ein verrutschter Browser-Zoom lässt sich ohne Neuladen
+   kaum zurücknehmen. Scrollen (pan-x/pan-y) bleibt erlaubt, ebenso die Schrift-
+   und Zoom-Einstellungen von Browser und Betriebssystem – nur die Geste ist weg.
+   Die Karte setzt für ihre eigenen Gesten touch-action: none (spezifischer). */
+html {
+  touch-action: pan-x pan-y;
+}
+
 body {
   margin: 0;
   background: var(--bg);

@@ -4,6 +4,7 @@ import LageplanLabels from './LageplanLabels'
 import MapDots, { type MapDotVM } from './MapDots'
 import { ColorDefs } from './MapDot'
 import { dotRadius } from '../../lib/mapGeometry'
+import { LAGEPLAN_VIEWBOX } from '../../lib/areas'
 
 interface Props {
   svgRef: RefObject<SVGSVGElement>
@@ -16,7 +17,7 @@ interface Props {
   dots: MapDotVM[]
   zoomQ: number
   fitScale: number
-  selectedId?: string | null
+  selectedIds: Set<string>
   highlightedAreaIds?: Set<string>
   // Vorschau-Punkt beim Setzen/Verschieben im Bearbeitungsmodus.
   ghost?: { x: number; y: number } | null
@@ -38,7 +39,7 @@ export default function LageplanMap({
   dots,
   zoomQ,
   fitScale,
-  selectedId,
+  selectedIds,
   highlightedAreaIds,
   ghost,
   onKeyDown,
@@ -60,7 +61,12 @@ export default function LageplanMap({
         ref={svgRef}
         {...bind}
         onKeyDown={onKeyDown}
-        className="h-full w-full touch-none select-none overscroll-contain"
+        // outline-none: der Browser rahmt sonst beim Antippen die GESAMTE Karte
+        // schwarz ein (die Fläche ist fokussierbar, damit es einen Tastaturweg gibt).
+        // Für die Tastatur bleibt der Rahmen über focus-visible erhalten.
+        className="h-full w-full touch-none select-none overscroll-contain outline-none
+          focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px]
+          focus-visible:outline-[var(--accent)]"
         preserveAspectRatio="xMidYMid meet"
         role="group"
         aria-label="Hallenplan"
@@ -81,6 +87,19 @@ export default function LageplanMap({
           <ColorDefs idPrefix={idPrefix} />
         </defs>
 
+        {/* Unsichtbare Trefferfläche über den ganzen Plan. SVG trifft nur, was auch
+          gemalt ist – ohne diese Fläche käme ein Tipp neben eine Hallenfläche
+          (Gang, Rand) nirgends an, und im Bearbeitungsmodus ließe sich dort kein
+          Boulder setzen. Großzügig über den Grundriss hinaus, weil man auch über
+          den Rand hinaus schieben kann. */}
+      <rect
+        x={LAGEPLAN_VIEWBOX.x - LAGEPLAN_VIEWBOX.w}
+        y={LAGEPLAN_VIEWBOX.y - LAGEPLAN_VIEWBOX.h}
+        width={LAGEPLAN_VIEWBOX.w * 3}
+        height={LAGEPLAN_VIEWBOX.h * 3}
+        fill="transparent"
+      />
+
         <LageplanBase idPrefix={idPrefix} highlightedAreaIds={highlightedAreaIds} />
         <LageplanLabels zoomQ={zoomQ} />
         <MapDots
@@ -88,7 +107,7 @@ export default function LageplanMap({
           zoomQ={zoomQ}
           fitScale={fitScale}
           idPrefix={idPrefix}
-          selectedId={selectedId}
+          selectedIds={selectedIds}
         />
 
         {ghost && (

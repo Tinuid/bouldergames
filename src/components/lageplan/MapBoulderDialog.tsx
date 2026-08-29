@@ -205,6 +205,14 @@ export default function MapBoulderDialog({
           </button>
         </div>
 
+        {isEdit && (onRemove || onDelete) && (
+          <p className="mt-4 text-[13px] text-muted">
+            „Abgeschraubt" nimmt den Boulder von der Karte, behält ihn aber samt aller Marken in
+            der Geschichte – der Standardfall beim Umschrauben. „Endgültig löschen" ist nur für
+            Fehleingaben und entfernt auch, was andere daran markiert haben.
+          </p>
+        )}
+
         {isEdit && onRemove && (
           <button
             type="button"
@@ -217,7 +225,7 @@ export default function MapBoulderDialog({
               )
             }
           >
-            Abgeschraubt
+            Abgeschraubt – von der Karte nehmen
           </button>
         )}
 
@@ -233,7 +241,7 @@ export default function MapBoulderDialog({
               )
             }
           >
-            Endgültig löschen
+            Endgültig löschen – auch alle Marken
           </button>
         )}
       </form>

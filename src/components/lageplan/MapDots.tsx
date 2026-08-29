@@ -13,6 +13,8 @@ export interface MapDotVM {
   tick: GymTickState | null
   // Vom Filter ausgeschlossen.
   dimmed: boolean
+  // Gehört nicht zur geöffneten Challenge – nur zurückgenommen dargestellt.
+  faded?: boolean
   aria: string
 }
 
@@ -36,13 +38,13 @@ function MapDots({
   zoomQ,
   fitScale,
   idPrefix,
-  selectedId,
+  selectedIds,
 }: {
   dots: MapDotVM[]
   zoomQ: number
   fitScale: number
   idPrefix: string
-  selectedId?: string | null
+  selectedIds: Set<string>
 }) {
   const r = dotRadius(zoomQ)
   const showBadgeGlyph = r * 0.46 * fitScale * zoomQ >= BADGE_GLYPH_MIN_PX
@@ -50,9 +52,10 @@ function MapDots({
   // Zeichenreihenfolge: ausgegraut ganz nach hinten, markiert nach vorn,
   // ausgewählt zuletzt. Damit gewinnt bei Überlappung immer das Wichtigere.
   const ordered = useMemo(() => {
-    const rank = (d: MapDotVM) => (d.id === selectedId ? 3 : d.dimmed ? 0 : d.tick ? 2 : 1)
+    const rank = (d: MapDotVM) =>
+      selectedIds.has(d.id) ? 4 : d.dimmed ? 0 : d.faded ? 1 : d.tick ? 3 : 2
     return [...dots].sort((a, b) => rank(a) - rank(b))
-  }, [dots, selectedId])
+  }, [dots, selectedIds])
 
   return (
     <g pointerEvents="none">
@@ -66,7 +69,8 @@ function MapDots({
           label={d.label}
           tick={d.tick}
           dimmed={d.dimmed}
-          selected={d.id === selectedId}
+          faded={d.faded}
+          selected={selectedIds.has(d.id)}
           showBadgeGlyph={showBadgeGlyph}
           idPrefix={idPrefix}
           ariaLabel={d.aria}

@@ -255,7 +255,9 @@ export function Flag(p: IconProps) {
   )
 }
 
-export function Map(p: IconProps) {
+// Absichtlich nicht "Map": das würde beim Importieren den eingebauten
+// Map-Konstruktor überschatten und `new Map(...)` in derselben Datei kaputtmachen.
+export function Plan(p: IconProps) {
   return (
     <svg {...base} {...p}>
       <path
@@ -278,20 +280,6 @@ export function Crosshair(p: IconProps) {
         stroke="currentColor"
         strokeWidth="1.8"
         strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
-export function Maximize(p: IconProps) {
-  return (
-    <svg {...base} {...p}>
-      <path
-        d="M9 4H4v5M15 4h5v5M15 20h5v-5M9 20H4v-5"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
       />
     </svg>
   )
