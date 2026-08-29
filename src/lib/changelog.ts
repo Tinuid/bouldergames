@@ -13,6 +13,13 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.14.1',
+    date: '29.08.2026',
+    text:
+      'Beim Hineinzoomen in die Karte werden die Punkte jetzt deutlich kleiner – eng nebeneinander geschraubte Boulder lassen sich damit auseinanderhalten.\n' +
+      'Und beim Setzen eines Boulders wird der Bereich zuverlässiger erkannt: bisher fiel ein Boulder direkt an der Wand oft aus dem Bereichsfilter heraus.',
+  },
+  {
     // 1.13.0 und 1.14.0 sind zusammen ausgeliefert worden (die Hallenkarte und ihre
     // Anbindung an die Challenges), darum hier bewusst EIN Eintrag statt zweier.
     version: '1.14.0',

@@ -120,6 +120,15 @@ function parsePolygon(d: string): [number, number][] {
 
 const POLYGONS = HALL_AREAS.map((a) => parsePolygon(a.d))
 
+// Wie weit ein Punkt außerhalb einer Fläche liegen darf, um ihr trotzdem zugeordnet
+// zu werden (SVG-User-Einheiten, gut eine Punktbreite).
+//
+// Ohne diese Toleranz ist die Zuordnung praktisch unbrauchbar: Boulder hängen AN der
+// Wand, also genau auf der Polygonkante – und die Bereiche sind schmale Bänder. Zwei
+// Punkte wenige Einheiten auseinander landen dann mal drinnen, mal draußen, und der
+// Bereichsfilter verliert die Hälfte.
+export const AREA_SNAP_TOLERANCE = 30
+
 // Even-Odd-Ray-Cast (horizontaler Strahl nach rechts).
 function pointInPolygon(pts: [number, number][], x: number, y: number): boolean {
   let inside = false
@@ -131,20 +140,57 @@ function pointInPolygon(pts: [number, number][], x: number, y: number): boolean 
   return inside
 }
 
-// Bereich an einer Position im SVG-User-Space – oder null außerhalb aller Flächen
+// Kürzester Abstand eines Punktes zu einer Strecke.
+function distanceToSegment(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+): number {
+  const vx = bx - ax
+  const vy = by - ay
+  const len2 = vx * vx + vy * vy
+  const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * vx + (py - ay) * vy) / len2))
+  return Math.hypot(px - (ax + t * vx), py - (ay + t * vy))
+}
+
+// Kürzester Abstand eines Punktes zum Rand eines Polygons.
+function distanceToPolygon(pts: [number, number][], x: number, y: number): number {
+  let min = Infinity
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    min = Math.min(min, distanceToSegment(x, y, pts[j][0], pts[j][1], pts[i][0], pts[i][1]))
+  }
+  return min
+}
+
+// Bereich an einer Position im SVG-User-Space – oder null, wenn weit weg von allem
 // (Gang/Rand ist ausdrücklich erlaubt).
 //
-// ACHTUNG: nur als VORBELEGUNG beim Setzen eines Boulders gedacht. Die Flächen sind
-// nicht-konvexe Einzelumrisse ohne Löcher; in der Konkavität von `abenteuerland`
-// und `ems-arena` meldet der Test fälschlich "drinnen". Darum ist gym_boulders.area
-// eine gespeicherte, im Dialog änderbare Spalte und wird NIE zur Renderzeit
-// abgeleitet.
+// Zwei Stufen: erst der exakte Drinnen-Test, rückwärts iteriert, damit die zuletzt
+// gezeichnete – also oben liegende – Fläche gewinnt (sonst würde `abenteuerfels` von
+// `abenteuerland` überstimmt). Trifft nichts, gewinnt die Fläche mit dem kürzesten
+// Randabstand, sofern der unter AREA_SNAP_TOLERANCE liegt.
 //
-// Rückwärts-Iteration: die zuletzt gezeichnete (oben liegende) Fläche gewinnt –
-// sonst würde `abenteuerfels` von `abenteuerland` überstimmt.
-export function areaAt(x: number, y: number): string | null {
+// ACHTUNG: weiterhin nur als VORBELEGUNG beim Setzen gedacht. Die Flächen sind
+// nicht-konvexe Bänder; in ihrer Konkavität meldet der Drinnen-Test fälschlich
+// "drinnen", und der Nachbar kann näher liegen als der richtige Bereich. Darum ist
+// gym_boulders.area eine gespeicherte, im Dialog änderbare Spalte und wird NIE zur
+// Renderzeit abgeleitet.
+export function areaAt(x: number, y: number, tolerance = AREA_SNAP_TOLERANCE): string | null {
   for (let i = HALL_AREAS.length - 1; i >= 0; i--) {
     if (pointInPolygon(POLYGONS[i], x, y)) return HALL_AREAS[i].id
   }
-  return null
+
+  let best: string | null = null
+  let bestDistance = tolerance
+  for (let i = HALL_AREAS.length - 1; i >= 0; i--) {
+    const d = distanceToPolygon(POLYGONS[i], x, y)
+    if (d < bestDistance) {
+      bestDistance = d
+      best = HALL_AREAS[i].id
+    }
+  }
+  return best
 }

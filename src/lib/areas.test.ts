@@ -60,9 +60,23 @@ describe('areaAt', () => {
     expect(areaAt(x, y)).toBe('abenteuerfels')
   })
 
-  it('gibt außerhalb aller Flächen null zurück', () => {
+  it('gibt weit außerhalb aller Flächen null zurück', () => {
     expect(areaAt(100, 30)).toBeNull()
     expect(areaAt(1040, 880)).toBeNull()
+  })
+
+  it('zieht knapp danebenliegende Punkte auf die nächste Fläche', () => {
+    // Boulder hängen AN der Wand, also auf der Polygonkante – ohne Toleranz fiele
+    // die Hälfte durch. Punkt kurz außerhalb der Torf-Terrasse:
+    expect(areaAt(646, 690)).toBe('torf-terrasse')
+    expect(areaAt(645, 674)).toBe('torf-terrasse')
+  })
+
+  it('respektiert die Toleranzgrenze', () => {
+    const [x, y] = INSIDE['pulverturm']
+    // Weit weg von allem, mit abgeschalteter Toleranz auch direkt neben der Fläche.
+    expect(areaAt(x, y, 0)).toBe('pulverturm')
+    expect(areaAt(100, 30, 0)).toBeNull()
   })
 })
 

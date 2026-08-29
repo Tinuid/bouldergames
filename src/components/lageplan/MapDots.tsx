@@ -20,7 +20,7 @@ export interface MapDotVM {
 
 // Unterhalb dieses Bildschirmradius (px) wird im Marken-Badge nur noch die farbige
 // Scheibe gezeigt – ein Häkchen oder Fähnchen wäre dort nicht mehr lesbar.
-const BADGE_GLYPH_MIN_PX = 7
+const BADGE_GLYPH_MIN_PX = 6
 
 /**
  * Die Punkt-Ebene der Karte.

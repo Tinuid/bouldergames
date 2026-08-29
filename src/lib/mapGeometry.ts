@@ -23,12 +23,19 @@ export interface Point {
 export const MIN_ZOOM = 1
 export const MAX_ZOOM = 8
 
-// Punkt-Radius in SVG-User-Einheiten bei Zoom 1. Die Dämpfung sorgt dafür, dass
-// Punkte beim Hineinzoomen zwar größer werden, aber deutlich langsamer als die
-// Karte – sonst sieht man am Ende nur noch Punkte und keinen Plan mehr.
-// Bildschirmradius ∝ zoom^(1 − DOT_DAMPING).
+// Punkt-Radius in SVG-User-Einheiten bei Zoom 1.
+//
+// Die Dämpfung entscheidet, wie stark die Punkte beim Hineinzoomen schrumpfen. Sie
+// ist bewusst hoch: herausgezoomt dürfen sich Punkte überlappen (dort zählt der
+// Überblick), hineingezoomt zählt dagegen, dass eng beieinander geschraubte Boulder
+// als getrennte Punkte lesbar bleiben – wichtiger als ein möglichst großer,
+// gut greifbarer Punkt.
+//
+// Bildschirmradius ∝ zoom^(1 − DOT_DAMPING), wächst also noch leicht mit (bei 0.75
+// etwa mit der vierten Wurzel) – die Zahl im Punkt bleibt damit auf jeder Stufe
+// lesbar, während der Punkt im Kartenmaßstab deutlich kleiner wird.
 export const DOT_BASE_R = 26
-export const DOT_DAMPING = 0.55
+export const DOT_DAMPING = 0.75
 
 // Bereichs-Beschriftungen werden stärker gegenskaliert (bleiben also fast konstant
 // groß, wie Ortsnamen auf einer Landkarte) und blenden beim Hineinzoomen aus.
