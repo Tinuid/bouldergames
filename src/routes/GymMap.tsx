@@ -75,7 +75,8 @@ export default function GymMap() {
   const contextBoulderId = searchParams.get('boulder')
 
   const [filter, setFilter] = useState<MapFilter>(EMPTY_FILTER)
-  const [filterOpen, setFilterOpen] = useState(false)
+  // Standardmäßig offen: ein Filter, den man erst aufklappen muss, wird nicht benutzt.
+  const [filterOpen, setFilterOpen] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -151,7 +152,9 @@ export default function GymMap() {
     if (!gymId) return
     try {
       const raw = localStorage.getItem(filterStorageKey(gymId))
-      if (raw) setFilter({ ...EMPTY_FILTER, ...JSON.parse(raw) })
+      // areas bewusst zurücksetzen: für den Bereichsfilter gibt es derzeit kein
+      // Bedienelement, ein gespeicherter Wert wäre ein unsichtbar aktiver Filter.
+      if (raw) setFilter({ ...EMPTY_FILTER, ...JSON.parse(raw), areas: [] })
     } catch {
       /* defekter Eintrag: einfach ohne Filter starten */
     }
@@ -192,7 +195,6 @@ export default function GymMap() {
   const available = useMemo(
     () => ({
       difficulties: [...new Set(boulders.map((b) => b.difficulty))],
-      areas: [...new Set(boulders.map((b) => b.area).filter((a): a is string => a != null))],
       colors: [...new Set(boulders.map((b) => b.color))],
     }),
     [boulders],
@@ -203,16 +205,11 @@ export default function GymMap() {
   useEffect(() => {
     setFilter((f) => {
       const difficulties = f.difficulties.filter((d) => available.difficulties.includes(d))
-      const areas = f.areas.filter((a) => available.areas.includes(a))
       const colors = f.colors.filter((c) => available.colors.includes(c))
-      if (
-        difficulties.length === f.difficulties.length &&
-        areas.length === f.areas.length &&
-        colors.length === f.colors.length
-      ) {
+      if (difficulties.length === f.difficulties.length && colors.length === f.colors.length) {
         return f
       }
-      return { ...f, difficulties, areas, colors }
+      return { ...f, difficulties, colors }
     })
   }, [available])
 
@@ -598,6 +595,9 @@ export default function GymMap() {
           zoomQ={panZoom.zoomQ}
           fitScale={panZoom.fitScale}
           selectedIds={dotSelection}
+          // Ruht, solange es kein Bedienelement für den Bereichsfilter gibt –
+          // filter.areas bleibt dann leer. Bleibt stehen, damit das Tönen der
+          // Fläche beim Wiedereinblenden sofort wieder funktioniert.
           highlightedAreaIds={filter.areas.length > 0 ? new Set(filter.areas) : undefined}
           ghost={placeAt}
           onKeyDown={(e) => {

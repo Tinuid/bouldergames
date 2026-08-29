@@ -13,6 +13,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.15.0',
+    date: '29.08.2026',
+    text:
+      'Der Filter auf der Hallenkarte ist jetzt von Anfang an sichtbar und deutlich kompakter – alle Möglichkeiten stehen auf einen Blick da, ohne Scrollen. Über den Pfeil oben rechts blendest du ihn weg.\n' +
+      'Bei den Marken wählst du nur noch eines: Alle, Offen, Erledigt oder Projekte.\n' +
+      'Der Bereichsfilter ist vorerst entfallen – die Karte zeigt ohnehin, wo etwas hängt.',
+  },
+  {
     version: '1.14.2',
     date: '29.08.2026',
     text:

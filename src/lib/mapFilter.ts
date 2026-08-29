@@ -9,14 +9,16 @@ import type { GymTickState } from '../types'
 
 export interface MapFilter {
   difficulties: number[]
+  // Bereichsfilter: im UI derzeit nicht angeboten (die Karte zeigt ohnehin, wo
+  // etwas hängt), im Modell aber erhalten – so lässt er sich ohne Migration
+  // gespeicherter Filter wieder einblenden.
   areas: string[]
   colors: string[]
-  // Ein 3-Wege-Segment statt zweier unabhängiger Schalter: die echten Fragen sind
-  // "was fehlt mir noch", "was habe ich geschafft" und "meine Projekte". Zwei
-  // Tri-States ergäben neun Kombinationen, von denen mehrere strukturell leer sind
-  // (erledigt löscht das Projekt).
-  tick: 'alle' | 'offen' | 'erledigt'
-  onlyProjects: boolean
+  // Eine einzige Auswahl statt Segment plus Extra-Schalter: "Projekte" ist keine
+  // eigene Achse, sondern eine der Antworten auf dieselbe Frage. Das spart eine
+  // Zeile und schließt sinnlose Kombinationen aus ("nur erledigt" + "nur Projekte").
+  // "Offen" heißt: alles, was nicht erledigt ist – Projekte also eingeschlossen.
+  tick: 'alle' | 'offen' | 'erledigt' | 'projekte'
 }
 
 // Leere Auswahl heißt "alle" – das ist eindeutig und macht Zurücksetzen trivial.
@@ -25,27 +27,14 @@ export const EMPTY_FILTER: MapFilter = {
   areas: [],
   colors: [],
   tick: 'alle',
-  onlyProjects: false,
 }
 
 export function isFiltering(f: MapFilter): boolean {
-  return (
-    f.difficulties.length > 0 ||
-    f.areas.length > 0 ||
-    f.colors.length > 0 ||
-    f.tick !== 'alle' ||
-    f.onlyProjects
-  )
+  return f.difficulties.length > 0 || f.areas.length > 0 || f.colors.length > 0 || f.tick !== 'alle'
 }
 
 export function activeFilterCount(f: MapFilter): number {
-  return (
-    f.difficulties.length +
-    f.areas.length +
-    f.colors.length +
-    (f.tick !== 'alle' ? 1 : 0) +
-    (f.onlyProjects ? 1 : 0)
-  )
+  return f.difficulties.length + f.areas.length + f.colors.length + (f.tick !== 'alle' ? 1 : 0)
 }
 
 export function toggleValue<T>(list: T[], value: T): T[] {
@@ -60,8 +49,8 @@ export function matchesFilter(
   if (f.difficulties.length > 0 && !f.difficulties.includes(b.difficulty)) return false
   if (f.colors.length > 0 && !f.colors.includes(b.color)) return false
   if (f.areas.length > 0 && (b.area == null || !f.areas.includes(b.area))) return false
-  if (f.onlyProjects && tick !== 'project') return false
   if (f.tick === 'erledigt' && tick !== 'done') return false
+  if (f.tick === 'projekte' && tick !== 'project') return false
   if (f.tick === 'offen' && tick === 'done') return false
   return true
 }

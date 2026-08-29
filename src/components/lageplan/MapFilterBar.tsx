@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { DIFFICULTIES } from '../../lib/difficulty'
 import { BOULDER_COLORS, colorSwatch } from '../../lib/colors'
-import { HALL_AREAS } from '../../lib/areas'
 import {
   EMPTY_FILTER,
   activeFilterCount,
@@ -9,21 +8,29 @@ import {
   toggleValue as toggle,
   type MapFilter,
 } from '../../lib/mapFilter'
-import { Check, ChevronRight } from '../icons'
+import { ChevronLeft } from '../icons'
 
 const TICK_OPTIONS: { value: MapFilter['tick']; label: string }[] = [
   { value: 'alle', label: 'Alle' },
   { value: 'offen', label: 'Offen' },
   { value: 'erledigt', label: 'Erledigt' },
+  { value: 'projekte', label: 'Projekte' },
 ]
 
 /**
- * Filterleiste unter der Karte. Zugeklappt zeigt sie nur Zähler und Einstieg,
- * damit sie nicht den Bereich verdeckt, auf den man gerade schaut.
+ * Filterleiste unter der Karte.
  *
- * Optik und Klassen entsprechen dem Filterblock in SessionView – mit einem
- * Unterschied: hier ist alles MEHRFACHauswahl, weil man auf der Karte typischerweise
- * "Grad 5 und 6 im Pulverturm" sucht.
+ * Standardmäßig aufgeklappt und bewusst kompakt: es muss IMMER alles sichtbar sein,
+ * ohne innerhalb des Filters zu scrollen – ein Filter, dessen Optionen man erst
+ * suchen muss, wird nicht benutzt. Dafür ist die Zahl der Gruppen klein gehalten
+ * (Grad, Farbe, eigene Marken) und der Bereichsfilter derzeit gar nicht dabei: die
+ * Karte zeigt ohnehin, wo etwas hängt.
+ *
+ * Der Einklapp-Pfeil sitzt oben rechts – dort ist er mit dem Daumen der rechten Hand
+ * zu erreichen, ohne die Karte zu verdecken.
+ *
+ * Optik und Klassen folgen dem Filterblock in SessionView, nur enger und überall
+ * mit Mehrfachauswahl.
  */
 export default function MapFilterBar({
   value,
@@ -38,28 +45,68 @@ export default function MapFilterBar({
   value: MapFilter
   onChange: (next: MapFilter) => void
   // Nur Werte anbieten, die tatsächlich vorkommen (Muster aus SessionView).
-  available: { difficulties: number[]; areas: string[]; colors: string[] }
+  available: { difficulties: number[]; colors: string[] }
   visibleCount: number
   totalCount: number
   open: boolean
   onOpenChange: (open: boolean) => void
-  // Platz für Aktionen – Aufhänger für die Mehrfachauswahl in Etappe 2.
+  // Platz für Aktionen – im Auswahlmodus sitzt hier die Aktionsleiste.
   footer?: ReactNode
 }) {
   const filtering = isFiltering(value)
   const count = activeFilterCount(value)
 
   const difficulties = DIFFICULTIES.filter((d) => available.difficulties.includes(d.code))
-  const areas = HALL_AREAS.filter((a) => available.areas.includes(a.id))
   const colors = BOULDER_COLORS.filter((c) => available.colors.includes(c.name))
+
+  const toggleButton = (
+    <button
+      type="button"
+      onClick={() => onOpenChange(!open)}
+      aria-expanded={open}
+      aria-label={open ? 'Filter ausblenden' : 'Filter einblenden'}
+      className="-my-1 -mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition hover:bg-surface-2 hover:text-ink"
+    >
+      <ChevronLeft className={`text-[18px] transition ${open ? 'rotate-90' : '-rotate-90'}`} />
+    </button>
+  )
 
   return (
     <div className="border-t border-border bg-surface">
-      {open && (
-        <div className="max-h-[42vh] overflow-y-auto px-5 pb-1 pt-4">
-          {difficulties.length > 0 && (
-            <div className="mb-4">
-              <div className="mb-2 font-display text-[13px] font-semibold text-muted">Grad</div>
+      {footer}
+
+      <div
+        className="px-5 py-2.5"
+        style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom))' }}
+      >
+        <div className="flex items-center gap-3">
+          <span className="font-display text-[13px] font-bold text-ink">Filter</span>
+          {count > 0 && (
+            <span className="rounded-full bg-accent px-1.5 py-px font-num text-[11px] font-bold text-accent-ink">
+              {count}
+            </span>
+          )}
+          <span
+            className="ml-auto font-num text-[12px] tabular-nums text-muted"
+            aria-live="polite"
+          >
+            {filtering ? `${visibleCount} / ${totalCount}` : totalCount} Boulder
+          </span>
+          {filtering && (
+            <button
+              type="button"
+              className="text-[12px] font-semibold text-accent"
+              onClick={() => onChange(EMPTY_FILTER)}
+            >
+              Zurücksetzen
+            </button>
+          )}
+          {toggleButton}
+        </div>
+
+        {open && (
+          <div className="mt-2.5 flex flex-col gap-2.5">
+            {difficulties.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {difficulties.map((d) => {
                   const selected = value.difficulties.includes(d.code)
@@ -67,14 +114,16 @@ export default function MapFilterBar({
                     <button
                       key={d.code}
                       type="button"
-                      onClick={() => onChange({ ...value, difficulties: toggle(value.difficulties, d.code) })}
+                      onClick={() =>
+                        onChange({ ...value, difficulties: toggle(value.difficulties, d.code) })
+                      }
                       aria-pressed={selected}
                       aria-label={
                         d.label === '?' || d.label === '!'
                           ? `Schwierigkeit ${d.label}`
                           : `Grad ${d.label}`
                       }
-                      className={`flex h-[30px] w-[30px] items-center justify-center rounded-lg border font-num text-[14px] font-bold transition active:scale-90 ${
+                      className={`flex h-[28px] w-[28px] items-center justify-center rounded-lg border font-num text-[13px] font-bold transition active:scale-90 ${
                         selected
                           ? 'border-accent bg-accent text-accent-ink'
                           : 'border-border-strong bg-surface-2 text-ink'
@@ -85,37 +134,9 @@ export default function MapFilterBar({
                   )
                 })}
               </div>
-            </div>
-          )}
+            )}
 
-          {areas.length > 0 && (
-            <div className="mb-4">
-              <div className="mb-2 font-display text-[13px] font-semibold text-muted">Bereich</div>
-              <div className="flex flex-wrap gap-1.5">
-                {areas.map((a) => {
-                  const selected = value.areas.includes(a.id)
-                  return (
-                    <button
-                      key={a.id}
-                      type="button"
-                      onClick={() => onChange({ ...value, areas: toggle(value.areas, a.id) })}
-                      aria-pressed={selected}
-                      className={`chip flex-row items-center gap-1.5 px-3 py-2 text-[13px] font-semibold ${
-                        selected ? 'is-active' : ''
-                      }`}
-                    >
-                      {selected && <Check className="text-[14px]" />}
-                      {a.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {colors.length > 0 && (
-            <div className="mb-4">
-              <div className="mb-2 font-display text-[13px] font-semibold text-muted">Farbe</div>
+            {colors.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {colors.map((c) => {
                   const selected = value.colors.includes(c.name)
@@ -127,9 +148,9 @@ export default function MapFilterBar({
                       title={c.name}
                       aria-label={c.name}
                       aria-pressed={selected}
-                      className={`h-6 w-6 rounded-full transition active:scale-90 ${
+                      className={`h-[22px] w-[22px] rounded-full transition active:scale-90 ${
                         selected
-                          ? 'scale-110 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.14),0_0_0_2px_var(--surface),0_0_0_4px_var(--accent)]'
+                          ? 'scale-110 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.14),0_0_0_2px_var(--surface),0_0_0_3px_var(--accent)]'
                           : 'shadow-[inset_0_0_0_1px_rgba(0,0,0,0.14)]'
                       }`}
                       style={{ background: colorSwatch(c.name) }}
@@ -137,12 +158,9 @@ export default function MapFilterBar({
                   )
                 })}
               </div>
-            </div>
-          )}
+            )}
 
-          <div className="mb-4">
-            <div className="mb-2 font-display text-[13px] font-semibold text-muted">Meine Marken</div>
-            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Meine Marken">
+            <div className="grid grid-cols-4 gap-1.5" role="radiogroup" aria-label="Meine Marken">
               {TICK_OPTIONS.map((o) => (
                 <button
                   key={o.value}
@@ -150,64 +168,18 @@ export default function MapFilterBar({
                   role="radio"
                   aria-checked={value.tick === o.value}
                   onClick={() => onChange({ ...value, tick: o.value })}
-                  className={`seg-opt items-center text-center text-[13px] font-semibold ${
-                    value.tick === o.value ? 'is-active' : ''
+                  className={`rounded-sm2 border py-1.5 text-center text-[12px] font-semibold transition active:scale-95 ${
+                    value.tick === o.value
+                      ? 'border-accent bg-accent text-accent-ink'
+                      : 'border-border-strong bg-surface-2 text-ink'
                   }`}
                 >
                   {o.label}
                 </button>
               ))}
             </div>
-            <button
-              type="button"
-              aria-pressed={value.onlyProjects}
-              onClick={() => onChange({ ...value, onlyProjects: !value.onlyProjects })}
-              className={`chip mt-2 w-full flex-row items-center justify-center gap-2 py-2.5 text-[13px] font-semibold ${
-                value.onlyProjects ? 'is-active' : ''
-              }`}
-            >
-              {value.onlyProjects && <Check className="text-[15px]" />}
-              Nur Projekte
-            </button>
           </div>
-        </div>
-      )}
-
-      {footer}
-
-      <div
-        className="flex items-center justify-between gap-3 px-5 py-3"
-        style={{ paddingBottom: 'calc(12px + env(safe-area-inset-bottom))' }}
-      >
-        <button
-          type="button"
-          onClick={() => onOpenChange(!open)}
-          aria-expanded={open}
-          className="flex items-center gap-1.5 font-display text-[14px] font-bold text-ink"
-        >
-          <ChevronRight className={`text-[16px] transition ${open ? 'rotate-90' : ''}`} />
-          Filter
-          {count > 0 && (
-            <span className="ml-1 rounded-full bg-accent px-2 py-0.5 font-num text-[11px] font-bold text-accent-ink">
-              {count}
-            </span>
-          )}
-        </button>
-
-        <div className="flex items-center gap-3">
-          <span className="font-num text-[13px] tabular-nums text-muted" aria-live="polite">
-            {filtering ? `${visibleCount} / ${totalCount}` : totalCount} Boulder
-          </span>
-          {filtering && (
-            <button
-              type="button"
-              className="text-[13px] font-semibold text-accent"
-              onClick={() => onChange(EMPTY_FILTER)}
-            >
-              Zurücksetzen
-            </button>
-          )}
-        </div>
+        )}
       </div>
     </div>
   )
