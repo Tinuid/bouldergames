@@ -13,23 +13,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    // 1.13.0 und 1.14.0 sind zusammen ausgeliefert worden (die Hallenkarte und ihre
+    // Anbindung an die Challenges), darum hier bewusst EIN Eintrag statt zweier.
     version: '1.14.0',
     date: '29.08.2026',
     text:
-      'Karte und Challenges wachsen zusammen: Auf der Hallenkarte kannst du jetzt über „Auswählen" mehrere Boulder antippen und daraus direkt eine neue Challenge starten oder sie zu einer laufenden hinzufügen.\n' +
-      'Umgekehrt zeigt dir eine Challenge über „Auf der Karte zeigen" (Menü oben rechts), wo ihre Boulder in der Halle hängen.\n' +
-      'Beim Hinzufügen eines Boulders kannst du wählen: selbst anlegen oder vom Lageplan holen – Grad, Farbe und Foto kommen dann mit.\n' +
-      'Jeder übernommene Boulder zeigt in der Challenge eine kleine Karte – ein Tipp darauf springt zur Stelle in der Halle.\n' +
-      'Außerdem lässt sich die App selbst nicht mehr versehentlich verzoomen – die Zwei-Finger-Geste gehört jetzt der Karte.',
-  },
-  {
-    version: '1.13.0',
-    date: '29.08.2026',
-    text:
       'Neu: die Hallenkarte. Über „Hallenkarte" auf der Startseite siehst du den Lageplan von Fingerfood mit allen Bouldern als farbige Punkte – die Zahl darauf ist der Grad.\n' +
-      'Zoomen und Verschieben mit zwei Fingern, Boulder antippen und für dich als „Erledigt" oder „Projekt" markieren. Diese Marken sieht nur dein Gerät.\n' +
-      'Gefiltert wird nach Grad, Bereich, Farbe und deinen Marken – auch mehreres gleichzeitig.\n' +
-      'Boulder auf der Karte setzen, ändern und abschrauben ist passwortgeschützt.',
+      'Zoomen und Verschieben mit zwei Fingern. Tippst du einen Boulder an, kannst du ihn für dich als „Erledigt" oder „Projekt" markieren – das sieht nur dein Gerät.\n' +
+      'Gefiltert wird nach Grad, Bereich, Farbe und deinen Marken, auch mehreres gleichzeitig.\n' +
+      'Karte und Challenges hängen zusammen: Über „Auswählen" tippst du mehrere Boulder an und startest daraus eine neue Challenge oder legst sie in eine laufende. Beim Hinzufügen eines Boulders kannst du entsprechend wählen – selbst anlegen oder vom Lageplan holen, dann kommen Grad, Farbe und Foto mit.\n' +
+      'Umgekehrt zeigt jeder übernommene Boulder in der Challenge eine kleine Karte; ein Tipp darauf springt zu seiner Stelle in der Halle. Das ganze Bild gibt es über „Auf der Karte zeigen" im Menü oben rechts.\n' +
+      'Boulder auf der Karte setzen, ändern und abschrauben ist passwortgeschützt.\n' +
+      'Außerdem lässt sich die App selbst nicht mehr versehentlich verzoomen – die Zwei-Finger-Geste gehört jetzt der Karte.',
   },
   {
     version: '1.12.0',
