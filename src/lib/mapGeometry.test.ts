@@ -9,6 +9,7 @@ import {
   labelOpacity,
   labelSize,
   nearestDot,
+  PAN_MARGIN,
   quantizeZoom,
   separateOverlaps,
   screenToUser,
@@ -85,39 +86,45 @@ describe('clampView', () => {
     expect(v.w / v.h).toBeCloseTo(PORTRAIT, 9)
   })
 
-  it('lässt höchstens eine halbe Bildschirmbreite über den Kartenrand hinaus', () => {
+  it('lässt PAN_MARGIN Ausschnittsbreiten über den Kartenrand hinaus', () => {
     const w = fit.w / 4
     const h = w / PORTRAIT
 
     const left = clampView({ x: -99999, y: 0, w, h }, CONTENT, fit, PORTRAIT)
-    expect(left.x).toBeCloseTo(CONTENT.x - w / 2, 9)
+    expect(left.x).toBeCloseTo(CONTENT.x - w * PAN_MARGIN, 9)
 
     const right = clampView({ x: 99999, y: 0, w, h }, CONTENT, fit, PORTRAIT)
-    expect(right.x).toBeCloseTo(CONTENT.x + CONTENT.w - w / 2, 9)
+    expect(right.x).toBeCloseTo(CONTENT.x + CONTENT.w - w + w * PAN_MARGIN, 9)
   })
 
-  it('erlaubt es, jeden Punkt der Karte in die Bildschirmmitte zu holen', () => {
-    const w = fit.w / 4
-    const h = w / PORTRAIT
-    // Die vier Ecken des Grundrisses – jede muss zentrierbar sein.
-    for (const [px, py] of [
+  it('erlaubt es auf JEDER Zoomstufe, jede Ecke in die Bildschirmmitte zu holen', () => {
+    const corners = [
       [CONTENT.x, CONTENT.y],
       [CONTENT.x + CONTENT.w, CONTENT.y],
       [CONTENT.x, CONTENT.y + CONTENT.h],
       [CONTENT.x + CONTENT.w, CONTENT.y + CONTENT.h],
-    ]) {
-      const v = clampView({ x: px - w / 2, y: py - h / 2, w, h }, CONTENT, fit, PORTRAIT)
-      expect(v.x + v.w / 2).toBeCloseTo(px, 6)
-      // Vertikal nur, wenn die Achse überhaupt verschiebbar ist.
-      if (v.h < CONTENT.h) expect(v.y + v.h / 2).toBeCloseTo(py, 6)
+    ]
+    // Auch komplett herausgezoomt (Zoom 1), wo der Plan ganz sichtbar ist.
+    for (const zoom of [MIN_ZOOM, 2, 4, MAX_ZOOM]) {
+      const w = fit.w / zoom
+      const h = w / PORTRAIT
+      for (const [px, py] of corners) {
+        const v = clampView({ x: px - w / 2, y: py - h / 2, w, h }, CONTENT, fit, PORTRAIT)
+        expect(v.x + v.w / 2).toBeCloseTo(px, 6)
+        expect(v.y + v.h / 2).toBeCloseTo(py, 6)
+      }
     }
   })
 
-  it('zentriert die Achse, auf der die Karte ganz hineinpasst', () => {
-    // Im Hochformat ist der Ausschnitt bei Zoom 1 breiter als der Grundriss –
-    // horizontal gibt es dann nichts zu verschieben.
-    const v = clampView({ ...fit, x: fit.x + 500 }, CONTENT, fit, PORTRAIT)
-    expect(v.x + v.w / 2).toBeCloseTo(CONTENT.x + CONTENT.w / 2, 9)
+  it('erlaubt auch das obere Drittel, damit das Sheet den Punkt nicht verdeckt', () => {
+    // focusOn holt den ausgewählten Punkt auf 32 % der Höhe – das braucht mehr
+    // Spielraum als das bloße Zentrieren.
+    const bias = 0.32
+    const w = fit.w / 2
+    const h = w / PORTRAIT
+    const py = CONTENT.y + CONTENT.h // unterste Kante
+    const v = clampView({ x: fit.x, y: py - bias * h, w, h }, CONTENT, fit, PORTRAIT)
+    expect(v.y + v.h * bias).toBeCloseTo(py, 6)
   })
 
   it('ist idempotent', () => {

@@ -13,6 +13,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.14.2',
+    date: '29.08.2026',
+    text:
+      'Die Hallenkarte lässt sich jetzt über ihren Rand hinausschieben – auch ein Boulder ganz außen am Plan lässt sich damit in die Bildmitte holen, statt am Rand hängenzubleiben.',
+  },
+  {
     version: '1.14.1',
     date: '29.08.2026',
     text:

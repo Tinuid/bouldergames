@@ -87,31 +87,42 @@ export function zoomOf(fit: ViewRect, view: ViewRect): number {
   return fit.w / view.w
 }
 
-// Begrenzt Zoom und Position: erst die Breite (Höhe folgt aus dem Seitenverhältnis),
-// dann je Achse – passt der Grundriss auf der Achse ganz hinein, wird zentriert,
-// sonst am Rand angeschlagen.
+// Wie weit über den Rand des Grundrisses hinaus geschoben werden darf, als Anteil
+// der sichtbaren Ausschnittsgröße.
 //
-// Der Anschlag liegt bewusst NICHT an der Kante des Grundrisses, sondern eine halbe
-// Bildschirmbreite dahinter. Sonst ließe sich ein Punkt am Rand nie in die Mitte
-// schieben – man stößt mit dem Display gegen den Kartenrand, obwohl genau dort das
-// Detail-Sheet den unteren Teil verdeckt. Mit dem Zuschlag ist jeder Punkt
-// erreichbar, und weiter als "halb leer" wird der Bildschirm nie.
+// Rechnerisch genügten 0.5, um einen Punkt am äußersten Rand genau in die Mitte zu
+// bekommen. Etwas mehr, weil (a) das Zentrieren sonst exakt am Anschlag passiert und
+// sich wie Anstoßen anfühlt und (b) der ausgewählte Punkt bewusst ins obere Drittel
+// geholt wird, damit ihn das Detail-Sheet nicht verdeckt – dafür reicht die Hälfte
+// nicht.
+export const PAN_MARGIN = 0.7
+
+// Begrenzt Zoom und Position: erst die Breite (Höhe folgt aus dem Seitenverhältnis),
+// dann je Achse der Anschlag.
+//
+// Der Anschlag liegt bewusst NICHT an der Kante des Grundrisses, sondern PAN_MARGIN
+// Ausschnittsbreiten dahinter – und zwar auf JEDER Zoomstufe. Würde eine Achse
+// festgehalten, sobald der Plan dort ganz hineinpasst (naheliegend, weil es dann ja
+// nichts mehr zu sehen gibt), ließe sich herausgezoomt kein Randpunkt in die Mitte
+// ziehen; man stößt mit dem Display gegen die Karte.
 export function clampView(view: ViewRect, content: ViewRect, fit: ViewRect, aspect: number): ViewRect {
   const w = Math.min(Math.max(view.w, fit.w / MAX_ZOOM), fit.w / MIN_ZOOM)
   const h = w / aspect
 
   // Eine Breitenänderung wird um den Mittelpunkt des übergebenen Ausschnitts
   // ausgeglichen; ohne Änderung bleibt x/y unberührt.
-  let x = view.x + (view.w - w) / 2
-  let y = view.y + (view.h - h) / 2
+  const x = view.x + (view.w - w) / 2
+  const y = view.y + (view.h - h) / 2
 
-  if (w >= content.w) x = content.x + (content.w - w) / 2
-  else x = Math.min(Math.max(x, content.x - w / 2), content.x + content.w - w / 2)
+  const marginX = w * PAN_MARGIN
+  const marginY = h * PAN_MARGIN
 
-  if (h >= content.h) y = content.y + (content.h - h) / 2
-  else y = Math.min(Math.max(y, content.y - h / 2), content.y + content.h - h / 2)
-
-  return { x, y, w, h }
+  return {
+    x: Math.min(Math.max(x, content.x - marginX), content.x + content.w - w + marginX),
+    y: Math.min(Math.max(y, content.y - marginY), content.y + content.h - h + marginY),
+    w,
+    h,
+  }
 }
 
 // Neuer Ausschnitt mit der Breite `newW`, bei dem der User-Space-Punkt `anchor`
