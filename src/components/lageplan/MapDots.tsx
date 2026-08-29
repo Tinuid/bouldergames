@@ -1,12 +1,16 @@
 import { memo, useMemo } from 'react'
 import MapDot from './MapDot'
-import { dotRadius } from '../../lib/mapGeometry'
 import type { GymTickState } from '../../types'
 
 export interface MapDotVM {
   id: string
+  // Anzeige-Position im SVG-User-Space. Bei gedrängten Punkten bewusst gegenüber
+  // der gespeicherten Position verschoben, damit sie einzeln antippbar bleiben.
   x: number
   y: number
+  // Radius in User-Einheiten – nicht für alle Punkte gleich: gedrängte werden
+  // kleiner gezeichnet.
+  r: number
   color: string
   // Anzeige-Label des Grades ("1"…"7", "?", "!").
   label: string
@@ -46,8 +50,8 @@ function MapDots({
   idPrefix: string
   selectedIds: Set<string>
 }) {
-  const r = dotRadius(zoomQ)
-  const showBadgeGlyph = r * 0.46 * fitScale * zoomQ >= BADGE_GLYPH_MIN_PX
+  // Bildschirm-Pixel pro User-Einheit – entscheidet, ob ein Badge-Symbol noch lesbar ist.
+  const pxPerUnit = fitScale * zoomQ
 
   // Zeichenreihenfolge: ausgegraut ganz nach hinten, markiert nach vorn,
   // ausgewählt zuletzt. Damit gewinnt bei Überlappung immer das Wichtigere.
@@ -64,14 +68,14 @@ function MapDots({
           key={d.id}
           x={d.x}
           y={d.y}
-          r={r}
+          r={d.r}
           color={d.color}
           label={d.label}
           tick={d.tick}
           dimmed={d.dimmed}
           faded={d.faded}
           selected={selectedIds.has(d.id)}
-          showBadgeGlyph={showBadgeGlyph}
+          showBadgeGlyph={d.r * 0.46 * pxPerUnit >= BADGE_GLYPH_MIN_PX}
           idPrefix={idPrefix}
           ariaLabel={d.aria}
         />

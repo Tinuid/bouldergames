@@ -10,6 +10,7 @@ import {
   labelSize,
   nearestDot,
   quantizeZoom,
+  separateOverlaps,
   screenToUser,
   zoomAround,
   zoomOf,
@@ -192,25 +193,97 @@ describe('Größen', () => {
 
 describe('nearestDot', () => {
   const dots = [
-    { id: 'a', x: 100, y: 100 },
-    { id: 'b', x: 130, y: 100 },
-    { id: 'c', x: 900, y: 800 },
+    { id: 'a', x: 100, y: 100, r: 20 },
+    { id: 'b', x: 130, y: 100, r: 20 },
+    { id: 'c', x: 900, y: 800, r: 20 },
   ]
 
   it('findet den nächstgelegenen Punkt in Reichweite', () => {
-    expect(nearestDot(dots, { x: 105, y: 102 }, 20, 10)?.id).toBe('a')
-    expect(nearestDot(dots, { x: 126, y: 100 }, 20, 10)?.id).toBe('b')
+    expect(nearestDot(dots, { x: 105, y: 102 }, 10)?.id).toBe('a')
+    expect(nearestDot(dots, { x: 126, y: 100 }, 10)?.id).toBe('b')
   })
 
   it('gibt null zurück, wenn nichts in Reichweite liegt', () => {
-    expect(nearestDot(dots, { x: 500, y: 500 }, 20, 10)).toBeNull()
+    expect(nearestDot(dots, { x: 500, y: 500 }, 10)).toBeNull()
+  })
+
+  it('berücksichtigt den Radius jedes Punktes einzeln', () => {
+    const mixed = [
+      { id: 'klein', x: 0, y: 0, r: 5 },
+      { id: 'gross', x: 60, y: 0, r: 30 },
+    ]
+    // 35 Einheiten vom kleinen entfernt (außer Reichweite), 25 vom großen (drin).
+    expect(nearestDot(mixed, { x: 35, y: 0 }, 0)?.id).toBe('gross')
   })
 
   it('lässt bei Gleichstand den zuletzt gezeichneten Punkt gewinnen', () => {
     const overlapping = [
-      { id: 'unten', x: 200, y: 200 },
-      { id: 'oben', x: 200, y: 200 },
+      { id: 'unten', x: 200, y: 200, r: 20 },
+      { id: 'oben', x: 200, y: 200, r: 20 },
     ]
-    expect(nearestDot(overlapping, { x: 200, y: 200 }, 20, 10)?.id).toBe('oben')
+    expect(nearestDot(overlapping, { x: 200, y: 200 }, 10)?.id).toBe('oben')
+  })
+})
+
+describe('separateOverlaps', () => {
+  function minPairDistance(pos: Map<string, { x: number; y: number }>): number {
+    const all = [...pos.values()]
+    let min = Infinity
+    for (let i = 0; i < all.length; i++) {
+      for (let j = i + 1; j < all.length; j++) {
+        min = Math.min(min, Math.hypot(all[i].x - all[j].x, all[i].y - all[j].y))
+      }
+    }
+    return min
+  }
+
+  it('zieht dicht beieinander liegende Punkte auseinander', () => {
+    // Der reale Fall: zwei Boulder vier Einheiten auseinander.
+    const dots = [
+      { id: 'a', x: 646, y: 690 },
+      { id: 'b', x: 649, y: 694 },
+    ]
+    const out = separateOverlaps(dots, 20)
+    expect(minPairDistance(out)).toBeGreaterThanOrEqual(20 - 1e-6)
+  })
+
+  it('trennt auch exakt deckungsgleiche Punkte', () => {
+    const dots = [
+      { id: 'a', x: 500, y: 500 },
+      { id: 'b', x: 500, y: 500 },
+      { id: 'c', x: 500, y: 500 },
+    ]
+    const out = separateOverlaps(dots, 15)
+    expect(minPairDistance(out)).toBeGreaterThan(0)
+  })
+
+  it('lässt weit auseinanderliegende Punkte unangetastet', () => {
+    const dots = [
+      { id: 'a', x: 100, y: 100 },
+      { id: 'b', x: 900, y: 800 },
+    ]
+    const out = separateOverlaps(dots, 20)
+    expect(out.get('a')).toEqual({ x: 100, y: 100 })
+    expect(out.get('b')).toEqual({ x: 900, y: 800 })
+  })
+
+  it('ist deterministisch', () => {
+    const dots = [
+      { id: 'a', x: 300, y: 300 },
+      { id: 'b', x: 302, y: 301 },
+      { id: 'c', x: 300, y: 300 },
+    ]
+    expect(separateOverlaps(dots, 25)).toEqual(separateOverlaps(dots, 25))
+  })
+
+  it('verschiebt so wenig wie möglich', () => {
+    const dots = [
+      { id: 'a', x: 400, y: 400 },
+      { id: 'b', x: 418, y: 400 },
+    ]
+    const out = separateOverlaps(dots, 20)
+    // Fehlen 2 Einheiten, wandert jeder Punkt nur je eine.
+    expect(Math.abs(out.get('a')!.x - 399)).toBeLessThan(0.01)
+    expect(Math.abs(out.get('b')!.x - 419)).toBeLessThan(0.01)
   })
 })

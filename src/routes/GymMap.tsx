@@ -6,7 +6,14 @@ import { useSvgPanZoom } from '../hooks/useSvgPanZoom'
 import { DEFAULT_GYM_SLUG } from '../lib/gyms'
 import { areaAt, areaLabel, LAGEPLAN_VIEWBOX } from '../lib/areas'
 import { difficultyLabel } from '../lib/difficulty'
-import { dotRadius, nearestDot } from '../lib/mapGeometry'
+import {
+  CROWDED_SHRINK,
+  SEPARATE_MIN_ZOOM,
+  dotRadius,
+  nearestDot,
+  separateOverlaps,
+  separationDistance,
+} from '../lib/mapGeometry'
 import { deleteBoulderImage, uploadBoulderImage } from '../lib/images'
 import {
   addBouldersFromGym,
@@ -209,7 +216,9 @@ export default function GymMap() {
     })
   }, [available])
 
-  const dots = useMemo<MapDotVM[]>(
+  // Rohdaten der Punkte, noch ohne Größe und ohne Entzerrung – beides hängt am
+  // Zoom und wird weiter unten ergänzt, sobald der Pan/Zoom-Hook steht.
+  const rawDots = useMemo(
     () =>
       boulders.map((b) => {
         const tick = tickByBoulder.get(b.id) ?? null
@@ -239,12 +248,17 @@ export default function GymMap() {
     [boulders, filter, tickByBoulder, mode, highlightIds],
   )
 
-  const visibleDots = useMemo(() => dots.filter((d) => !d.dimmed), [dots])
-
   // Aktuelle Werte für den Tap-Handler, ohne ihn bei jeder Filteränderung neu zu
-  // bauen (er hängt am Pan/Zoom-Hook).
-  const stateRef = useRef({ visibleDots, adminMode, movingId, boulders, mode })
-  stateRef.current = { visibleDots, adminMode, movingId, boulders, mode }
+  // bauen (er hängt am Pan/Zoom-Hook). Wird weiter unten gefüllt, sobald das
+  // Punkt-Layout steht – der Treffer-Test muss mit denselben Koordinaten rechnen,
+  // die auch gezeichnet werden.
+  const stateRef = useRef<{
+    visibleDots: MapDotVM[]
+    adminMode: boolean
+    movingId: string | null
+    boulders: GymBoulder[]
+    mode: MapMode
+  }>({ visibleDots: [], adminMode: false, movingId: null, boulders: [], mode: 'browse' })
 
   const panZoomRef = useRef<{ zoomQ: number; fitScale: number }>({ zoomQ: 1, fitScale: 1 })
 
@@ -257,6 +271,7 @@ export default function GymMap() {
         mode: currentMode,
       } = stateRef.current
       const { zoomQ, fitScale } = panZoomRef.current
+
 
       // Verschieben ist scharfgeschaltet: der nächste Tipp ist die neue Position.
       // Bewusst kein Ziehen am Punkt – das wäre nicht vom Verschieben der Karte
@@ -275,7 +290,7 @@ export default function GymMap() {
       }
 
       const pxPerUnit = fitScale * zoomQ
-      const hit = nearestDot(vd, p, dotRadius(zoomQ), TAP_SLOP_PX / pxPerUnit)
+      const hit = nearestDot(vd, p, TAP_SLOP_PX / pxPerUnit)
 
       // Im Auswahlmodus sammelt ein Tipp ein bzw. wieder aus – bewusst kein
       // Detail-Sheet, sonst wäre das Tippen doppeldeutig.
@@ -301,6 +316,46 @@ export default function GymMap() {
   const panZoom = useSvgPanZoom({ content: LAGEPLAN_VIEWBOX, onTap: handleTap })
   panZoomRef.current = { zoomQ: panZoom.zoomQ, fitScale: panZoom.fitScale }
   const { focusOn, fitTo, zoomBy, panBy, reset } = panZoom
+
+  // Größe und endgültige Position der Punkte.
+  //
+  // Eng nebeneinander geschraubte Boulder wären sonst ein einziger Klecks und
+  // einzeln nicht antippbar. Ab SEPARATE_MIN_ZOOM werden gedrängte Punkte darum
+  // etwas kleiner gezeichnet (weniger Verschiebung nötig) und auseinandergeschoben.
+  // Ihre gezeigte Position ist dann bewusst ungenau – bei diesem Zoom zählt
+  // Unterscheidbarkeit mehr als der Millimeter.
+  const dots = useMemo<MapDotVM[]>(() => {
+    const baseR = dotRadius(panZoom.zoomQ)
+    if (panZoom.zoomQ < SEPARATE_MIN_ZOOM || rawDots.length < 2) {
+      return rawDots.map((d) => ({ ...d, r: baseR }))
+    }
+
+    // Wer ist gedrängt? Alles, was sich beim normalen Radius berührt.
+    const crowded = new Set<string>()
+    const touching = separationDistance(baseR)
+    for (let i = 0; i < rawDots.length; i++) {
+      for (let j = i + 1; j < rawDots.length; j++) {
+        const a = rawDots[i]
+        const b = rawDots[j]
+        if (Math.hypot(a.x - b.x, a.y - b.y) < touching) {
+          crowded.add(a.id)
+          crowded.add(b.id)
+        }
+      }
+    }
+    if (crowded.size === 0) return rawDots.map((d) => ({ ...d, r: baseR }))
+
+    const smallR = baseR * CROWDED_SHRINK
+    const moved = separateOverlaps(rawDots, separationDistance(smallR))
+    return rawDots.map((d) => {
+      const isCrowded = crowded.has(d.id)
+      const p = isCrowded ? (moved.get(d.id) ?? d) : d
+      return { ...d, x: p.x, y: p.y, r: isCrowded ? smallR : baseR }
+    })
+  }, [rawDots, panZoom.zoomQ])
+
+  const visibleDots = useMemo(() => dots.filter((d) => !d.dimmed), [dots])
+  stateRef.current = { visibleDots, adminMode, movingId, boulders, mode }
 
   // Ist ein einzelner Boulder gemeint, den einmalig auswählen – der Fokus-Effekt
   // weiter unten holt ihn dann in die Mitte.

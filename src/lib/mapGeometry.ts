@@ -175,23 +175,116 @@ export function quantizeZoom(zoom: number): number {
   return Math.round(zoom / ZOOM_STEP) * ZOOM_STEP
 }
 
-// Nächstgelegener Punkt zu einer Tap-Position, innerhalb von Radius + Slop.
+// Ab dieser Zoomstufe werden überlappende Punkte auseinandergeschoben. Darunter
+// zählt der Überblick, und ein auseinandergezogener Haufen wäre dort nur verwirrend.
+export const SEPARATE_MIN_ZOOM = 2.5
+
+// Wie stark ein Punkt schrumpft, der zu dicht an einem anderen sitzt. Kleinere
+// Punkte brauchen weniger Verschiebung – die Position bleibt damit näher an der
+// Wahrheit, und beide bleiben einzeln antippbar.
+export const CROWDED_SHRINK = 0.82
+
+// Etwas Luft zwischen zwei Punkten, damit sie als getrennt lesbar sind.
+const SEPARATION_GAP = 1.08
+
+/**
+ * Schiebt Punkte auseinander, die näher als `minDist` beieinander liegen.
+ *
+ * Nötig, weil eng nebeneinander geschraubte Boulder sonst als ein Klecks
+ * erscheinen und sich nicht einzeln antippen lassen – Verkleinern allein reicht
+ * dafür nicht: zwei Punkte vier Einheiten auseinander bleiben auch beim stärksten
+ * Zoom übereinander. Die angezeigte Position wird dadurch bewusst ungenau.
+ *
+ * Iterative Entspannung: jedes zu nahe Paar drückt sich gegenseitig zur Hälfte weg,
+ * bis nichts mehr kollidiert oder die Iterationen aufgebraucht sind. Verglichen wird
+ * nur innerhalb benachbarter Gitterzellen, damit es nicht quadratisch wird.
+ *
+ * Deterministisch: gleiche Eingabe ⇒ gleiche Ausgabe. Sonst würden die Punkte bei
+ * jedem Neuzeichnen zittern.
+ */
+export function separateOverlaps<T extends { id: string; x: number; y: number }>(
+  points: readonly T[],
+  minDist: number,
+  iterations = 20,
+): Map<string, Point> {
+  const pos = points.map((p) => ({ id: p.id, x: p.x, y: p.y }))
+  const result = new Map<string, Point>()
+
+  if (minDist > 0 && pos.length > 1) {
+    const cell = minDist
+    for (let iter = 0; iter < iterations; iter++) {
+      const grid = new Map<string, number[]>()
+      for (let i = 0; i < pos.length; i++) {
+        const key = `${Math.floor(pos[i].x / cell)},${Math.floor(pos[i].y / cell)}`
+        const bucket = grid.get(key)
+        if (bucket) bucket.push(i)
+        else grid.set(key, [i])
+      }
+
+      let moved = false
+      for (let i = 0; i < pos.length; i++) {
+        const cx = Math.floor(pos[i].x / cell)
+        const cy = Math.floor(pos[i].y / cell)
+        for (let gx = cx - 1; gx <= cx + 1; gx++) {
+          for (let gy = cy - 1; gy <= cy + 1; gy++) {
+            for (const j of grid.get(`${gx},${gy}`) ?? []) {
+              if (j <= i) continue
+              let dx = pos[j].x - pos[i].x
+              let dy = pos[j].y - pos[i].y
+              let d = Math.hypot(dx, dy)
+              if (d >= minDist) continue
+              if (d < 1e-9) {
+                // Exakt deckungsgleich: nach einem festen Winkel je Index trennen,
+                // sonst hinge die Richtung vom Zufall ab.
+                const angle = i * 2.399963
+                dx = Math.cos(angle)
+                dy = Math.sin(angle)
+                d = 1
+              }
+              const push = (minDist - d) / 2
+              const ux = (dx / d) * push
+              const uy = (dy / d) * push
+              pos[i].x -= ux
+              pos[i].y -= uy
+              pos[j].x += ux
+              pos[j].y += uy
+              moved = true
+            }
+          }
+        }
+      }
+      if (!moved) break
+    }
+  }
+
+  for (const p of pos) result.set(p.id, { x: p.x, y: p.y })
+  return result
+}
+
+// Mindestabstand zweier Punkte mit dem Radius r, inklusive etwas Luft.
+export function separationDistance(r: number): number {
+  return 2 * r * SEPARATION_GAP
+}
+
+// Nächstgelegener Punkt zu einer Tap-Position, innerhalb seines Radius plus Slop.
 // Bewusst statt onClick auf den <circle>-Elementen: so lösen wir (a) den Fall
 // "Pan endet zufällig auf einem Punkt" sauber im Aufrufer und (b) sind auf einem
 // Touchscreen deutlich verzeihender als exakte Kreisgeometrie.
+//
+// Der Radius steckt an jedem Punkt, weil gedrängte Punkte kleiner gezeichnet werden.
+// Wichtig: es müssen dieselben (ggf. verschobenen) Koordinaten sein, die auch
+// gezeichnet werden – sonst trifft man neben dem, was man sieht.
 // Bei Gleichstand gewinnt der zuletzt gezeichnete (oben liegende) Punkt.
-export function nearestDot<T extends { id: string; x: number; y: number }>(
+export function nearestDot<T extends { id: string; x: number; y: number; r: number }>(
   dots: T[],
   p: Point,
-  radiusUser: number,
   slopUser: number,
 ): T | null {
-  const max = radiusUser + slopUser
   let best: T | null = null
   let bestD = Infinity
   for (const d of dots) {
     const dist = Math.hypot(d.x - p.x, d.y - p.y)
-    if (dist <= max && dist <= bestD) {
+    if (dist <= d.r + slopUser && dist <= bestD) {
       best = d
       bestD = dist
     }

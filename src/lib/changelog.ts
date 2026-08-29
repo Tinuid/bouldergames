@@ -16,7 +16,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: '1.14.1',
     date: '29.08.2026',
     text:
-      'Beim Hineinzoomen in die Karte werden die Punkte jetzt deutlich kleiner – eng nebeneinander geschraubte Boulder lassen sich damit auseinanderhalten.\n' +
+      'Beim Hineinzoomen in die Karte werden die Punkte jetzt deutlich kleiner, und Boulder, die zu dicht beieinander liegen, rücken auseinander – so lässt sich jeder einzeln antippen, auch wenn sie fast an derselben Stelle hängen.\n' +
       'Und beim Setzen eines Boulders wird der Bereich zuverlässiger erkannt: bisher fiel ein Boulder direkt an der Wand oft aus dem Bereichsfilter heraus.',
   },
   {
