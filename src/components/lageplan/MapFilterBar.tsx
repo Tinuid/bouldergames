@@ -67,7 +67,11 @@ export default function MapFilterBar({
       aria-label={open ? 'Filter ausblenden' : 'Filter einblenden'}
       className="-my-1 -mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition hover:bg-surface-2 hover:text-ink"
     >
-      <ChevronLeft className={`text-[18px] transition ${open ? 'rotate-90' : '-rotate-90'}`} />
+      {/* Der Pfeil zeigt, wohin es geht, nicht wo man ist: die Leiste sitzt unten und
+          klappt nach unten weg (offen ⇒ Pfeil nach unten) bzw. nach oben auf
+          (zugeklappt ⇒ Pfeil nach oben). ChevronLeft zeigt nach links, -90° dreht
+          ihn nach unten, +90° nach oben. */}
+      <ChevronLeft className={`text-[18px] transition ${open ? '-rotate-90' : 'rotate-90'}`} />
     </button>
   )
 
