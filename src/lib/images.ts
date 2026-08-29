@@ -45,6 +45,29 @@ async function loadBitmap(file: File): Promise<ImageBitmap> {
   return await createImageBitmap(file, { imageOrientation: 'from-image' })
 }
 
+// Zufällige UUID v4.
+//
+// crypto.randomUUID() gibt es NUR in sicheren Kontexten (https bzw. localhost) –
+// beim Testen über das lokale Netz per http fehlt die Funktion und der Upload bräche
+// mit "crypto.randomUUID is not a function" ab. crypto.getRandomValues() ist dagegen
+// überall verfügbar (und wird in codes.ts schon genauso genutzt), also bauen wir die
+// UUID im Zweifel selbst.
+function randomUuid(): string {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  bytes[6] = (bytes[6] & 0x0f) | 0x40 // Version 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80 // Variante 1
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    hex.slice(12, 16),
+    hex.slice(16, 20),
+    hex.slice(20),
+  ].join('-')
+}
+
 /**
  * Verkleinert das Bild und lädt es in den Storage-Bucket. Der Pfad beginnt mit
  * der user_id (von der Storage-RLS verlangt), gefolgt von einer zufälligen UUID.
@@ -52,7 +75,7 @@ async function loadBitmap(file: File): Promise<ImageBitmap> {
  */
 export async function uploadBoulderImage(file: File, userId: string): Promise<string> {
   const blob = await downscaleToJpeg(file)
-  const path = `${userId}/${crypto.randomUUID()}.jpg`
+  const path = `${userId}/${randomUuid()}.jpg`
   const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
     contentType: 'image/jpeg',
     upsert: false,

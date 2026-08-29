@@ -156,6 +156,18 @@ body {
   .sheet-grip {
     @apply mx-auto mb-4 h-[5px] w-[38px] rounded-[3px] bg-border-strong;
   }
+
+  /* Variante von .sheet OHNE Scrim, für den Lageplan: das verdunkelte inset-0 von
+     .sheet-scrim würde genau den Punkt verstecken, den man gerade angetippt hat.
+     Die Karte darüber bleibt bedienbar – deshalb hier auch kein aria-modal. */
+  .sheet-inline {
+    @apply max-h-[52%] w-full max-w-md overflow-y-auto border-t border-border bg-surface;
+    border-top-left-radius: 26px;
+    border-top-right-radius: 26px;
+    padding: 10px 20px calc(18px + env(safe-area-inset-bottom));
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.18);
+    animation: bcUp 0.32s cubic-bezier(0.2, 0.8, 0.25, 1);
+  }
 }
 
 /* ════════════════ KEYFRAMES ════════════════ */

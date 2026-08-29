@@ -240,3 +240,59 @@ export function Trash(p: IconProps) {
     </svg>
   )
 }
+
+export function Flag(p: IconProps) {
+  return (
+    <svg {...base} {...p}>
+      <path
+        d="M6 21V4m0 0 8.5 1.8a1 1 0 0 1 .3 1.8L11 10l3.8 2.4a1 1 0 0 1-.3 1.8L6 16"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+export function Map(p: IconProps) {
+  return (
+    <svg {...base} {...p}>
+      <path
+        d="m3 6.5 6-2.5v13l-6 2.5v-13Zm6-2.5 6 2.5v13L9 17m6-10.5 6-2.5v13l-6 2.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+export function Crosshair(p: IconProps) {
+  return (
+    <svg {...base} {...p}>
+      <circle cx="12" cy="12" r="6.5" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="M12 2.5v3.5M12 18v3.5M2.5 12H6m12 0h3.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+export function Maximize(p: IconProps) {
+  return (
+    <svg {...base} {...p}>
+      <path
+        d="M9 4H4v5M15 4h5v5M15 20h5v-5M9 20H4v-5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}

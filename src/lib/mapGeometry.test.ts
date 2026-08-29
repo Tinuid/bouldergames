@@ -1,0 +1,198 @@
+import { describe, it, expect } from 'vitest'
+import {
+  MAX_ZOOM,
+  MIN_ZOOM,
+  clampView,
+  coverView,
+  dotRadius,
+  fitView,
+  labelOpacity,
+  labelSize,
+  nearestDot,
+  quantizeZoom,
+  screenToUser,
+  zoomAround,
+  zoomOf,
+  type ViewRect,
+} from './mapGeometry'
+import { LAGEPLAN_VIEWBOX } from './areas'
+
+const CONTENT: ViewRect = { ...LAGEPLAN_VIEWBOX }
+
+// Hochformat-Handy (390×700) und Querformat-Desktop – die beiden Extreme.
+const PORTRAIT = 390 / 700
+const LANDSCAPE = 1200 / 700
+
+describe('fitView', () => {
+  it('enthält den Grundriss vollständig und zentriert ihn', () => {
+    for (const aspect of [PORTRAIT, LANDSCAPE, CONTENT.w / CONTENT.h]) {
+      const fit = fitView(CONTENT, aspect)
+      expect(fit.w).toBeGreaterThanOrEqual(CONTENT.w - 1e-9)
+      expect(fit.h).toBeGreaterThanOrEqual(CONTENT.h - 1e-9)
+      expect(fit.w / fit.h).toBeCloseTo(aspect, 9)
+      // gleiche Mitte wie der Grundriss
+      expect(fit.x + fit.w / 2).toBeCloseTo(CONTENT.x + CONTENT.w / 2, 9)
+      expect(fit.y + fit.h / 2).toBeCloseTo(CONTENT.y + CONTENT.h / 2, 9)
+    }
+  })
+
+  it('ergibt Zoom 1 für sich selbst', () => {
+    const fit = fitView(CONTENT, PORTRAIT)
+    expect(zoomOf(fit, fit)).toBeCloseTo(1, 9)
+  })
+})
+
+describe('coverView', () => {
+  it('liegt vollständig im Grundriss und füllt den Container', () => {
+    for (const aspect of [PORTRAIT, LANDSCAPE]) {
+      const cover = coverView(CONTENT, aspect)
+      expect(cover.w / cover.h).toBeCloseTo(aspect, 9)
+      expect(cover.w).toBeLessThanOrEqual(CONTENT.w + 1e-9)
+      expect(cover.h).toBeLessThanOrEqual(CONTENT.h + 1e-9)
+      // Eine der beiden Achsen schöpft den Grundriss genau aus.
+      const füllt =
+        Math.abs(cover.w - CONTENT.w) < 1e-9 || Math.abs(cover.h - CONTENT.h) < 1e-9
+      expect(füllt).toBe(true)
+    }
+  })
+
+  it('ist hochkant näher dran als der eingepasste Ausschnitt', () => {
+    const fit = fitView(CONTENT, PORTRAIT)
+    const cover = coverView(CONTENT, PORTRAIT)
+    expect(zoomOf(fit, cover)).toBeGreaterThan(1)
+  })
+
+  it('überschreitet den maximalen Zoom nicht', () => {
+    const fit = fitView(CONTENT, PORTRAIT)
+    expect(zoomOf(fit, coverView(CONTENT, PORTRAIT))).toBeLessThanOrEqual(MAX_ZOOM)
+  })
+})
+
+describe('clampView', () => {
+  const fit = fitView(CONTENT, PORTRAIT)
+
+  it('begrenzt den Zoom auf [MIN_ZOOM, MAX_ZOOM]', () => {
+    const tooFarOut = clampView({ ...fit, w: fit.w * 10, h: fit.h * 10 }, CONTENT, fit, PORTRAIT)
+    expect(zoomOf(fit, tooFarOut)).toBeCloseTo(MIN_ZOOM, 9)
+
+    const tooFarIn = clampView({ x: 500, y: 400, w: fit.w / 100, h: fit.h / 100 }, CONTENT, fit, PORTRAIT)
+    expect(zoomOf(fit, tooFarIn)).toBeCloseTo(MAX_ZOOM, 9)
+  })
+
+  it('hält das Seitenverhältnis des Containers', () => {
+    const v = clampView({ x: 300, y: 300, w: 400, h: 999 }, CONTENT, fit, PORTRAIT)
+    expect(v.w / v.h).toBeCloseTo(PORTRAIT, 9)
+  })
+
+  it('lässt eingezoomt nicht über den Kartenrand hinauslaufen', () => {
+    const zoomed = clampView({ x: 0, y: 0, w: fit.w / 4, h: fit.h / 4 }, CONTENT, fit, PORTRAIT)
+    expect(zoomed.x).toBeGreaterThanOrEqual(CONTENT.x - 1e-9)
+    expect(zoomed.y).toBeGreaterThanOrEqual(CONTENT.y - 1e-9)
+
+    const far = clampView({ x: 99999, y: 99999, w: fit.w / 4, h: fit.h / 4 }, CONTENT, fit, PORTRAIT)
+    expect(far.x + far.w).toBeLessThanOrEqual(CONTENT.x + CONTENT.w + 1e-9)
+    expect(far.y + far.h).toBeLessThanOrEqual(CONTENT.y + CONTENT.h + 1e-9)
+  })
+
+  it('zentriert die Achse, auf der die Karte ganz hineinpasst', () => {
+    // Im Hochformat ist der Ausschnitt bei Zoom 1 breiter als der Grundriss –
+    // horizontal gibt es dann nichts zu verschieben.
+    const v = clampView({ ...fit, x: fit.x + 500 }, CONTENT, fit, PORTRAIT)
+    expect(v.x + v.w / 2).toBeCloseTo(CONTENT.x + CONTENT.w / 2, 9)
+  })
+
+  it('ist idempotent', () => {
+    const once = clampView({ x: 400, y: 200, w: fit.w / 3, h: fit.h / 3 }, CONTENT, fit, PORTRAIT)
+    const twice = clampView(once, CONTENT, fit, PORTRAIT)
+    expect(twice).toEqual(once)
+  })
+})
+
+describe('zoomAround', () => {
+  it('hält den Ankerpunkt an derselben relativen Stelle', () => {
+    const view: ViewRect = { x: 100, y: 100, w: 400, h: 800 }
+    const anchor = { x: 200, y: 300 }
+    const before = { fx: (anchor.x - view.x) / view.w, fy: (anchor.y - view.y) / view.h }
+
+    const next = zoomAround(view, 200, view.w / view.h, anchor)
+    const after = { fx: (anchor.x - next.x) / next.w, fy: (anchor.y - next.y) / next.h }
+
+    expect(after.fx).toBeCloseTo(before.fx, 9)
+    expect(after.fy).toBeCloseTo(before.fy, 9)
+  })
+})
+
+describe('screenToUser', () => {
+  const rect = { left: 20, top: 40, width: 390 }
+
+  it('bildet die Ecken des Containers auf die Ecken des Ausschnitts ab', () => {
+    const view: ViewRect = { x: 90, y: 10, w: 390, h: 700 }
+    expect(screenToUser(view, rect, 20, 40)).toEqual({ x: 90, y: 10 })
+    expect(screenToUser(view, rect, 410, 40).x).toBeCloseTo(480, 9)
+  })
+
+  it('ist die Umkehrung der Skalierung', () => {
+    const view: ViewRect = { x: 90, y: 10, w: 960, h: 1723 }
+    const p = screenToUser(view, rect, 215, 400)
+    const s = rect.width / view.w
+    expect((p.x - view.x) * s + rect.left).toBeCloseTo(215, 9)
+  })
+})
+
+describe('Größen', () => {
+  it('lässt Punkte wachsen, aber langsamer als die Karte', () => {
+    const r1 = dotRadius(1)
+    const r4 = dotRadius(4)
+    // User-Radius schrumpft …
+    expect(r4).toBeLessThan(r1)
+    // … aber auf dem Bildschirm (r × zoom) wird der Punkt größer …
+    expect(r4 * 4).toBeGreaterThan(r1 * 1)
+    // … und zwar weniger als proportional zum Zoom.
+    expect(r4 * 4).toBeLessThan(r1 * 4)
+  })
+
+  it('hält Beschriftungen auf dem Bildschirm nahezu konstant', () => {
+    const s1 = labelSize(1) * 1
+    const s8 = labelSize(8) * 8
+    expect(s8).toBeGreaterThan(s1)
+    expect(s8 / s1).toBeLessThan(2)
+  })
+
+  it('blendet Beschriftungen beim Hineinzoomen aus', () => {
+    expect(labelOpacity(1)).toBe(1)
+    expect(labelOpacity(3)).toBe(1)
+    expect(labelOpacity(4)).toBeLessThan(1)
+    expect(labelOpacity(5)).toBeCloseTo(0.35, 9)
+    expect(labelOpacity(8)).toBeCloseTo(0.35, 9)
+  })
+
+  it('quantisiert den Zoom in feste Stufen', () => {
+    expect(quantizeZoom(1.012)).toBeCloseTo(1, 9)
+    expect(quantizeZoom(1.04)).toBeCloseTo(1.05, 9)
+  })
+})
+
+describe('nearestDot', () => {
+  const dots = [
+    { id: 'a', x: 100, y: 100 },
+    { id: 'b', x: 130, y: 100 },
+    { id: 'c', x: 900, y: 800 },
+  ]
+
+  it('findet den nächstgelegenen Punkt in Reichweite', () => {
+    expect(nearestDot(dots, { x: 105, y: 102 }, 20, 10)?.id).toBe('a')
+    expect(nearestDot(dots, { x: 126, y: 100 }, 20, 10)?.id).toBe('b')
+  })
+
+  it('gibt null zurück, wenn nichts in Reichweite liegt', () => {
+    expect(nearestDot(dots, { x: 500, y: 500 }, 20, 10)).toBeNull()
+  })
+
+  it('lässt bei Gleichstand den zuletzt gezeichneten Punkt gewinnen', () => {
+    const overlapping = [
+      { id: 'unten', x: 200, y: 200 },
+      { id: 'oben', x: 200, y: 200 },
+    ]
+    expect(nearestDot(overlapping, { x: 200, y: 200 }, 20, 10)?.id).toBe('oben')
+  })
+})

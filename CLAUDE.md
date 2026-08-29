@@ -113,6 +113,15 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
     `reorder_boulders(p_session_id, p_boulder_ids)` an: vergibt `boulders.seq` atomar neu –
     Zwei-Phasen-Renumbering gegen `unique (session_id, seq)`, Advisory-Lock wie `set_boulder_seq`,
     Host-Check via `is_session_host`). Idempotent.
+17. `supabase/migrations/0015_gym_map.sql` ausführen (legt die Hallenkarte an: `gyms` inkl. einer
+    Seed-Zeile mit dem Kürzel `halle`, den Boulder-Katalog `gym_boulders` und die privaten Marken
+    `gym_ticks`, dazu RLS und Realtime für `gym_boulders`). Idempotent. Der Hallenname lässt sich
+    danach per `update public.gyms set name = '…' where slug = 'halle';` anpassen.
+18. `supabase/migrations/0016_gym_admin.sql` ausführen (legt die passwortgeschützten
+    `security definer`-RPCs zum Pflegen des Katalogs an) und **danach einmalig das Lageplan-Passwort
+    gehasht setzen** (auskommentiertes `insert … crypt('…', gen_salt('bf', 10))` am Dateiende,
+    Schlüssel `gym_admin_key` – bewusst ein anderer als `feedback_admin_key`). Ohne gesetztes
+    Passwort ist das Bearbeiten der Karte gesperrt. Idempotent.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.
@@ -247,19 +256,80 @@ Transaktion in der RPC (kein Race). Die Function läuft mit `service_role` (umge
 Secret `CLEANUP_SECRET` (Bearer-Header) geschützt; deployt mit `--no-verify-jwt`, getriggert per Cron
 (Setup-Schritte 13/14 oben). **Nicht** abgedeckt: verwaiste anonyme `auth.users` wachsen weiter.
 
+**Hallenkarte (`/karte`) – ein Katalog neben dem Session-Modell.** Boulder in Sessions sind
+Wegwerf-Objekte: sie hängen per `not null`-FK an einer Session und werden von
+`cleanup_stale_sessions()` mitgelöscht. Der Hallen-Katalog ist das Gegenteil und lebt darum in
+eigenen Tabellen (Migration `0015`): `gyms` (eine Seed-Zeile, aufgelöst über den `slug` aus
+`src/lib/gyms.ts` – **nie** eine uuid im Code), `gym_boulders` (Position im SVG-User-Space, Grad,
+Farbe, Bereich, Foto, `removed_at` für „abgeschraubt") und `gym_ticks` (die persönlichen Marken
+`done`/`project`). Die neuen Tabellen haben **keinen** FK auf `sessions` und werden vom nächtlichen
+Cleanup absichtlich **nicht** erfasst – beim Anfassen von `0012` so lassen.
+
+**Marken sind privat und gerätegebunden.** `gym_ticks` ist per RLS auf `user_id = auth.uid()`
+beschränkt – anders als `results`, wo eine Session ein bewusst geteilter Gruppenkontext ist. Ohne
+Accounts heißt das: die Marken hängen am Gerät. Ein späterer echter Login erbt sie nur, wenn er den
+anonymen Nutzer *aufwertet* (`linkIdentity`, gleiche `auth.uid()`); ein frisch angelegtes Konto
+nicht. Zähler wie „12× getoppt" ließen sich später über eine `security definer`-RPC nachrüsten, die
+nie eine `user_id` herausgibt – dafür muss die RLS **nicht** gelockert werden.
+
+**Der Katalog wird nur über Passwort-RPCs geschrieben.** Auf `gym_boulders` gibt es bewusst keine
+`insert`/`update`/`delete`-Policy; alles läuft über `upsert_gym_boulder`, `move_gym_boulder`,
+`set_gym_boulder_removed` und `delete_gym_boulder` (Migration `0016`, bcrypt-Vergleich gegen
+`app_config.gym_admin_key`) – dasselbe Muster wie `delete_feedback`. `verify_gym_admin_key` entsperrt
+den Modus vorab; das Passwort liegt in der App nur im React-State, **nie** im `localStorage`. Das ist
+faktisch schon der Betreiber-Modus, nur ohne Accounts.
+
+**Plan-Geometrie und Bereiche zentralisiert.** `src/lib/areas.ts` (`HALL_AREAS`) ist die einzige
+Quelle der Wahrheit für die acht Hallenflächen: Pfad-`id` (= gespeicherter Wert in
+`gym_boulders.area`), Anzeigename, Beschriftung und die SVG-Pfaddaten. Die Originaldatei
+`src/assets/lageplan.svg` bleibt nur als Referenz liegen. Neue Bereiche brauchen einen Eintrag hier
+**und** eine Migration, weil das Vokabular als CHECK-Constraint gespiegelt ist. `areaAt(x, y)` macht
+Punkt-in-Polygon (Even-Odd-Ray-Cast, rückwärts iteriert, damit `abenteuerfels` nicht von
+`abenteuerland` überstimmt wird) – aber **nur als Vorbelegung** beim Setzen: die Flächen sind
+nicht-konvexe Bänder, in deren Konkavität der Test falsch liegt. Darum ist `area` eine gespeicherte,
+im Dialog änderbare Spalte und wird nie zur Renderzeit abgeleitet.
+
+**Zoom/Pan ohne Bibliothek.** `src/hooks/useSvgPanZoom.ts` steuert die `viewBox` (Pan, Pinch,
+Wheel, Doppeltipp), `src/lib/mapGeometry.ts` enthält die testbare Mathematik. Zwei Invarianten, die
+man nicht brechen darf: (1) `view.w/view.h` folgt immer dem Seitenverhältnis des Containers, damit
+`preserveAspectRatio` die Identität ist und Bildschirm ⇄ User eine simple Affine bleibt; (2) die
+`viewBox` wird **imperativ** gesetzt, nie als React-Attribut – sonst würfe jedes Re-Rendering während
+einer Geste den Ausschnitt auf den veralteten State zurück, und ein Pan würde hunderte SVG-Knoten pro
+Frame neu rendern. Der Zoom landet nur **gequantelt** im State (Punkt- und Label-Größen hängen daran).
+Punkte skalieren gedämpft (`dotRadius`), damit beim Hineinzoomen mehr Plan und nicht nur ein
+riesiger Punkt sichtbar wird. Getroffen wird über `nearestDot` im Screen statt per `onClick` am
+Kreis – die Punktebene ist `pointer-events: none`, sonst löste ein Pan, das auf einem Punkt endet,
+eine Auswahl aus. Gefilterte Punkte werden ausgegraut (nicht versteckt, sonst verliert die Karte ihre
+räumliche Aussage) und fliegen aus dem Treffer-Test.
+
+**Verschieben per zweitem Tipp, nicht per Drag.** Im Bearbeitungsmodus wird ein Punkt ausgewählt,
+„Verschieben" scharfgeschaltet und die neue Position angetippt. Ein Ein-Finger-Drag am Punkt wäre
+nicht vom Verschieben der Karte zu unterscheiden. `useSvgPanZoom` liefert `onLongPress` und
+`disabled` bereits mit, falls später doch ein Drag dazukommen soll.
+
 **Verlauf gerätelokal.** Ohne Accounts merkt sich `src/lib/localHistory.ts` besuchte Sessions in
 `localStorage` (für die "Zuletzt gespielt"-Liste auf `Home`).
 
 **Routing/Screens.** `src/App.tsx` rendert erst nach erfolgreichem Auth-Bootstrap. Routen:
 `/` (Home), `/create`, `/join` + `/join/:code`, `/s/:sessionId` (`SessionView` – Hauptscreen;
 wird die Session über einen geteilten Link ohne vorherigen Beitritt geöffnet, zeigt er inline ein
-Namens-/Beitritts-Formular) und `/feedback` (`FeedbackList` – öffentliche Feedback-Liste).
+Namens-/Beitritts-Formular), `/karte` (`GymMap` – Hallenkarte; bewusst der einzige Screen ohne
+`max-w-md`-Spalte: `fixed inset-0` mit eigenem Safe-Area-Padding, weil `position: fixed` das Padding
+des `body` ignoriert) und `/feedback` (`FeedbackList` – öffentliche Feedback-Liste).
 
 **Farben zentralisiert.** Die wählbaren Hallen-Farben für Boulder leben als einzige Quelle der
-Wahrheit in `src/lib/colors.ts` (`BOULDER_COLORS`: persistierter `name` + CSS-`swatch`, inkl.
-Zweiton-Verläufen). `colorSwatch(name)` mappt einen gespeicherten Farbnamen zurück auf den
-CSS-Hintergrund. `AddBoulderDialog` (Auswahl) und `BoulderCard` (Farbklecks) nutzen beides – neue
-Farben **nur hier** ergänzen.
+Wahrheit in `src/lib/colors.ts` (`BOULDER_COLORS`: persistierter `name` + `hex`/`hex2`; der
+CSS-`swatch` inkl. Zweiton-Verlauf wird daraus abgeleitet). `colorSwatch(name)` mappt einen
+gespeicherten Farbnamen zurück auf den CSS-Hintergrund. Für die SVG-Punkte der Hallenkarte gibt es
+zusätzlich `colorStops`/`colorSvgFill` (ein `linear-gradient(...)` ist als SVG-`fill` ungültig, darum
+generierte `<linearGradient>`-Defs statt CSS-String-Parsing) und `colorInk`/`colorInkHalo` für den
+Kontrast der Grad-Zahl auf hellen Punkten. `AddBoulderDialog`/`BoulderPickers` (Auswahl) und
+`BoulderCard` (Farbklecks) nutzen den `swatch` – neue Farben **nur hier** ergänzen.
+
+**Gemeinsame Formular-Bausteine.** Grad-Kacheln, Farbkreise und das Foto-Feld liegen in
+`src/components/BoulderPickers.tsx` (`DifficultyPicker`, `ColorPicker`, `PhotoField`) und werden von
+`AddBoulderDialog` (Session) **und** `MapBoulderDialog` (Karte) benutzt. Bewusst reine Darstellung:
+Formular-State, Validierung und Submit bleiben im jeweiligen Dialog.
 
 **Feedback.** Freitext-Feedback aus der App: `FeedbackDialog` (von `Home` per Floating-Button
 geöffnet) schreibt über `submitFeedback` in die `feedback`-Tabelle; die öffentliche Liste

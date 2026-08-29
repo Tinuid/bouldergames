@@ -1,9 +1,14 @@
 import { supabase } from './supabase'
 import { generateJoinCode, normalizeJoinCode } from './codes'
 import { computePoints, normalizeResult } from './scoring'
+import { deleteBoulderImage } from './images'
 import type {
   Boulder,
   Feedback,
+  Gym,
+  GymBoulder,
+  GymTick,
+  GymTickState,
   Participant,
   Result,
   ResultStatus,
@@ -396,4 +401,165 @@ export async function upsertResult(params: {
     .single<Result>()
   if (error) throw error
   return data
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Hallenkarte / Lageplan (Migrationen 0015 + 0016)
+//
+// Der Katalog liegt in eigenen Tabellen neben dem Session-Modell. Lesen darf jeder
+// Angemeldete; die eigenen Marken filtert die RLS auf auth.uid(). Geschrieben wird
+// der Katalog ausschließlich über die passwortgeschützten RPCs – auf gym_boulders
+// gibt es bewusst keine insert/update/delete-Policy.
+// ════════════════════════════════════════════════════════════════════════════
+
+// Halle über ihren stabilen slug auflösen (die uuid ist pro Umgebung zufällig).
+export async function getGymBySlug(slug: string): Promise<Gym | null> {
+  const { data, error } = await supabase.from('gyms').select().eq('slug', slug).maybeSingle<Gym>()
+  if (error) throw error
+  return data
+}
+
+export async function getGymById(id: string): Promise<Gym | null> {
+  const { data, error } = await supabase.from('gyms').select().eq('id', id).maybeSingle<Gym>()
+  if (error) throw error
+  return data
+}
+
+// Boulder einer Halle. Standardmäßig ohne abgeschraubte; includeRemoved lädt sie
+// mit, damit ältere Marken auflösbar bleiben.
+export async function listGymBoulders(
+  gymId: string,
+  opts?: { includeRemoved?: boolean },
+): Promise<GymBoulder[]> {
+  let query = supabase.from('gym_boulders').select().eq('gym_id', gymId)
+  if (!opts?.includeRemoved) query = query.is('removed_at', null)
+  const { data, error } = await query.order('created_at', { ascending: true })
+  if (error) throw error
+  return data ?? []
+}
+
+// Eigene Marken. Die RLS gibt ohnehin nur eigene Zeilen zurück – user_id wird
+// trotzdem gefiltert, damit der Index greift.
+export async function listMyGymTicks(userId: string): Promise<GymTick[]> {
+  const { data, error } = await supabase.from('gym_ticks').select().eq('user_id', userId)
+  if (error) throw error
+  return data ?? []
+}
+
+// Marke setzen bzw. umschalten (erledigt ⇄ Projekt). Upsert wie bei results.
+export async function setGymTick(params: {
+  gymBoulderId: string
+  userId: string
+  state: GymTickState
+}): Promise<GymTick> {
+  const { data, error } = await supabase
+    .from('gym_ticks')
+    .upsert(
+      { gym_boulder_id: params.gymBoulderId, user_id: params.userId, state: params.state },
+      { onConflict: 'gym_boulder_id,user_id' },
+    )
+    .select()
+    .single<GymTick>()
+  if (error) throw error
+  return data
+}
+
+// Marke entfernen (keine Zeile = keine Marke).
+//
+// Bewusste Abweichung vom Repo-Idiom ".select('id') + bei 0 Zeilen werfen": hier
+// sind 0 Zeilen zweideutig (Marke war schon weg vs. RLS blockt). Ein doppelter Tipp
+// würde sonst eine falsche Fehlermeldung erzeugen.
+export async function clearGymTick(gymBoulderId: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('gym_ticks')
+    .delete()
+    .eq('gym_boulder_id', gymBoulderId)
+    .eq('user_id', userId)
+  if (error) throw error
+}
+
+// Erkennt den serverseitigen "Falsches Passwort"-Fehler der Admin-RPCs.
+export function isWrongPasswordError(err: unknown): boolean {
+  return err instanceof Error && /passwort/i.test(err.message)
+}
+
+// Admin-Passwort serverseitig prüfen, um den Bearbeitungsmodus zu entsperren,
+// bevor die erste Änderung passiert.
+export async function verifyGymAdminKey(key: string): Promise<void> {
+  const { error } = await supabase.rpc('verify_gym_admin_key', { p_key: key })
+  if (error) throw error
+}
+
+// Karten-Boulder anlegen (id weglassen) oder vollständig bearbeiten.
+export async function upsertGymBoulder(params: {
+  key: string
+  id?: string | null
+  gymId: string
+  x: number
+  y: number
+  area: string | null
+  difficulty: number
+  color: string
+  label: string | null
+  imagePath: string | null
+}): Promise<GymBoulder> {
+  const { data, error } = await supabase.rpc('upsert_gym_boulder', {
+    p_key: params.key,
+    p_id: params.id ?? null,
+    p_gym_id: params.gymId,
+    p_x: params.x,
+    p_y: params.y,
+    p_area: params.area,
+    p_difficulty: params.difficulty,
+    p_color: params.color,
+    p_label: params.label,
+    p_image_path: params.imagePath,
+  })
+  if (error) throw error
+  return data as GymBoulder
+}
+
+// Nur die Position ändern (Ergebnis des Verschiebens). Eigene schmale RPC, damit
+// ein Zug nicht alle Felder überschreibt.
+export async function moveGymBoulder(params: {
+  key: string
+  id: string
+  x: number
+  y: number
+  area: string | null
+}): Promise<void> {
+  const { error } = await supabase.rpc('move_gym_boulder', {
+    p_key: params.key,
+    p_id: params.id,
+    p_x: params.x,
+    p_y: params.y,
+    p_area: params.area,
+  })
+  if (error) throw error
+}
+
+// Abschrauben / wieder anschrauben: verschwindet von der Karte, Marken bleiben.
+export async function setGymBoulderRemoved(params: {
+  key: string
+  id: string
+  removed: boolean
+}): Promise<void> {
+  const { error } = await supabase.rpc('set_gym_boulder_removed', {
+    p_key: params.key,
+    p_id: params.id,
+    p_removed: params.removed,
+  })
+  if (error) throw error
+}
+
+// Endgültig löschen (nimmt die Marken aller Nutzer mit). Die RPC gibt den
+// image_path zurück; das Storage-Objekt räumt der Client best-effort hinterher,
+// weil die Datenbank den Bucket nicht anfassen kann.
+export async function deleteGymBoulder(params: { key: string; id: string }): Promise<void> {
+  const { data, error } = await supabase.rpc('delete_gym_boulder', {
+    p_key: params.key,
+    p_id: params.id,
+  })
+  if (error) throw error
+  await deleteBoulderImage(data as string | null)
 }

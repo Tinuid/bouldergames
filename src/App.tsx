@@ -5,6 +5,7 @@ import CreateSession from './routes/CreateSession'
 import JoinSession from './routes/JoinSession'
 import SessionView from './routes/SessionView'
 import FeedbackList from './routes/FeedbackList'
+import GymMap from './routes/GymMap'
 
 export default function App() {
   const { loading, error } = useAuth()
@@ -32,6 +33,7 @@ export default function App() {
       <Route path="/join" element={<JoinSession />} />
       <Route path="/join/:code" element={<JoinSession />} />
       <Route path="/s/:sessionId" element={<SessionView />} />
+      <Route path="/karte" element={<GymMap />} />
       <Route path="/feedback" element={<FeedbackList />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

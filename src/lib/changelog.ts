@@ -13,6 +13,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.13.0',
+    date: '29.08.2026',
+    text:
+      'Neu: die Hallenkarte. Über „Hallenkarte" auf der Startseite siehst du den Lageplan der Halle mit allen Bouldern als farbige Punkte – die Zahl darauf ist der Grad.\n' +
+      'Zoomen und Verschieben mit zwei Fingern, Boulder antippen und für dich als „Erledigt" oder „Projekt" markieren. Diese Marken sieht nur dein Gerät.\n' +
+      'Gefiltert wird nach Grad, Bereich, Farbe und deinen Marken – auch mehreres gleichzeitig.\n' +
+      'Boulder auf der Karte setzen, ändern und abschrauben ist passwortgeschützt.',
+  },
+  {
     version: '1.12.0',
     date: '14.07.2026',
     text:

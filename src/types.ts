@@ -93,6 +93,54 @@ export interface Feedback {
   created_at: string
 }
 
+// ── Hallenkarte / Lageplan (supabase/migrations/0015_gym_map.sql) ────────────
+// Der Hallen-Katalog lebt bewusst NEBEN dem Session-Modell: Session-Boulder
+// werden vom nächtlichen Cleanup mitgelöscht, Karten-Boulder sind der Bestand.
+
+export type GymTickState = 'done' | 'project'
+
+export interface Gym {
+  id: string
+  // Stabiler Schlüssel, über den der Client die Halle auflöst (src/lib/gyms.ts).
+  slug: string
+  name: string
+  // Verweist auf den im Bundle liegenden Grundriss (src/lib/areas.ts).
+  map_key: string
+  created_at: string
+}
+
+export interface GymBoulder {
+  id: string
+  gym_id: string
+  // Position im SVG-User-Space des Lageplans (viewBox "90 10 960 880").
+  x: number
+  y: number
+  // Bereichs-Id aus src/lib/areas.ts, beim Setzen aus x/y vorbelegt und danach
+  // gespeichert. null = außerhalb aller Flächen.
+  area: string | null
+  // Code wie boulders.difficulty: 1–7 = Grad, 8 = "?", 9 = "!".
+  difficulty: number
+  // Farbname aus src/lib/colors.ts.
+  color: string
+  // Optionale Hallen-Kennzeichnung, KEINE laufende Nummer.
+  label: string | null
+  image_path: string | null
+  // Gesetzt = abgeschraubt: nicht mehr auf der Karte, Marken bleiben.
+  removed_at: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface GymTick {
+  id: string
+  gym_boulder_id: string
+  user_id: string
+  state: GymTickState
+  created_at: string
+  updated_at: string
+}
+
 // Hilfs-Mapper: Session-Datensatz -> ScoringConfig
 export function scoringFromSession(s: Session): ScoringConfig {
   return {
