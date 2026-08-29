@@ -34,11 +34,11 @@ create table if not exists public.gyms (
   created_at timestamptz not null default now()
 );
 
--- Die eine Halle. do update statt do nothing: ein erneuter Lauf gleicht den Namen
--- ab, bleibt aber idempotent.
+-- Die eine Halle. do NOTHING beim Konflikt: ein erneuter Lauf darf den Namen nicht
+-- zurücksetzen – er wird im Betrieb per update gepflegt, nicht hier.
 insert into public.gyms (slug, name)
-values ('halle', 'Kletterhalle')
-on conflict (slug) do update set name = excluded.name;
+values ('halle', 'Fingerfood')
+on conflict (slug) do nothing;
 
 create table if not exists public.gym_boulders (
   id          uuid primary key default gen_random_uuid(),
