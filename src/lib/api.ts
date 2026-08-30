@@ -516,7 +516,6 @@ export async function upsertGymBoulder(params: {
   area: string | null
   difficulty: number
   color: string
-  label: string | null
   imagePath: string | null
 }): Promise<GymBoulder> {
   const { data, error } = await supabase.rpc('upsert_gym_boulder', {
@@ -528,7 +527,10 @@ export async function upsertGymBoulder(params: {
     p_area: params.area,
     p_difficulty: params.difficulty,
     p_color: params.color,
-    p_label: params.label,
+    // Die freie Kennzeichnung ist aus der App entfernt; Spalte und RPC-Parameter bleiben
+    // stehen (keine Migration), darum hier fest null – sonst fände Postgres die Funktion
+    // mit ihren zehn Parametern nicht. Ein alter Wert wird beim Bearbeiten geleert.
+    p_label: null,
     p_image_path: params.imagePath,
   })
   if (error) throw error

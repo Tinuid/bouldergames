@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { computeLeaderboardRows, rankClass } from '../lib/leaderboard'
+import { computeLeaderboardRows } from '../lib/leaderboard'
+import RankMedal from './RankMedal'
 import type { Participant, Result } from '../types'
 
 /**
  * Vollständige Leaderboard-Liste. Steht seit der kompakten Kopfzeile in der Challenge
- * (LeaderboardSummary) nur noch auf der Ranglisten-Seite – dort unterhalb des Treppchens,
- * daher `skipTop`, das die bereits im Treppchen gezeigten Zeilen auslässt.
+ * (LeaderboardSummary) nur noch auf der Ranglisten-Seite – dort als EINZIGE Darstellung,
+ * von Platz 1 bis zum letzten. Die ersten drei Plätze tragen statt des neutralen Kreises
+ * eine Medaille (RankMedal); ein eigenes Treppchen gibt es bewusst nicht mehr, es hat die
+ * Information der Zeile nur doppelt und in einer zweiten Optik gezeigt.
  *
  * Punkte kommen fertig aus `results.points`; gerechnet wird nur in lib/leaderboard.ts.
  */
@@ -14,20 +17,14 @@ export default function Leaderboard({
   results,
   currentUserId,
   onSelectPlayer,
-  skipTop = 0,
-  title = 'Leaderboard',
 }: {
   participants: Participant[]
   results: Result[]
   currentUserId: string | null
   // Optional: Klick auf eine Zeile öffnet die Detailansicht des Spielers.
   onSelectPlayer?: (participant: Participant) => void
-  // Die ersten n Zeilen auslassen (die Ranglisten-Seite zeigt sie im Treppchen).
-  skipTop?: number
-  title?: string
 }) {
   const rows = useMemo(() => computeLeaderboardRows(participants, results), [participants, results])
-  const visible = useMemo(() => rows.slice(skipTop), [rows, skipTop])
 
   // Kurzer Puls auf der eigenen Zeile, wenn sich die eigene Punktzahl ändert.
   const myRow = useMemo(
@@ -49,9 +46,9 @@ export default function Leaderboard({
 
   return (
     <div className="card !p-1.5">
-      <h2 className="section-label px-3 pb-2.5 pt-3.5">{title}</h2>
+      <h2 className="section-label px-3 pb-2.5 pt-3.5">Leaderboard</h2>
       <ol className="flex flex-col gap-1">
-        {visible.map((row) => {
+        {rows.map((row) => {
           const isMe = currentUserId !== null && row.participant.user_id === currentUserId
           return (
             <li
@@ -69,13 +66,7 @@ export default function Leaderboard({
                 aria-label={`Details zu ${row.participant.display_name}`}
                 className="flex w-full items-center gap-3 rounded-sm2 px-3 py-2.5 text-left transition enabled:hover:bg-surface-2"
               >
-                <span
-                  className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full font-num text-[14px] font-bold ${rankClass(
-                    row.rank,
-                  )}`}
-                >
-                  {row.rank}
-                </span>
+                <RankMedal rank={row.rank} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 font-display text-[17px] font-bold">
                     <span className="truncate">{row.participant.display_name}</span>
@@ -96,11 +87,7 @@ export default function Leaderboard({
             </li>
           )
         })}
-        {visible.length === 0 && (
-          <li className="px-3 py-2 text-muted">
-            {rows.length === 0 ? 'Noch keine Teilnehmer.' : 'Keine weiteren Teilnehmer.'}
-          </li>
-        )}
+        {rows.length === 0 && <li className="px-3 py-2 text-muted">Noch keine Teilnehmer.</li>}
       </ol>
     </div>
   )

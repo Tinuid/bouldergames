@@ -13,6 +13,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.19.0',
+    date: '30.08.2026',
+    text:
+      'Die Rangliste zeigt jetzt eine durchgehende Liste von Platz 1 bis zum letzten – das Treppchen ist entfallen.\n' +
+      'Die ersten drei Plätze tragen dafür eine kleine Medaille mit ihrer Platzziffer.\n' +
+      'Deine eigene Platzierung bleibt beim Scrollen immer unten eingeblendet, auch wenn du vorne stehst.\n' +
+      'Auf der Hallenkarte gibt es das Feld „Kennzeichnung“ nicht mehr.',
+  },
+  {
     version: '1.18.0',
     date: '30.08.2026',
     text:

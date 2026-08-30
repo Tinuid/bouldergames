@@ -9,7 +9,6 @@ export interface MapBoulderFormValues {
   difficulty: number
   color: string
   area: string | null
-  label: string | null
   image: File | null
   removeImage: boolean
 }
@@ -49,7 +48,6 @@ export default function MapBoulderDialog({
   const [difficulty, setDifficulty] = useState<number | null>(null)
   const [color, setColor] = useState<string | null>(null)
   const [area, setArea] = useState<string | null>(null)
-  const [label, setLabel] = useState('')
   const [image, setImage] = useState<File | null>(null)
   const [removeImage, setRemoveImage] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -62,7 +60,6 @@ export default function MapBoulderDialog({
     setDifficulty(boulder?.difficulty ?? null)
     setColor(boulder?.color ?? null)
     setArea(boulder?.area ?? suggestedArea)
-    setLabel(boulder?.label ?? '')
     setImage(null)
     setRemoveImage(false)
     setError(null)
@@ -97,7 +94,6 @@ export default function MapBoulderDialog({
         difficulty,
         color,
         area,
-        label: label.trim() || null,
         image,
         removeImage,
       })
@@ -166,16 +162,6 @@ export default function MapBoulderDialog({
           ))}
         </select>
         {area && <p className="mt-2 text-[13px] text-muted">{areaLabel(area)}</p>}
-
-        <div className="mb-[11px] mt-[18px] font-display text-[13px] font-semibold text-muted">
-          Kennzeichnung <span className="font-medium text-faint">(optional, z.B. „A7")</span>
-        </div>
-        <input
-          className="input"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          maxLength={20}
-        />
 
         <div className="mb-[11px] mt-[18px] font-display text-[13px] font-semibold text-muted">
           Foto <span className="font-medium text-faint">(optional)</span>

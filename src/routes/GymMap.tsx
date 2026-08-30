@@ -488,7 +488,6 @@ export default function GymMap() {
         area: values.area,
         difficulty: values.difficulty,
         color: values.color,
-        label: values.label,
         imagePath,
       })
 

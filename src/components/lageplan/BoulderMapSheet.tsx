@@ -73,7 +73,6 @@ export default function BoulderMapSheet({
                 <span className="truncate">
                   {boulder.color}
                   {area ? ` · ${area}` : ''}
-                  {boulder.label ? ` · ${boulder.label}` : ''}
                 </span>
               </div>
             </div>

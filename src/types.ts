@@ -128,7 +128,8 @@ export interface GymBoulder {
   difficulty: number
   // Farbname aus src/lib/colors.ts.
   color: string
-  // Optionale Hallen-Kennzeichnung, KEINE laufende Nummer.
+  // Früher eine optionale freie Hallen-Kennzeichnung. Wird von der App nicht mehr
+  // gesetzt oder angezeigt; die Spalte steht nur noch in der Datenbank.
   label: string | null
   image_path: string | null
   // Gesetzt = abgeschraubt: nicht mehr auf der Karte, Marken bleiben.

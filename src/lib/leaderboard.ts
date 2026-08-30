@@ -19,7 +19,8 @@ export interface LeaderboardRow {
 }
 
 // Medaillenfarben für die ersten drei Plätze (Tokens --gold/--silver/--bronze).
-// Index 0 = Platz 1. Von Leaderboard, LeaderboardSummary und Podium gemeinsam benutzt.
+// Index 0 = Platz 1. Von RankMedal (Liste + „Dein Platz“-Leiste) und LeaderboardSummary
+// gemeinsam benutzt.
 export const RANK_CLASSES = [
   'bg-gold text-[#3a2a06]',
   'bg-silver text-[#2a2d33]',
@@ -29,6 +30,15 @@ export const RANK_CLASSES = [
 // Klassen des Rang-Chips für eine Platzierung (1-basiert); ab Platz 4 neutral.
 export function rankClass(rank: number): string {
   return RANK_CLASSES[rank - 1] ?? 'bg-surface-3 text-ink'
+}
+
+// Dieselbe Farbe noch einmal als CSS-Wert: das Bändchen der Medaille mischt daraus
+// seinen dunkleren Ton, und dafür taugt eine Tailwind-Klasse nicht.
+// null ab Platz 4 – dort gibt es keine Medaille.
+const RANK_TOKENS = ['var(--gold)', 'var(--silver)', 'var(--bronze)']
+
+export function rankToken(rank: number): string | null {
+  return RANK_TOKENS[rank - 1] ?? null
 }
 
 /**

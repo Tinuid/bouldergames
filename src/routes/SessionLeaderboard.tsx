@@ -2,11 +2,11 @@ import { useMemo } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useRealtimeSession } from '../hooks/useRealtimeSession'
-import { computeLeaderboardRows, rankClass, summarizeLeaderboard } from '../lib/leaderboard'
+import { computeLeaderboardRows, summarizeLeaderboard } from '../lib/leaderboard'
 import type { Participant } from '../types'
 import { ChevronLeft } from '../components/icons'
 import Leaderboard from '../components/Leaderboard'
-import Podium from '../components/Podium'
+import RankMedal from '../components/RankMedal'
 import PlayerDetail from '../components/PlayerDetail'
 
 /**
@@ -82,14 +82,9 @@ export default function SessionLeaderboard() {
 
   if (!session) return null
 
-  const podiumRows = rows.slice(0, 3)
-  const listStart = podiumRows.length
-  // "Dein Platz"-Leiste nur, wenn man selbst nicht schon im Treppchen steht.
-  const showMyBar = summary.me != null && rows.indexOf(summary.me) >= listStart
-  const listTitle =
-    rows.length > listStart
-      ? `Platz ${rows[listStart].rank} – ${rows[rows.length - 1].rank}`
-      : 'Weitere'
+  // Seit die Liste bei Platz 1 beginnt, ist die angeheftete Leiste das einzige Element,
+  // das den eigenen Platz beim Scrollen dauerhaft zeigt – also immer, sobald man dabei ist.
+  const showMyBar = summary.me != null
 
   return (
     <div className="animate-screen-in mx-auto flex min-h-full max-w-md flex-col px-5 pb-11 pt-6">
@@ -111,32 +106,12 @@ export default function SessionLeaderboard() {
         {boulders.length === 1 ? '1 Boulder' : `${boulders.length} Boulder`}
       </div>
 
-      {podiumRows.length > 0 && (
-        <div className="mb-[22px]">
-          <Podium
-            rows={podiumRows}
-            currentUserId={userId}
-            onSelectPlayer={(row) => openPlayer(row.participant)}
-          />
-        </div>
-      )}
-
-      {rows.length > listStart && (
-        <Leaderboard
-          participants={participants}
-          results={results}
-          currentUserId={userId}
-          onSelectPlayer={openPlayer}
-          skipTop={listStart}
-          title={listTitle}
-        />
-      )}
-
-      {rows.length === 0 && (
-        <p className="px-1 py-2 text-[14px] text-muted">
-          Noch keine Teilnehmer in dieser Challenge.
-        </p>
-      )}
+      <Leaderboard
+        participants={participants}
+        results={results}
+        currentUserId={userId}
+        onSelectPlayer={openPlayer}
+      />
 
       {/* Angeheftet, damit der eigene Platz beim Scrollen durch ein großes Feld nie verschwindet.
           Der Abstandshalter mit mt-auto schiebt die Leiste ans untere Ende, solange die Liste
@@ -146,13 +121,7 @@ export default function SessionLeaderboard() {
           <div className="mt-auto h-4 shrink-0" />
           <div className="sticky bottom-0 -mx-5 border-t border-border bg-surface px-5 pb-[calc(env(safe-area-inset-bottom)+14px)] pt-[11px] shadow-[0_-6px_18px_rgba(40,33,20,0.06)]">
             <div className="mx-auto flex max-w-md items-center gap-3">
-              <span
-                className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full font-num text-[14px] font-bold tabular-nums ${rankClass(
-                  summary.me.rank,
-                )}`}
-              >
-                {summary.me.rank}
-              </span>
+              <RankMedal rank={summary.me.rank} />
               <div className="min-w-0 flex-1">
                 <div className="font-display text-[15px] font-bold tracking-[-0.01em]">
                   Dein Platz
