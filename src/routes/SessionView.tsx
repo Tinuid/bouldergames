@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, useSearchParams, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useRealtimeSession } from '../hooks/useRealtimeSession'
 import { useDialogEscape } from '../hooks/useDialogEscape'
@@ -22,7 +22,6 @@ import {
   scoringFromSession,
   type Boulder,
   type GymBoulder,
-  type Participant,
   type PenaltyMode,
   type ResultStatus,
 } from '../types'
@@ -34,11 +33,10 @@ const PENALTY_LABELS: Record<PenaltyMode, string> = {
   strict: 'strikt',
   misses: 'nur Fehlversuche',
 }
-import Leaderboard from '../components/Leaderboard'
+import LeaderboardSummary from '../components/LeaderboardSummary'
 import BoulderCard from '../components/BoulderCard'
 import BoulderRanking from '../components/BoulderRanking'
 import AddBoulderDialog from '../components/AddBoulderDialog'
-import PlayerDetail from '../components/PlayerDetail'
 import ShareSession from '../components/ShareSession'
 import EditSessionDialog from '../components/EditSessionDialog'
 import ReorderBouldersDialog from '../components/ReorderBouldersDialog'
@@ -50,6 +48,12 @@ export default function SessionView() {
   const [searchParams, setSearchParams] = useSearchParams()
   const returnToGymBoulder = searchParams.get('boulder')
   const navigate = useNavigate()
+  // Rückkehr von der Ranglisten-Seite: dort steht die Id des SESSION-Boulders im
+  // Router-State (nicht in der URL – der Sprung ist flüchtig und muss keinen Reload
+  // überleben; ?boulder= ist bereits mit der Karten-Boulder-Id belegt).
+  const location = useLocation()
+  const returnToBoulderId = (location.state as { highlightBoulderId?: string } | null)
+    ?.highlightBoulderId
   const { userId } = useAuth()
   const { session, participants, boulders, results, loading, error, notFound, refresh } =
     useRealtimeSession(sessionId)
@@ -71,7 +75,6 @@ export default function SessionView() {
   const [filterDifficulty, setFilterDifficulty] = useState<number | null>(null)
   const [filterColor, setFilterColor] = useState<string | null>(null)
   const [hideDone, setHideDone] = useState(false)
-  const [viewedPlayer, setViewedPlayer] = useState<Participant | null>(null)
   const [rankingBoulder, setRankingBoulder] = useState<Boulder | null>(null)
   const [highlightBoulderId, setHighlightBoulderId] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -178,22 +181,21 @@ export default function SessionView() {
   // Nur die Grade/Farben als Filter-Optionen anbieten, die in der Session vorkommen –
   // in der Reihenfolge der zentralen Quellen (difficulty.ts / colors.ts).
   const availableDifficulties = useMemo(() => {
-    const present = new Set(
-      boulders.map((b) => b.difficulty).filter((d): d is number => d != null),
-    )
+    const present = new Set(boulders.map((b) => b.difficulty).filter((d): d is number => d != null))
     return DIFFICULTIES.filter((d) => present.has(d.code))
   }, [boulders])
   const availableColors = useMemo(() => {
-    const present = new Set(
-      boulders.map((b) => b.color).filter((c): c is string => c != null),
-    )
+    const present = new Set(boulders.map((b) => b.color).filter((c): c is string => c != null))
     return BOULDER_COLORS.filter((c) => present.has(c.name))
   }, [boulders])
 
   // Aktiven Filter zurücksetzen, sobald seine Option nicht mehr vorkommt
   // (Boulder gelöscht/umgestuft) – verhindert eine leere Liste ohne sichtbaren Grund.
   useEffect(() => {
-    if (filterDifficulty != null && !availableDifficulties.some((d) => d.code === filterDifficulty)) {
+    if (
+      filterDifficulty != null &&
+      !availableDifficulties.some((d) => d.code === filterDifficulty)
+    ) {
       setFilterDifficulty(null)
     }
   }, [filterDifficulty, availableDifficulties])
@@ -223,12 +225,12 @@ export default function SessionView() {
     setHideDone(false)
   }, [])
 
-  // Aus der Spieler-Detailansicht zu einem Boulder springen: Detail schließen, Filter
-  // zurücksetzen (sonst ist der Boulder evtl. ausgeblendet und nicht im DOM), dann markieren.
+  // Zu einem Boulder springen (aus der Spieler-Detailansicht der Ranglisten-Seite oder von
+  // der Karte): Filter zurücksetzen (sonst ist der Boulder evtl. ausgeblendet und nicht im
+  // DOM), dann markieren.
   const goToBoulder = useCallback(
     (boulderId: string) => {
       resetFilters()
-      setViewedPlayer(null)
       setHighlightBoulderId(boulderId)
     },
     [resetFilters],
@@ -241,6 +243,14 @@ export default function SessionView() {
     setSearchParams({}, { replace: true })
     if (target) goToBoulder(target.id)
   }, [returnToGymBoulder, boulders, goToBoulder, setSearchParams])
+
+  useEffect(() => {
+    if (!returnToBoulderId || boulders.length === 0) return
+    const exists = boulders.some((b) => b.id === returnToBoulderId)
+    // State in jedem Fall leeren, sonst springt ein erneutes Rendern wieder dorthin.
+    navigate(location.pathname, { replace: true, state: null })
+    if (exists) goToBoulder(returnToBoulderId)
+  }, [returnToBoulderId, boulders, goToBoulder, navigate, location.pathname])
 
   // Nach dem Anspringen zum Boulder scrollen und das Aufleuchten nach der Animation wieder
   // zurücknehmen (damit die animate-bump-Klasse beim nächsten Mal erneut auslösen kann).
@@ -501,11 +511,11 @@ export default function SessionView() {
       </div>
 
       <div className="mb-[26px]">
-        <Leaderboard
+        <LeaderboardSummary
           participants={participants}
           results={results}
           currentUserId={userId}
-          onSelectPlayer={setViewedPlayer}
+          onOpen={() => navigate(`/s/${sessionId}/rangliste`)}
         />
       </div>
 
@@ -819,17 +829,6 @@ export default function SessionView() {
           resultsByParticipant={byBoulderParticipant.get(rankingBoulder.id)}
           currentUserId={userId}
           onClose={() => setRankingBoulder(null)}
-        />
-      )}
-
-      {viewedPlayer && (
-        <PlayerDetail
-          participant={viewedPlayer}
-          meParticipant={myParticipant}
-          boulders={boulders}
-          results={results}
-          onClose={() => setViewedPlayer(null)}
-          onSelectBoulder={goToBoulder}
         />
       )}
 

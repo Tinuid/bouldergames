@@ -1,54 +1,33 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { computeLeaderboardRows, rankClass } from '../lib/leaderboard'
 import type { Participant, Result } from '../types'
 
-interface Row {
-  participant: Participant
-  points: number
-  tops: number
-  flashes: number
-}
-
-const RANK_CLASSES = [
-  'bg-gold text-[#3a2a06]',
-  'bg-silver text-[#2a2d33]',
-  'bg-bronze text-[#2e1a0c]',
-]
-
+/**
+ * Vollständige Leaderboard-Liste. Steht seit der kompakten Kopfzeile in der Challenge
+ * (LeaderboardSummary) nur noch auf der Ranglisten-Seite – dort unterhalb des Treppchens,
+ * daher `skipTop`, das die bereits im Treppchen gezeigten Zeilen auslässt.
+ *
+ * Punkte kommen fertig aus `results.points`; gerechnet wird nur in lib/leaderboard.ts.
+ */
 export default function Leaderboard({
   participants,
   results,
   currentUserId,
   onSelectPlayer,
+  skipTop = 0,
+  title = 'Leaderboard',
 }: {
   participants: Participant[]
   results: Result[]
   currentUserId: string | null
   // Optional: Klick auf eine Zeile öffnet die Detailansicht des Spielers.
   onSelectPlayer?: (participant: Participant) => void
+  // Die ersten n Zeilen auslassen (die Ranglisten-Seite zeigt sie im Treppchen).
+  skipTop?: number
+  title?: string
 }) {
-  const rows = useMemo<Row[]>(() => {
-    const byParticipant = new Map<string, Row>()
-    for (const p of participants) {
-      byParticipant.set(p.id, { participant: p, points: 0, tops: 0, flashes: 0 })
-    }
-    for (const r of results) {
-      const row = byParticipant.get(r.participant_id)
-      if (!row) continue
-      row.points += r.points
-      if (r.status === 'flash') {
-        row.flashes += 1
-        row.tops += 1
-      } else if (r.status === 'top') {
-        row.tops += 1
-      }
-    }
-    return [...byParticipant.values()].sort(
-      (a, b) =>
-        b.points - a.points ||
-        b.tops - a.tops ||
-        a.participant.display_name.localeCompare(b.participant.display_name),
-    )
-  }, [participants, results])
+  const rows = useMemo(() => computeLeaderboardRows(participants, results), [participants, results])
+  const visible = useMemo(() => rows.slice(skipTop), [rows, skipTop])
 
   // Kurzer Puls auf der eigenen Zeile, wenn sich die eigene Punktzahl ändert.
   const myRow = useMemo(
@@ -70,9 +49,9 @@ export default function Leaderboard({
 
   return (
     <div className="card !p-1.5">
-      <h2 className="section-label px-3 pb-2.5 pt-3.5">Leaderboard</h2>
+      <h2 className="section-label px-3 pb-2.5 pt-3.5">{title}</h2>
       <ol className="flex flex-col gap-1">
-        {rows.map((row, i) => {
+        {visible.map((row) => {
           const isMe = currentUserId !== null && row.participant.user_id === currentUserId
           return (
             <li
@@ -91,11 +70,11 @@ export default function Leaderboard({
                 className="flex w-full items-center gap-3 rounded-sm2 px-3 py-2.5 text-left transition enabled:hover:bg-surface-2"
               >
                 <span
-                  className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full font-num text-[14px] font-bold ${
-                    RANK_CLASSES[i] ?? 'bg-surface-3 text-ink'
-                  }`}
+                  className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full font-num text-[14px] font-bold ${rankClass(
+                    row.rank,
+                  )}`}
                 >
-                  {i + 1}
+                  {row.rank}
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 font-display text-[17px] font-bold">
@@ -117,7 +96,11 @@ export default function Leaderboard({
             </li>
           )
         })}
-        {rows.length === 0 && <li className="px-3 py-2 text-muted">Noch keine Teilnehmer.</li>}
+        {visible.length === 0 && (
+          <li className="px-3 py-2 text-muted">
+            {rows.length === 0 ? 'Noch keine Teilnehmer.' : 'Keine weiteren Teilnehmer.'}
+          </li>
+        )}
       </ol>
     </div>
   )

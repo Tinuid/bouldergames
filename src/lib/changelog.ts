@@ -13,6 +13,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.16.0',
+    date: '30.08.2026',
+    text:
+      'Oben in der Challenge steht jetzt nur noch dein eigener Stand: dein Platz, deine Punkte und wer gerade führt. Die Boulder-Liste beginnt dadurch deutlich weiter oben.\n' +
+      'Ein Tipp darauf öffnet die komplette Rangliste – mit Treppchen für die ersten drei und deinem Platz fest am unteren Rand, damit er beim Scrollen nicht verschwindet.\n' +
+      'Bei Punktgleichstand teilen sich beide jetzt denselben Platz (1, 2, 2, 4 …), so wie schon in der Rangliste eines einzelnen Boulders.',
+  },
+  {
     version: '1.15.0',
     date: '29.08.2026',
     text:
@@ -23,8 +31,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '1.14.2',
     date: '29.08.2026',
-    text:
-      'Die Hallenkarte lässt sich jetzt über ihren Rand hinausschieben – auch ein Boulder ganz außen am Plan lässt sich damit in die Bildmitte holen, statt am Rand hängenzubleiben.',
+    text: 'Die Hallenkarte lässt sich jetzt über ihren Rand hinausschieben – auch ein Boulder ganz außen am Plan lässt sich damit in die Bildmitte holen, statt am Rand hängenzubleiben.',
   },
   {
     version: '1.14.1',
@@ -50,8 +57,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '1.12.0',
     date: '14.07.2026',
-    text:
-      'Boulder umsortieren: Der Host kann in den Session-Einstellungen über „Boulder-Reihenfolge ändern" die Boulder per Ziehen am Griff neu anordnen. Erst „Speichern" übernimmt die neue Nummerierung für alle.',
+    text: 'Boulder umsortieren: Der Host kann in den Session-Einstellungen über „Boulder-Reihenfolge ändern" die Boulder per Ziehen am Griff neu anordnen. Erst „Speichern" übernimmt die neue Nummerierung für alle.',
   },
   {
     version: '1.11.0',
