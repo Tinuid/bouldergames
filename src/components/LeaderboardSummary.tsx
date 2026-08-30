@@ -21,7 +21,7 @@ export default function LeaderboardSummary({
   currentUserId: string | null
   onOpen: () => void
 }) {
-  const { me, leader, leaderShared, total, gapToNext, nextRank, leadOverNext } = useMemo(
+  const { me, leader, leaderShared, total, leadOverNext } = useMemo(
     () => summarizeLeaderboard(computeLeaderboardRows(participants, results), currentUserId),
     [participants, results, currentUserId],
   )
@@ -50,9 +50,9 @@ export default function LeaderboardSummary({
     if (leaderShared) hint = `Gleichauf an der Spitze mit ${leader.points}`
     else if (leadOverNext != null) hint = `Du führst mit ${leadOverNext} Punkten Vorsprung`
     else hint = 'Du führst'
-  } else if (gapToNext != null && nextRank != null) {
-    hint = `${leader.participant.display_name} führt mit ${leader.points} · ${gapToNext} bis Platz ${nextRank}`
   } else {
+    // Bewusst ohne den Abstand zum nächsten Platz – die Zahl brauchte hier niemand.
+    // Auf der Ranglisten-Seite steht sie weiterhin in der „Dein Platz“-Leiste.
     hint = `${leader.participant.display_name} führt mit ${leader.points}`
   }
 

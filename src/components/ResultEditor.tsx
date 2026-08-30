@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { computePoints, normalizeResult } from '../lib/scoring'
 import type { Result, ResultStatus, ScoringConfig } from '../types'
-import { Bolt, Check, Minus, Plus, X } from './icons'
+import { Bolt, Check, Minus, Plus } from './icons'
 
+// Nur noch die beiden Erfolgs-Zustände haben einen eigenen Knopf. "Nicht geschafft"
+// ergibt sich aus gezählten Fehlversuchen ohne Top – siehe Zähl-Control unten.
 const OPTIONS: {
-  status: ResultStatus
+  status: Extract<ResultStatus, 'flash' | 'top'>
   label: string
   icon: React.ReactNode
   // aktive Variante (inaktiv = neutral)
@@ -17,8 +19,14 @@ const OPTIONS: {
     activeCls: 'border-accent bg-accent text-accent-ink',
   },
   { status: 'top', label: 'Top', icon: <Check />, activeCls: 'border-ok bg-ok text-white' },
-  { status: 'fail', label: 'Nicht', icon: <X />, activeCls: 'border-bad bg-bad-soft text-bad' },
 ]
+
+// Fehlversuche aus dem gespeicherten Ergebnis: `attempts` sind die GESAMTversuche
+// inklusive des erfolgreichen Zugs, ein Flash hat definitionsgemäß keinen Fehlversuch.
+function missesOf(status: ResultStatus, attempts: number): number {
+  if (status === 'flash' || status === 'open') return 0
+  return status === 'top' ? Math.max(0, attempts - 1) : Math.max(0, attempts)
+}
 
 export default function ResultEditor({
   result,
@@ -54,89 +62,113 @@ export default function ResultEditor({
     onSave(norm.status, norm.attempts)
   }
 
-  function selectStatus(s: ResultStatus) {
-    // Toggle: nochmaliges Tippen setzt zurück auf "offen".
+  const misses = missesOf(status, attempts)
+
+  function selectStatus(s: 'flash' | 'top') {
+    // Toggle: nochmaliges Tippen nimmt den Erfolg zurück. Die gezählten Fehlversuche
+    // bleiben dabei stehen – sonst wäre ein Fehlgriff auf "Top" nicht zu korrigieren.
     if (s === status) {
-      apply('open', 0)
+      apply(misses > 0 ? 'fail' : 'open', misses)
     } else if (s === 'flash') {
       apply('flash', 1)
-    } else if (s === 'top') {
-      // Ein Top hat mindestens 1 Fehlversuch (0 Fehlversuche wäre ein Flash) ⇒ attempts ≥ 2.
-      apply('top', Math.max(2, attempts))
     } else {
-      apply('fail', Math.max(1, attempts))
+      // Die bereits gezählten Fehlversuche bleiben stehen, der erfolgreiche Zug kommt dazu.
+      // Ein Top hat mindestens 1 Fehlversuch (0 Fehlversuche wäre ein Flash) ⇒ attempts ≥ 2.
+      apply('top', Math.max(2, misses + 1))
     }
   }
 
+  function addMiss() {
+    if (status === 'top') apply('top', attempts + 1)
+    // Ein Flash verträgt keinen Fehlversuch – der Zähler löst ihn auf.
+    else if (status === 'flash') apply('fail', 1)
+    else apply('fail', misses + 1)
+  }
+
+  function removeMiss() {
+    if (status === 'top') apply('top', Math.max(2, attempts - 1))
+    else if (misses <= 1) apply('open', 0)
+    else apply('fail', misses - 1)
+  }
+
   const preview = computePoints(status, attempts, scoring, difficulty)
-  const showStepper = status === 'top' || status === 'fail'
-  // Angezeigt werden Fehlversuche: beim Top zählt der erfolgreiche Zug nicht mit.
-  const misses = status === 'top' ? attempts - 1 : attempts
-  // Untergrenze für attempts je Status (Top braucht mind. 1 Fehlversuch).
-  const minAttempts = status === 'top' ? 2 : 1
+  // Kosten Fehlversuche keine Punkte, gibt es nichts zu zählen – dann fällt der Knopf weg.
+  const showCounter = scoring.attemptCost > 0
+  // Ein Top braucht seinen einen Fehlversuch; darunter geht der Zähler nicht.
+  const minusDisabled = status === 'top' && misses <= 1
+  const counterCls =
+    misses > 0 ? 'border-bad bg-bad-soft text-bad' : 'border-border-strong bg-surface-2 text-ink'
+  // Trennlinie im geteilten Knopf: Tailwind-Opacity greift auf den var(--…)-Tokens nicht.
+  const dividerStyle = { borderRight: '1px solid color-mix(in srgb, var(--bad) 30%, transparent)' }
 
   if (compact) {
     return (
-      <div className="flex flex-col gap-2 border-t border-border py-2.5">
-        <div className="flex items-center gap-2">
-          <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{label}</span>
-          <div className="flex gap-1.5">
-            {OPTIONS.map((o) => {
-              const active = status === o.status
-              return (
-                <button
-                  key={o.status}
-                  onClick={() => selectStatus(o.status)}
-                  aria-label={o.label}
-                  title={o.label}
-                  aria-pressed={active}
-                  className={`flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border text-[16px] transition ${
-                    active ? o.activeCls : 'border-border-strong bg-surface-2 text-ink'
-                  }`}
-                >
-                  {o.icon}
-                </button>
-              )
-            })}
-          </div>
-        </div>
+      <div className="flex items-center gap-2 border-t border-border py-2.5">
+        <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{label}</span>
+        <div className="flex gap-1.5">
+          {OPTIONS.map((o) => {
+            const active = status === o.status
+            return (
+              <button
+                key={o.status}
+                onClick={() => selectStatus(o.status)}
+                aria-label={o.label}
+                title={o.label}
+                aria-pressed={active}
+                className={`flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border text-[16px] transition ${
+                  active ? o.activeCls : 'border-border-strong bg-surface-2 text-ink'
+                }`}
+              >
+                {o.icon}
+              </button>
+            )
+          })}
 
-        {showStepper && (
-          <div className="flex items-center justify-end gap-1.5">
-            <span className="mr-1 text-[12.5px] text-muted">Fehlversuche</span>
-            <button
-              className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] border border-border-strong bg-surface-2 text-ink transition hover:border-accent hover:text-accent disabled:opacity-35 disabled:hover:border-border-strong disabled:hover:text-ink"
-              onClick={() => apply(status, Math.max(minAttempts, attempts - 1))}
-              disabled={misses <= 0}
-              aria-label="Weniger Fehlversuche"
+          {showCounter && (
+            <div
+              className={`flex h-[34px] items-stretch overflow-hidden rounded-[10px] border transition ${counterCls}`}
             >
-              <Minus className="text-[15px]" />
-            </button>
-            <span className="min-w-[22px] text-center font-num text-[15px] font-bold tabular-nums">
-              {misses}
-            </span>
-            <button
-              className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] border border-border-strong bg-surface-2 text-ink transition hover:border-accent hover:text-accent"
-              onClick={() => apply(status, attempts + 1)}
-              aria-label="Mehr Fehlversuche"
-            >
-              <Plus className="text-[15px]" />
-            </button>
-          </div>
-        )}
+              {misses > 0 && (
+                <button
+                  onClick={removeMiss}
+                  disabled={minusDisabled}
+                  aria-label="Ein Versuch weniger"
+                  title="Ein Versuch weniger"
+                  className="flex w-7 shrink-0 items-center justify-center transition disabled:opacity-35"
+                  style={dividerStyle}
+                >
+                  <Minus className="text-[15px]" />
+                </button>
+              )}
+              <button
+                onClick={addMiss}
+                aria-label="Ein Versuch mehr"
+                title="Ein Versuch mehr"
+                className="flex min-w-[34px] items-center justify-center px-1.5"
+              >
+                {misses > 0 ? (
+                  <span className="font-num text-[15px] font-bold tabular-nums">{misses}</span>
+                ) : (
+                  <Plus className="text-[16px]" />
+                )}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     )
   }
 
   return (
     <div className="flex flex-col">
-      <div className="grid grid-cols-3 gap-2">
+      <div className={`grid gap-2 ${showCounter ? 'grid-cols-3' : 'grid-cols-2'}`}>
         {OPTIONS.map((o) => {
           const active = status === o.status
           return (
             <button
               key={o.status}
               onClick={() => selectStatus(o.status)}
+              aria-pressed={active}
               className={`flex items-center justify-center gap-1.5 rounded-sm2 border px-1.5 py-2.5 font-display text-[14px] font-bold transition ${
                 active ? o.activeCls : 'border-border-strong bg-surface-2 text-ink'
               }`}
@@ -146,33 +178,45 @@ export default function ResultEditor({
             </button>
           )
         })}
-      </div>
 
-      {showStepper && (
-        <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-          <span className="text-[14px] font-medium text-muted">Fehlversuche</span>
-          <div className="flex items-center gap-1.5">
+        {showCounter && (
+          // Zweigeteilt, optisch weiter ein Knopf im Raster: schmales Minus zum Korrigieren
+          // (erst ab dem ersten Versuch), breite Plus-Hälfte als Hauptaktion.
+          <div
+            className={`flex items-stretch overflow-hidden rounded-sm2 border font-display text-[14px] font-bold transition ${counterCls}`}
+          >
+            {misses > 0 && (
+              <button
+                onClick={removeMiss}
+                disabled={minusDisabled}
+                aria-label="Ein Versuch weniger"
+                title="Ein Versuch weniger"
+                className="flex w-10 shrink-0 items-center justify-center transition disabled:opacity-35"
+                style={dividerStyle}
+              >
+                <Minus className="text-[16px]" />
+              </button>
+            )}
             <button
-              className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-border-strong bg-surface-2 text-ink transition hover:border-accent hover:text-accent disabled:opacity-35 disabled:hover:border-border-strong disabled:hover:text-ink"
-              onClick={() => apply(status, Math.max(minAttempts, attempts - 1))}
-              disabled={misses <= 0}
-              aria-label="Weniger Fehlversuche"
+              onClick={addMiss}
+              aria-label="Ein Versuch mehr"
+              title="Ein Versuch mehr"
+              className="flex min-w-0 flex-1 items-center justify-center gap-1.5 px-1.5 py-2.5"
             >
-              <Minus className="text-[16px]" />
-            </button>
-            <span className="min-w-[26px] text-center font-num text-lg font-bold tabular-nums">
-              {misses}
-            </span>
-            <button
-              className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-border-strong bg-surface-2 text-ink transition hover:border-accent hover:text-accent"
-              onClick={() => apply(status, attempts + 1)}
-              aria-label="Mehr Fehlversuche"
-            >
-              <Plus className="text-[16px]" />
+              {misses > 0 ? (
+                <span className="font-num text-lg font-bold tabular-nums">{misses}</span>
+              ) : (
+                <>
+                  <span className="text-[16px]">
+                    <Plus />
+                  </span>
+                  Versuch
+                </>
+              )}
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {status !== 'open' && (
         <div className="mt-2.5 text-right font-display text-[14px] font-semibold text-muted">

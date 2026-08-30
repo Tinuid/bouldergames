@@ -13,6 +13,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.20.0',
+    date: '30.08.2026',
+    text:
+      'Fehlversuche zählst du jetzt direkt am Knopf „Versuch“ hoch – der Stand steht im Knopf selbst, die extra Zeile darunter ist weg.\n' +
+      'Zum Korrigieren erscheint links davon ein Minus, sobald der erste Versuch gezählt ist.\n' +
+      'Kosten Fehlversuche in deiner Session keine Punkte, gibt es den Knopf gar nicht mehr – dann bleiben Flash und Top.\n' +
+      'Die Farbe eines Boulders steht jetzt neben dem Grad statt darunter.\n' +
+      'Der Leaderboard-Streifen zeigt nur noch, wer führt.',
+  },
+  {
     version: '1.19.0',
     date: '30.08.2026',
     text:
