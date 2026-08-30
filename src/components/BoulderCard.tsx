@@ -105,23 +105,25 @@ export default function BoulderCard({
           title="Rangliste anzeigen"
           className={`-my-1 flex min-w-0 flex-1 items-center gap-[13px] rounded-[12px] border border-border px-2 py-1 text-left transition enabled:hover:border-border-strong enabled:hover:bg-surface-2 enabled:active:scale-[0.99] disabled:border-transparent disabled:px-0`}
         >
-          <span className="block min-w-0 flex-1 whitespace-nowrap font-display text-[17px] font-bold">
-            {boulder.difficulty != null ? `Grad ${difficultyLabel(boulder.difficulty)}` : 'Boulder'}
+          <span className="min-w-0 flex-1">
+            <span className="block whitespace-nowrap font-display text-[17px] font-bold">
+              {boulder.difficulty != null
+                ? `Grad ${difficultyLabel(boulder.difficulty)}`
+                : 'Boulder'}
+            </span>
+            {boulder.color && (
+              <span className="mt-0.5 flex items-center gap-1.5 truncate text-[13px] text-muted">
+                {dot && (
+                  <span
+                    className="inline-block h-[11px] w-[11px] rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)]"
+                    style={{ background: dot }}
+                  />
+                )}
+                {boulder.color}
+              </span>
+            )}
           </span>
         </button>
-        {/* Die Farbe steht neben dem Grad, nicht darunter – und außerhalb des Ranglisten-
-            Buttons, damit die Kopfzeile eine Zeile hoch bleibt. */}
-        {boulder.color && (
-          <span className="flex min-w-0 shrink items-center gap-1.5 text-[13px] text-muted">
-            {dot && (
-              <span
-                className="inline-block h-[11px] w-[11px] shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)]"
-                style={{ background: dot }}
-              />
-            )}
-            <span className="truncate">{boulder.color}</span>
-          </span>
-        )}
         <div className="flex shrink-0 items-center gap-2">
           {onEdit && (
             <button

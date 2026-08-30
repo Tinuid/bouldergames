@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.20.1',
+    date: '30.08.2026',
+    text: 'Die Farbe eines Boulders steht wieder unter dem Grad – die neue Position daneben hat sich nicht bewährt.',
+  },
+  {
     version: '1.20.0',
     date: '30.08.2026',
     text:
