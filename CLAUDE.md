@@ -336,8 +336,9 @@ Vorauswahl für eine **neue** Challenge reist bewusst im Router-State nach `/cre
 sie ist flüchtig und muss einen Reload nicht überleben.
 
 **Wiederfinden in der Halle.** Jeder übernommene Boulder zeigt in `BoulderCard` neben dem Foto eine
-Mini-Karte (`MiniMap`, flacher Grundriss aus `HALL_AREAS` plus ein bewusst überproportionaler Punkt);
-ein Tipp führt auf `/karte?session=<id>&boulder=<gymBoulderId>` und wählt ihn dort aus. Ohne diesen
+Mini-Karte (`MiniMap`, flacher Grundriss aus `HALL_AREAS` plus ein bewusst überproportionaler Punkt
+in der Farbe des Boulders – Zweiton-Farben brauchen dafür `ColorDefs` mit einem `useId`-Präfix je
+Vorkommen); ein Tipp führt auf `/karte?session=<id>&boulder=<gymBoulderId>` und wählt ihn dort aus. Ohne diesen
 Rückweg nützt der Katalog in der Halle wenig.
 
 **Gesetzt wird nur über das Fadenkreuz**, nicht durch Tippen auf die Karte: mit dem Finger auf eine
@@ -356,7 +357,10 @@ nicht vom Verschieben der Karte zu unterscheiden. `useSvgPanZoom` liefert `onLon
 **Routing/Screens.** `src/App.tsx` rendert erst nach erfolgreichem Auth-Bootstrap. Routen:
 `/` (Home), `/create`, `/join` + `/join/:code`, `/s/:sessionId` (`SessionView` – Hauptscreen;
 wird die Session über einen geteilten Link ohne vorherigen Beitritt geöffnet, zeigt er inline ein
-Namens-/Beitritts-Formular), `/karte` (`GymMap` – Hallenkarte, optional mit `?session=<id>` und `&pick=1`; bewusst der einzige Screen ohne
+Namens-/Beitritts-Formular), `/s/:sessionId/rangliste` (`SessionLeaderboard` – vollständige
+Rangliste; der Spieler-Vergleich `PlayerDetail` hängt an `?player=<participantId>` und **nicht** an
+React-State, damit er einen eigenen History-Eintrag bekommt: der Sprung zu einem Boulder führt
+nach `/s/:sessionId`, und der Zurück-Button muss wieder im Vergleich landen), `/karte` (`GymMap` – Hallenkarte, optional mit `?session=<id>` und `&pick=1`; bewusst der einzige Screen ohne
 `max-w-md`-Spalte: `fixed inset-0` mit eigenem Safe-Area-Padding, weil `position: fixed` das Padding
 des `body` ignoriert) und `/feedback` (`FeedbackList` – öffentliche Feedback-Liste).
 

@@ -89,7 +89,12 @@ export default function BoulderCard({
             aria-label="Auf der Karte zeigen"
             title="Auf der Karte zeigen"
           >
-            <MiniMap x={gymPosition.x} y={gymPosition.y} className="h-full w-full" />
+            <MiniMap
+              x={gymPosition.x}
+              y={gymPosition.y}
+              color={boulder.color}
+              className="h-full w-full"
+            />
           </button>
         )}
         <button

@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useMemo } from 'react'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useRealtimeSession } from '../hooks/useRealtimeSession'
 import { computeLeaderboardRows, rankClass, summarizeLeaderboard } from '../lib/leaderboard'
@@ -16,15 +16,39 @@ import PlayerDetail from '../components/PlayerDetail'
  *
  * Lädt die Session selbst über useRealtimeSession: die Challenge-Ansicht steigt beim
  * Navigieren aus, es entsteht also kein zweites Realtime-Abo.
+ *
+ * Der angesehene Spieler steht in der URL (?player=<participantId>), nicht im State:
+ * nur so bekommt das Öffnen einen eigenen History-Eintrag, und der Weg zurück aus einem
+ * angetippten Boulder landet wieder im Vergleich statt in der nackten Liste.
  */
 export default function SessionLeaderboard() {
   const { sessionId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { userId } = useAuth()
   const { session, participants, boulders, results, loading, error, notFound } =
     useRealtimeSession(sessionId)
 
-  const [viewedPlayer, setViewedPlayer] = useState<Participant | null>(null)
+  // Unbekannte Id (alter Link, Spieler ausgetreten) ⇒ kein Overlay, Liste bleibt bedienbar.
+  const viewedPlayerId = searchParams.get('player')
+  const viewedPlayer = useMemo(
+    () => participants.find((p) => p.id === viewedPlayerId) ?? null,
+    [participants, viewedPlayerId],
+  )
+
+  // Bewusst push (kein replace): der Eintrag ist genau das Ziel des Zurück-Buttons.
+  function openPlayer(participant: Participant) {
+    setSearchParams({ player: participant.id })
+  }
+
+  function closePlayer() {
+    // Zurückgehen räumt den eigenen History-Eintrag ab, statt einen zweiten anzulegen.
+    // Ist die Rangliste selbst der erste Eintrag (geteilter Link, Reload), führte das
+    // aus der App heraus – dann nur den Parameter entfernen.
+    if (location.key === 'default') setSearchParams({}, { replace: true })
+    else navigate(-1)
+  }
 
   const rows = useMemo(() => computeLeaderboardRows(participants, results), [participants, results])
   const summary = useMemo(() => summarizeLeaderboard(rows, userId), [rows, userId])
@@ -92,7 +116,7 @@ export default function SessionLeaderboard() {
           <Podium
             rows={podiumRows}
             currentUserId={userId}
-            onSelectPlayer={(row) => setViewedPlayer(row.participant)}
+            onSelectPlayer={(row) => openPlayer(row.participant)}
           />
         </div>
       )}
@@ -102,7 +126,7 @@ export default function SessionLeaderboard() {
           participants={participants}
           results={results}
           currentUserId={userId}
-          onSelectPlayer={setViewedPlayer}
+          onSelectPlayer={openPlayer}
           skipTop={listStart}
           title={listTitle}
         />
@@ -153,7 +177,7 @@ export default function SessionLeaderboard() {
           meParticipant={myParticipant}
           boulders={boulders}
           results={results}
-          onClose={() => setViewedPlayer(null)}
+          onClose={closePlayer}
           onSelectBoulder={goToBoulder}
         />
       )}

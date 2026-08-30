@@ -13,6 +13,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.17.0',
+    date: '30.08.2026',
+    text:
+      'Die Mini-Karte neben einem Boulder zeigt den Punkt jetzt in der Farbe des Boulders – damit findest du ihn in der Halle schneller wieder.\n' +
+      'Springst du aus einem Spieler-Vergleich zu einem Boulder, bringt dich der Zurück-Button wieder in genau diesen Vergleich statt in die Ranglisten-Liste.\n' +
+      'Der Streifen oben in der Challenge heißt jetzt „Leaderboard“.',
+  },
+  {
     version: '1.16.0',
     date: '30.08.2026',
     text:

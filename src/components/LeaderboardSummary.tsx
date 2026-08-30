@@ -71,7 +71,7 @@ export default function LeaderboardSummary({
     >
       <div className="px-[14px] pb-[14px] pt-3">
         <div className="mb-[9px] flex items-center justify-between">
-          <span className="section-label">{me ? 'Dein Stand' : 'Leaderboard'}</span>
+          <span className="section-label">Leaderboard</span>
           <ChevronRight className="text-[18px] text-faint" />
         </div>
 
