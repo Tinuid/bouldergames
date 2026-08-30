@@ -3,6 +3,7 @@ import { useParams, useSearchParams, Link, useLocation, useNavigate } from 'reac
 import { useAuth } from '../hooks/useAuth'
 import { useRealtimeSession } from '../hooks/useRealtimeSession'
 import { useDialogEscape } from '../hooks/useDialogEscape'
+import { useGymTickSync } from '../hooks/useGymTickSync'
 import {
   addBoulder,
   deleteBoulder,
@@ -177,6 +178,10 @@ export default function SessionView() {
     }
     return { mine, byBoulderParticipant }
   }, [results, myParticipant])
+
+  // Geflashte/getoppte Boulder, die von der Hallenkarte stammen, dort als "erledigt"
+  // markieren – einmal pro Boulder und Gerät, still im Hintergrund.
+  useGymTickSync({ sessionId, userId, boulders, myResults: mine })
 
   // Nur die Grade/Farben als Filter-Optionen anbieten, die in der Session vorkommen –
   // in der Reihenfolge der zentralen Quellen (difficulty.ts / colors.ts).

@@ -335,6 +335,22 @@ hervorgehoben, Ausschnitt eingepasst) und „+ Hinzufügen → Vom Lageplan" auf
 Vorauswahl für eine **neue** Challenge reist bewusst im Router-State nach `/create` und nicht in der URL –
 sie ist flüchtig und muss einen Reload nicht überleben.
 
+**Erfolge aus der Challenge setzen die Karten-Marke.** Ein `flash`/`top` auf einem übernommenen
+Boulder markiert ihn auf der Karte als „erledigt“ (`gym_ticks.state = 'done'`). Das läuft bewusst
+**rein client-seitig** (`src/lib/gymTickSync.ts` + `src/hooks/useGymTickSync.ts`, eingehängt in
+`SessionView`): `gym_ticks` ist per RLS strikt privat, nur das eigene Gerät darf die eigenen Marken
+schreiben – kein Trigger, keine RPC, keine Migration nötig. Der Effekt hängt an den eigenen
+Ergebnissen und deckt damit beide Momente mit **einem** Mechanismus ab: beim Öffnen der Challenge
+(holt ältere Ergebnisse nach) und direkt beim Eintragen, weil `handleSaveResult` nach
+`upsertResult` ohnehin `refresh()` ruft – **kein** zweiter Schreibpfad im Save-Handler. Nebeneffekt:
+Trägt bei `shared_scoring` jemand anderes mein Ergebnis ein, setzt trotzdem mein Gerät die Marke.
+Gesetzt wird pro Boulder **genau einmal** – welche schon abgeglichen sind, merkt sich das Gerät in
+`localStorage` (`bg:gymTicks:<sessionId>`), damit ein manuelles Entfernen auf der Karte gewinnt und
+beim nächsten Öffnen nicht zurückkommt. Aus demselben Grund bleibt die Marke stehen, wenn ein Top
+nachträglich auf `open`/`fail` korrigiert wird. Ein bestehendes `'project'` wird zu `'done'`
+hochgestuft; ein `fail` fasst die Karte nie an. Fehler werden still verworfen (Bequemlichkeit, kein
+vom Nutzer angestoßenes Speichern) – ohne Vermerk im `localStorage` läuft der Abgleich einfach neu.
+
 **Wiederfinden in der Halle.** Jeder übernommene Boulder zeigt in `BoulderCard` neben dem Foto eine
 Mini-Karte (`MiniMap`, flacher Grundriss aus `HALL_AREAS` plus ein bewusst überproportionaler Punkt
 in der Farbe des Boulders – Zweiton-Farben brauchen dafür `ColorDefs` mit einem `useId`-Präfix je

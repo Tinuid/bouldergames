@@ -464,6 +464,22 @@ export async function setGymTick(params: {
   return data
 }
 
+// Mehrere Karten-Boulder auf einmal als "erledigt" markieren – ein Round-Trip statt
+// einer Anfrage pro Boulder (beim ersten Öffnen einer Challenge sind das schnell 15).
+// Wird vom automatischen Abgleich aus einer Challenge benutzt (siehe gymTickSync.ts).
+//
+// Ein bestehendes 'project' wird dabei bewusst zu 'done': wer den Boulder in einer
+// Challenge geschafft hat, hat ihn geschafft. Kein .select() – der Aufrufer braucht
+// die Zeilen nicht, und ohne Rückgabe bleibt die Payload klein.
+export async function markGymTicksDone(gymBoulderIds: string[], userId: string): Promise<void> {
+  if (gymBoulderIds.length === 0) return
+  const { error } = await supabase.from('gym_ticks').upsert(
+    gymBoulderIds.map((id) => ({ gym_boulder_id: id, user_id: userId, state: 'done' as const })),
+    { onConflict: 'gym_boulder_id,user_id' },
+  )
+  if (error) throw error
+}
+
 // Marke entfernen (keine Zeile = keine Marke).
 //
 // Bewusste Abweichung vom Repo-Idiom ".select('id') + bei 0 Zeilen werfen": hier

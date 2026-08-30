@@ -13,6 +13,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.18.0',
+    date: '30.08.2026',
+    text:
+      'Boulder, die du vom Lageplan in eine Challenge übernommen hast, markiert die Hallenkarte jetzt automatisch als „erledigt“, sobald du sie flashst oder toppst.\n' +
+      'Das gilt auch rückwirkend: Beim nächsten Öffnen einer Challenge werden deine bisherigen Erfolge nachgetragen.\n' +
+      'Entfernst du eine Marke danach von Hand auf der Karte, bleibt sie weg – sie wird nicht erneut gesetzt.',
+  },
+  {
     version: '1.17.0',
     date: '30.08.2026',
     text:
