@@ -297,10 +297,12 @@ faktisch schon der Betreiber-Modus, nur ohne Accounts.
 **Plan-Geometrie und Bereiche zentralisiert.** `src/lib/areas.ts` ist die einzige Quelle der
 Wahrheit für den Grundriss: `HALL_AREAS` (die sieben Bereiche = Wandstücke: `id` = gespeicherter
 Wert in `gym_boulders.area`, Anzeigename, Beschriftung mit Anker und Drehung, SVG-Pfaddaten) plus
-die reinen Deko-Ebenen `HALL_FLOORS` (Laufflächen), `HALL_OVERHANGS` (Überhänge) und `HALL_FRAME`
-(Hallenrahmen). Grundlage ist der handgezeichnete Plan `src/assets/lageplan.svg` (Zeichenfläche
-1120×1080, relative Pfade – in `areas.ts` einmalig in absolute `M/L/Z` umgerechnet); er bleibt nur
-als Referenz liegen, der Vorgänger-Plan steht in der Git-History. Ein Bereich darf aus **mehreren
+die reinen Deko-Ebenen `HALL_FLOORS` (Laufflächen), `HALL_OVERHANGS` (Überhänge), `HALL_FRAME`
+(Hallenrahmen) und `LAGEPLAN_TITLE` (handgeschriebener Titel links oben; nur im Stil `handdrawn`,
+skaliert mit dem Plan statt wie die Bereichs-Labels gegenzuskalieren). Grundlage ist der
+handgezeichnete Plan `src/assets/lageplan.svg` (Zeichenfläche 1120×1080, relative Pfade – in
+`areas.ts` einmalig in absolute `M/L/Z` umgerechnet); er bleibt nur als Referenz liegen, der
+Vorgänger-Plan steht in der Git-History. Ein Bereich darf aus **mehreren
 Teilflächen** bestehen (mehrere `M … Z` in einem `d`, geparst über `parseRings`): Kreide-Heide ist
 ein L aus zwei Wandstücken, das Abenteuerland ein U-Band plus der Block in seiner Mitte (früher
 eigener Bereich `abenteuerfels`, mit `0018` zusammengelegt). Neue Bereiche brauchen einen Eintrag

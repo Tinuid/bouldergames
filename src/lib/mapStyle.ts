@@ -30,6 +30,8 @@ export interface MapStyle {
   overhang: string | null
   // Hallenrahmen; null ⇒ nicht zeichnen.
   frame: string | null
+  // Handgeschriebener Titel "Lageplan" links oben (LAGEPLAN_TITLE), in der Label-Schrift.
+  title: boolean
   label: {
     fill: string
     // Halo hinter der Schrift (Lesbarkeit über Punkten); null ⇒ ohne.
@@ -54,6 +56,7 @@ const HANDDRAWN: MapStyle = {
   wallStrokeWidth: 1,
   overhang: '#f7f3e9',
   frame: '#c6bb9e',
+  title: true,
   label: {
     fill: '#6d583a',
     halo: null,
@@ -74,6 +77,7 @@ const CHALK: MapStyle = {
   wallStrokeWidth: 4,
   overhang: null,
   frame: null,
+  title: false,
   label: {
     fill: 'var(--faint)',
     halo: 'var(--bg)',

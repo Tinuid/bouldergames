@@ -141,6 +141,10 @@ export const HALL_OVERHANGS: string[] = [
 export const HALL_FRAME =
   'M 64.3 463.7 L 40.6 860.2 L 148.5 1055.3 L 570.2 945.0 L 889.6 1007.6 L 1043.0 964.4 L 1098.7 429.1 L 1056.6 331.2 L 1110.7 151.2 L 970.1 47.0 L 621.1 88.2 L 293.9 44.6 L 323.0 133.1 L 28.5 151.2 L 64.3 463.7 Z'
 
+// Der handgeschriebene Titel links oben in der Aussparung des Rahmens – Teil der
+// Zeichnung, kein Bereich. Anker, Drehung und Größe aus dem matrix(...) des Originals.
+export const LAGEPLAN_TITLE = { text: 'Lageplan', x: 64.6, y: 117.1, rotate: -3.4, size: 53.2 } as const
+
 const BY_ID = new Map(HALL_AREAS.map((a) => [a.id, a]))
 
 // Anzeigename zu einer gespeicherten Bereichs-Id. null ⇒ null (Boulder außerhalb

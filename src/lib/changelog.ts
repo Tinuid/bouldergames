@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.21.1',
+    date: '01.11.2026',
+    text: 'Der Lageplan trägt wieder seinen handgeschriebenen Titel oben links.',
+  },
+  {
     version: '1.21.0',
     date: '01.11.2026',
     text:

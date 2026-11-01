@@ -1,4 +1,4 @@
-import { HALL_AREAS, HALL_FLOORS, HALL_FRAME, HALL_OVERHANGS } from '../../lib/areas'
+import { HALL_AREAS, HALL_FLOORS, HALL_FRAME, HALL_OVERHANGS, LAGEPLAN_TITLE } from '../../lib/areas'
 import { MAP_STYLE } from '../../lib/mapStyle'
 
 /**
@@ -6,7 +6,7 @@ import { MAP_STYLE } from '../../lib/mapStyle'
  * <svg>-Root – der gehört LageplanMap, das die viewBox besitzt.
  *
  * Geometrie aus src/lib/areas.ts, Farben aus src/lib/mapStyle.ts. Ebenen von unten
- * nach oben: Laufflächen, Wände (= Bereiche), Überhänge, Hallenrahmen, Filter-Tönung.
+ * nach oben: Laufflächen, Wände (= Bereiche), Überhänge, Hallenrahmen, Titel, Filter-Tönung.
  * Welche Ebenen gezeichnet werden, entscheidet der Stil – der App-Look ('chalk')
  * kennt z.B. nur die schraffierten Wände. Die Schraffur liegt namensraumgeschützt
  * in den <defs> von LageplanMap.
@@ -56,6 +56,24 @@ export default function LageplanBase({
 
       {style.frame && (
         <path d={HALL_FRAME} fill="none" stroke={style.frame} strokeWidth={1.3} strokeLinejoin="miter" />
+      )}
+
+      {/* Titel der Zeichnung. Bewusst hier und nicht in LageplanLabels: er gehört zum
+        Plan, wächst also beim Zoomen mit (kein Gegenskalieren, kein Ausblenden). */}
+      {style.title && (
+        <text
+          x={LAGEPLAN_TITLE.x}
+          y={LAGEPLAN_TITLE.y}
+          transform={`rotate(${LAGEPLAN_TITLE.rotate} ${LAGEPLAN_TITLE.x} ${LAGEPLAN_TITLE.y})`}
+          fontSize={LAGEPLAN_TITLE.size}
+          fill={style.label.fill}
+          fontFamily={style.label.fontFamily}
+          fontWeight={style.label.fontWeight}
+          pointerEvents="none"
+          aria-hidden
+        >
+          {LAGEPLAN_TITLE.text}
+        </text>
       )}
 
       {/* Nach den Grundflächen gezeichnet, damit die Tönung obenauf liegt. */}
