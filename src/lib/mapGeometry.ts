@@ -17,10 +17,12 @@ export interface Point {
   y: number
 }
 
-// Zoom 1 = "eingepasst". Weiter herauszoomen als eingepasst ist bewusst nicht
-// erlaubt (harter Anschlag, kein Rubber-Band). Bei 8× zeigt ein 390px-Handy noch
-// gut ein Sechstel der Hallenbreite – genug, um Punkte präzise zu setzen.
-export const MIN_ZOOM = 1
+// Zoom 1 = "eingepasst" und bleibt die Bezugsgröße (Punkt- und Label-Größen, Doppeltipp).
+// Herauszoomen geht bewusst etwas darüber hinaus, bis auf 70 % der Gesamtansicht: dann
+// liegt die ganze Halle mit Papierrand ringsum frei, statt bis an den Bildschirmrand zu
+// stoßen. Dort ist ein harter Anschlag, kein Rubber-Band. Bei 8× zeigt ein 390px-Handy
+// noch gut ein Sechstel der Hallenbreite – genug, um Punkte präzise zu setzen.
+export const MIN_ZOOM = 0.7
 export const MAX_ZOOM = 8
 
 // Punkt-Radius in SVG-User-Einheiten bei Zoom 1.

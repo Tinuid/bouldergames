@@ -81,6 +81,16 @@ describe('clampView', () => {
     expect(zoomOf(fit, tooFarIn)).toBeCloseTo(MAX_ZOOM, 9)
   })
 
+  it('lässt etwas weiter heraus als die eingepasste Ansicht', () => {
+    // Die Gesamtansicht selbst ist kein Anschlag mehr – sie bleibt unverändert …
+    expect(MIN_ZOOM).toBeLessThan(1)
+    const same = clampView(fit, CONTENT, fit, PORTRAIT)
+    expect(same.w).toBeCloseTo(fit.w, 9)
+    // … und ein Stück darüber hinaus geht es noch.
+    const wider = clampView({ ...fit, w: fit.w * 1.2, h: fit.h * 1.2 }, CONTENT, fit, PORTRAIT)
+    expect(wider.w).toBeCloseTo(fit.w * 1.2, 9)
+  })
+
   it('hält das Seitenverhältnis des Containers', () => {
     const v = clampView({ x: 300, y: 300, w: 400, h: 999 }, CONTENT, fit, PORTRAIT)
     expect(v.w / v.h).toBeCloseTo(PORTRAIT, 9)
@@ -104,7 +114,7 @@ describe('clampView', () => {
       [CONTENT.x, CONTENT.y + CONTENT.h],
       [CONTENT.x + CONTENT.w, CONTENT.y + CONTENT.h],
     ]
-    // Auch komplett herausgezoomt (Zoom 1), wo der Plan ganz sichtbar ist.
+    // Auch komplett herausgezoomt (MIN_ZOOM), wo der Plan ganz sichtbar ist.
     for (const zoom of [MIN_ZOOM, 2, 4, MAX_ZOOM]) {
       const w = fit.w / zoom
       const h = w / PORTRAIT
