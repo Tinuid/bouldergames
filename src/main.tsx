@@ -13,6 +13,9 @@ import '@fontsource/hanken-grotesk/400.css'
 import '@fontsource/hanken-grotesk/500.css'
 import '@fontsource/hanken-grotesk/600.css'
 import '@fontsource/hanken-grotesk/700.css'
+// Handschrift für die Bereichsnamen auf dem handgezeichneten Lageplan
+// (src/lib/mapStyle.ts). Nur der Latin-Schnitt – mehr Zeichen braucht die Karte nicht.
+import '@fontsource/caveat/latin-600.css'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(

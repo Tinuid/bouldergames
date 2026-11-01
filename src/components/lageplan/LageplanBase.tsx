@@ -1,14 +1,15 @@
-import { HALL_AREAS } from '../../lib/areas'
+import { HALL_AREAS, HALL_FLOORS, HALL_FRAME, HALL_OVERHANGS } from '../../lib/areas'
+import { MAP_STYLE } from '../../lib/mapStyle'
 
 /**
- * Die Hallenflächen des Lageplans. Rendert bewusst nur <g>-Inhalt, keinen
+ * Der Grundriss des Lageplans. Rendert bewusst nur <g>-Inhalt, keinen
  * <svg>-Root – der gehört LageplanMap, das die viewBox besitzt.
  *
- * Die Geometrie kommt aus src/lib/areas.ts (Original: src/assets/lageplan.svg).
- * Der interne <style>-Block und die Schraffur-id des Originals sind hier bewusst
- * aufgelöst: beim Inlinen würden Klassennamen und ids global – die Schraffur liegt
- * darum namensraumgeschützt in den <defs> von LageplanMap, alles andere steht als
- * Attribut am Pfad und bindet an die Chalk-Tokens.
+ * Geometrie aus src/lib/areas.ts, Farben aus src/lib/mapStyle.ts. Ebenen von unten
+ * nach oben: Laufflächen, Wände (= Bereiche), Überhänge, Hallenrahmen, Filter-Tönung.
+ * Welche Ebenen gezeichnet werden, entscheidet der Stil – der App-Look ('chalk')
+ * kennt z.B. nur die schraffierten Wände. Die Schraffur liegt namensraumgeschützt
+ * in den <defs> von LageplanMap.
  */
 export default function LageplanBase({
   idPrefix,
@@ -20,21 +21,42 @@ export default function LageplanBase({
   // auf den Bereichsfilter.
   highlightedAreaIds?: Set<string>
 }) {
+  const style = MAP_STYLE
   const highlighted = HALL_AREAS.filter((a) => highlightedAreaIds?.has(a.id))
+  const wallFill = style.wall === 'hatch' ? `url(#${idPrefix}-hatch)` : style.wall
 
   return (
     <g>
+      {style.floor && HALL_FLOORS.map((d, i) => <path key={`floor-${i}`} d={d} fill={style.floor!} />)}
+
       {HALL_AREAS.map((area) => (
         <path
           key={area.id}
           id={`${idPrefix}-area-${area.id}`}
           d={area.d}
-          fill={`url(#${idPrefix}-hatch)`}
-          stroke="var(--border-strong)"
-          strokeWidth={4}
+          fill={wallFill}
+          stroke={style.wallStroke}
+          strokeWidth={style.wallStrokeWidth}
           strokeLinejoin="round"
         />
       ))}
+
+      {style.overhang &&
+        HALL_OVERHANGS.map((d, i) => (
+          <path
+            key={`overhang-${i}`}
+            d={d}
+            fill="none"
+            stroke={style.overhang!}
+            strokeWidth={1.5}
+            strokeDasharray="5 5"
+            strokeLinecap="round"
+          />
+        ))}
+
+      {style.frame && (
+        <path d={HALL_FRAME} fill="none" stroke={style.frame} strokeWidth={1.3} strokeLinejoin="miter" />
+      )}
 
       {/* Nach den Grundflächen gezeichnet, damit die Tönung obenauf liegt. */}
       {highlighted.map((area) => (

@@ -126,6 +126,17 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
     an – die Herkunfts-Referenz auf den Hallen-Katalog –, dazu einen partiellen Unique-Index
     gegen doppelte Übernahme in dieselbe Session und einen Index auf `participants.user_id`
     für die Liste „meine Challenges"). Keine RLS-Änderung, keine neue RPC. Idempotent.
+20. `supabase/migrations/0018_lageplan_v2.sql` ausführen – **direkt nach** dem Deploy der App-Version
+    mit dem handgezeichneten Plan. Rechnet alle `gym_boulders.x/y` je Bereich per Bounding-Box vom
+    alten auf den neuen Grundriss um (Näherung, danach auf der Karte per „Verschieben“
+    nachjustieren), legt `abenteuerfels` mit `abenteuerland` zusammen und setzt den Bereichs-CHECK
+    auf 7 Werte. Idempotent über `gyms.map_key` (`'lageplan'` → `'lageplan-v2'`, neuer Spalten-
+    Default `'lageplan-v2'`; umgerechnet werden nur Boulder von Hallen mit altem Marker): ein zweiter
+    Lauf rechnet nichts doppelt um. Bis die Migration gelaufen ist, sperrt die neue App den
+    Bearbeitungsmodus der Karte (`LAGEPLAN_MAP_KEY` in `src/lib/areas.ts` ≠ `gyms.map_key`) – eine im
+    Zwischenfenster gesetzte Position läge schon im neuen System und würde sonst doppelt umgerechnet.
+    **0015 danach nicht erneut ausführen:** es setzte den Bereichs-CHECK auf das alte Vokabular mit
+    `abenteuerfels` zurück.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.
@@ -283,15 +294,32 @@ nie eine `user_id` herausgibt – dafür muss die RLS **nicht** gelockert werden
 den Modus vorab; das Passwort liegt in der App nur im React-State, **nie** im `localStorage`. Das ist
 faktisch schon der Betreiber-Modus, nur ohne Accounts.
 
-**Plan-Geometrie und Bereiche zentralisiert.** `src/lib/areas.ts` (`HALL_AREAS`) ist die einzige
-Quelle der Wahrheit für die acht Hallenflächen: Pfad-`id` (= gespeicherter Wert in
-`gym_boulders.area`), Anzeigename, Beschriftung und die SVG-Pfaddaten. Die Originaldatei
-`src/assets/lageplan.svg` bleibt nur als Referenz liegen. Neue Bereiche brauchen einen Eintrag hier
-**und** eine Migration, weil das Vokabular als CHECK-Constraint gespiegelt ist. `areaAt(x, y)` macht
-Punkt-in-Polygon (Even-Odd-Ray-Cast, rückwärts iteriert, damit `abenteuerfels` nicht von
-`abenteuerland` überstimmt wird) – aber **nur als Vorbelegung** beim Setzen: die Flächen sind
-nicht-konvexe Bänder, in deren Konkavität der Test falsch liegt. Darum ist `area` eine gespeicherte,
-im Dialog änderbare Spalte und wird nie zur Renderzeit abgeleitet.
+**Plan-Geometrie und Bereiche zentralisiert.** `src/lib/areas.ts` ist die einzige Quelle der
+Wahrheit für den Grundriss: `HALL_AREAS` (die sieben Bereiche = Wandstücke: `id` = gespeicherter
+Wert in `gym_boulders.area`, Anzeigename, Beschriftung mit Anker und Drehung, SVG-Pfaddaten) plus
+die reinen Deko-Ebenen `HALL_FLOORS` (Laufflächen), `HALL_OVERHANGS` (Überhänge) und `HALL_FRAME`
+(Hallenrahmen). Grundlage ist der handgezeichnete Plan `src/assets/lageplan.svg` (Zeichenfläche
+1120×1080, relative Pfade – in `areas.ts` einmalig in absolute `M/L/Z` umgerechnet); er bleibt nur
+als Referenz liegen, der Vorgänger-Plan steht in der Git-History. Ein Bereich darf aus **mehreren
+Teilflächen** bestehen (mehrere `M … Z` in einem `d`, geparst über `parseRings`): Kreide-Heide ist
+ein L aus zwei Wandstücken, das Abenteuerland ein U-Band plus der Block in seiner Mitte (früher
+eigener Bereich `abenteuerfels`, mit `0018` zusammengelegt). Neue Bereiche brauchen einen Eintrag
+hier **und** eine Migration, weil das Vokabular als CHECK-Constraint gespiegelt ist. `areaAt(x, y)`
+macht Punkt-in-Polygon (Even-Odd-Ray-Cast über alle Teilflächen, rückwärts iteriert, damit bei
+Überlappungen die oben liegende Fläche gewinnt) – aber **nur als Vorbelegung** beim Setzen: die
+Flächen sind nicht-konvexe Bänder, in deren Konkavität der Test falsch liegt. Darum ist `area` eine
+gespeicherte, im Dialog änderbare Spalte und wird nie zur Renderzeit abgeleitet.
+
+**Kartenstil getrennt von der Geometrie.** `src/lib/mapStyle.ts` beschreibt, **wie** der Grundriss
+gezeichnet wird; `MAP_STYLE` wählt die aktive Variante. `'handdrawn'` (aktiv) übernimmt Farben und
+Ebenen der Zeichnung mit der freien Handschrift Caveat (`@fontsource/caveat`, gebündelt und vom
+Service Worker gecacht – die Originalschrift der Zeichnung ist nicht verfügbar). `'chalk'` ist der
+frühere App-Look (Schraffur, Chalk-Tokens, Display-Schrift) und bleibt **bewusst erhalten**, weil
+die Karte später in den App-Look migriert werden soll – dafür nur `MAP_STYLE` umstellen.
+`LageplanBase`, `LageplanLabels`, `LageplanMap` (Papiergrund auf der Trefferfläche) und `MiniMap`
+(`MAP_STYLE.mini`) lesen die Plan-Farben von dort; stilunabhängig bleiben nur die Filter-Tönung
+(Accent-Tokens), die Farben der Chalk-Schraffur (im `<pattern>` von `LageplanMap`, das darum auch
+stehen bleibt, wenn der aktive Stil es nicht nutzt) und der Halo des Mini-Markers.
 
 **Zoom/Pan ohne Bibliothek.** `src/hooks/useSvgPanZoom.ts` steuert die `viewBox` (Pan, Pinch,
 Wheel, Doppeltipp), `src/lib/mapGeometry.ts` enthält die testbare Mathematik. Zwei Invarianten, die
@@ -352,7 +380,8 @@ hochgestuft; ein `fail` fasst die Karte nie an. Fehler werden still verworfen (B
 vom Nutzer angestoßenes Speichern) – ohne Vermerk im `localStorage` läuft der Abgleich einfach neu.
 
 **Wiederfinden in der Halle.** Jeder übernommene Boulder zeigt in `BoulderCard` neben dem Foto eine
-Mini-Karte (`MiniMap`, flacher Grundriss aus `HALL_AREAS` plus ein bewusst überproportionaler Punkt
+Mini-Karte (`MiniMap`, flacher Grundriss – Hallenumriss, Laufflächen und `HALL_AREAS` in den
+Farben `MAP_STYLE.mini` – plus ein bewusst überproportionaler Punkt
 in der Farbe des Boulders – Zweiton-Farben brauchen dafür `ColorDefs` mit einem `useId`-Präfix je
 Vorkommen); ein Tipp führt auf `/karte?session=<id>&boulder=<gymBoulderId>` und wählt ihn dort aus. Ohne diesen
 Rückweg nützt der Katalog in der Halle wenig.

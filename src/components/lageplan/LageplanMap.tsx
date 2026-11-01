@@ -5,6 +5,7 @@ import MapDots, { type MapDotVM } from './MapDots'
 import { ColorDefs } from './MapDot'
 import { dotRadius } from '../../lib/mapGeometry'
 import { LAGEPLAN_VIEWBOX } from '../../lib/areas'
+import { MAP_STYLE } from '../../lib/mapStyle'
 
 interface Props {
   svgRef: RefObject<SVGSVGElement>
@@ -73,7 +74,8 @@ export default function LageplanMap({
         tabIndex={0}
       >
         <defs>
-          {/* Schraffur des Originals, aber in Chalk-Tönen und namensraumgeschützt. */}
+          {/* Schraffur des App-Looks ('chalk' in src/lib/mapStyle.ts), namensraumgeschützt.
+            Im handgezeichneten Stil ungenutzt, bleibt aber für den späteren Wechsel. */}
           <pattern
             id={`${idPrefix}-hatch`}
             width="15"
@@ -93,11 +95,16 @@ export default function LageplanMap({
           Boulder setzen. Großzügig über den Grundriss hinaus, weil man auch über
           den Rand hinaus schieben kann. */}
       <rect
-        x={LAGEPLAN_VIEWBOX.x - LAGEPLAN_VIEWBOX.w}
-        y={LAGEPLAN_VIEWBOX.y - LAGEPLAN_VIEWBOX.h}
-        width={LAGEPLAN_VIEWBOX.w * 3}
-        height={LAGEPLAN_VIEWBOX.h * 3}
-        fill="transparent"
+        x={LAGEPLAN_VIEWBOX.x - LAGEPLAN_VIEWBOX.w * 4}
+        y={LAGEPLAN_VIEWBOX.y - LAGEPLAN_VIEWBOX.h * 4}
+        width={LAGEPLAN_VIEWBOX.w * 9}
+        height={LAGEPLAN_VIEWBOX.h * 9}
+        // Trägt zugleich den Papiergrund des Stils – so bleibt auch beim
+        // Herausschieben über den Rand alles in der Farbe der Zeichnung. ±4 Plangrößen,
+        // weil PAN_MARGIN relativ zum Ausschnitt gilt: bei Zoom 1 und extremem
+        // Seitenverhältnis (Hochkant-Handy, breiter Desktop) ist der Ausschnitt in einer
+        // Richtung gut doppelt so groß wie der Plan.
+        fill={MAP_STYLE.background ?? 'transparent'}
       />
 
         <LageplanBase idPrefix={idPrefix} highlightedAreaIds={highlightedAreaIds} />

@@ -110,7 +110,9 @@ export interface Gym {
   // Stabiler Schlüssel, über den der Client die Halle auflöst (src/lib/gyms.ts).
   slug: string
   name: string
-  // Verweist auf den im Bundle liegenden Grundriss (src/lib/areas.ts).
+  // Grundriss, in dessen Koordinatensystem die gym_boulders-Positionen gespeichert
+  // sind. Muss LAGEPLAN_MAP_KEY (src/lib/areas.ts) entsprechen, sonst sperrt die Karte
+  // das Bearbeiten ('lageplan' = Vorgänger-Plan, 'lageplan-v2' = seit Migration 0018).
   map_key: string
   created_at: string
 }
@@ -118,7 +120,8 @@ export interface Gym {
 export interface GymBoulder {
   id: string
   gym_id: string
-  // Position im SVG-User-Space des Lageplans (viewBox "90 10 960 880").
+  // Position im SVG-User-Space des Lageplans (Grundriss LAGEPLAN_MAP_KEY, Ausschnitt
+  // LAGEPLAN_VIEWBOX in src/lib/areas.ts).
   x: number
   y: number
   // Bereichs-Id aus src/lib/areas.ts, beim Setzen aus x/y vorbelegt und danach

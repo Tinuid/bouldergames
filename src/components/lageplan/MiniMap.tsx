@@ -1,6 +1,7 @@
 import { useId } from 'react'
-import { HALL_AREAS, LAGEPLAN_VIEWBOX } from '../../lib/areas'
+import { HALL_AREAS, HALL_FLOORS, HALL_FRAME, LAGEPLAN_VIEWBOX } from '../../lib/areas'
 import { colorStops, colorSvgFill } from '../../lib/colors'
+import { MAP_STYLE } from '../../lib/mapStyle'
 import { ColorDefs } from './MapDot'
 
 /**
@@ -8,8 +9,9 @@ import { ColorDefs } from './MapDot'
  * wo in der Halle der Boulder hängt.
  *
  * Bewusst nicht LageplanBase wiederverwendet: die Schraffur bräuchte eigene <defs>
- * je Vorkommen, und bei dieser Größe wäre das Muster ohnehin nur Grieß. Hier reichen
- * flache Flächen mit kräftiger Kontur.
+ * je Vorkommen, und bei dieser Größe wären Muster, Überhänge und Rahmenlinie ohnehin
+ * nur Grieß. Hier reichen flache Flächen mit kräftiger Kontur in den Mini-Farben des
+ * Kartenstils (MAP_STYLE.mini).
  *
  * Der Punkt trägt die Farbe des Boulders (wie auf der großen Karte) – genau die hilft
  * beim Wiederfinden in der Halle. Zweiton-Farben brauchen dafür einen <linearGradient>,
@@ -36,6 +38,7 @@ export default function MiniMap({
   // deren Verlaufs-ids sich sonst gegenseitig überschrieben.
   const idPrefix = `mm${useId().replace(/:/g, '')}`
   const twoTone = colorStops(color).length === 2
+  const mini = MAP_STYLE.mini
 
   return (
     <svg
@@ -49,12 +52,14 @@ export default function MiniMap({
           <ColorDefs idPrefix={idPrefix} />
         </defs>
       )}
+      {mini.background && <path d={HALL_FRAME} fill={mini.background} />}
+      {mini.floor && HALL_FLOORS.map((d, i) => <path key={`floor-${i}`} d={d} fill={mini.floor!} />)}
       {HALL_AREAS.map((area) => (
         <path
           key={area.id}
           d={area.d}
-          fill="var(--surface-2)"
-          stroke="var(--border-strong)"
+          fill={mini.wall}
+          stroke={mini.wallStroke}
           strokeWidth={10}
           strokeLinejoin="round"
         />

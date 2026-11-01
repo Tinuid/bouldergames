@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useRealtimeGym } from '../hooks/useRealtimeGym'
 import { useSvgPanZoom } from '../hooks/useSvgPanZoom'
 import { DEFAULT_GYM_SLUG } from '../lib/gyms'
-import { areaAt, areaLabel, LAGEPLAN_VIEWBOX } from '../lib/areas'
+import { areaAt, areaLabel, LAGEPLAN_MAP_KEY, LAGEPLAN_VIEWBOX } from '../lib/areas'
 import { difficultyLabel } from '../lib/difficulty'
 import {
   CROWDED_SHRINK,
@@ -462,7 +462,14 @@ export default function GymMap() {
     setPickerOpen(false)
   }
 
+  // Die Datenbank steht noch auf einem anderen Grundriss als das Bundle (Migration
+  // 0018 noch nicht gelaufen): Positionen nicht schreiben, siehe LAGEPLAN_MAP_KEY.
+  const planOutdated = gym != null && gym.map_key !== LAGEPLAN_MAP_KEY
+
   async function handleUnlock(key: string) {
+    if (planOutdated) {
+      throw new Error('Die Karte wird gerade auf den neuen Lageplan umgestellt – Bearbeiten ist kurz gesperrt.')
+    }
     await verifyGymAdminKey(key)
     setAdminKey(key)
     setUnlockOpen(false)
@@ -863,6 +870,7 @@ export default function GymMap() {
             <button
               type="button"
               className="btn-secondary mt-[18px] w-full"
+              disabled={!adminMode && planOutdated}
               onClick={() => {
                 setMenuOpen(false)
                 if (adminMode) setAdminKey(null)
@@ -871,6 +879,12 @@ export default function GymMap() {
             >
               {adminMode ? 'Bearbeitung beenden' : 'Lageplan bearbeiten'}
             </button>
+            {!adminMode && planOutdated && (
+              <p className="mt-2 text-[13px] text-muted">
+                Die Karte wird gerade auf den neuen Lageplan umgestellt – Bearbeiten ist kurz
+                gesperrt.
+              </p>
+            )}
             <button
               type="button"
               className="btn-ghost mt-2.5 w-full"

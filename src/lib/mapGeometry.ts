@@ -170,8 +170,9 @@ export function dotRadius(zoom: number): number {
   return DOT_BASE_R * Math.pow(zoom, -DOT_DAMPING)
 }
 
-export function labelSize(zoom: number): number {
-  return LABEL_BASE_SIZE * Math.pow(zoom, -LABEL_DAMPING)
+// `base` = Schriftgröße bei Zoom 1; hängt vom Kartenstil ab (src/lib/mapStyle.ts).
+export function labelSize(zoom: number, base = LABEL_BASE_SIZE): number {
+  return base * Math.pow(zoom, -LABEL_DAMPING)
 }
 
 // Beschriftungen verblassen beim Hineinzoomen: ab Zoom 3 beginnt die Rampe, ab

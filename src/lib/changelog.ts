@@ -13,6 +13,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.21.0',
+    date: '01.11.2026',
+    text:
+      'Die Hallenkarte hat einen neuen, handgezeichneten Lageplan – mit Laufflächen, Überhängen und dem Umriss der Halle.\n' +
+      'Der Abenteuerfels gehört jetzt zum Abenteuerland.\n' +
+      'Die Boulder wurden auf den neuen Plan übertragen; einzelne Punkte können noch etwas neben ihrer Wand liegen und werden nachjustiert.',
+  },
+  {
     version: '1.20.1',
     date: '30.08.2026',
     text: 'Die Farbe eines Boulders steht wieder unter dem Grad – die neue Position daneben hat sich nicht bewährt.',
