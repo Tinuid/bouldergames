@@ -3,13 +3,14 @@
 // wenn die App einmal mit ?diag=1 geöffnet wurde. Nicht nach main mergen.
 import { useSyncExternalStore } from 'react'
 
-export type DiagFlag = 'noCapture' | 'noBlur' | 'noSafeArea' | 'noScrollLock'
+export type DiagFlag = 'noCapture' | 'noBlur' | 'noSafeArea' | 'noScrollLock' | 'noFrameLoop'
 
 export const DIAG_FLAGS: { flag: DiagFlag; label: string }[] = [
   { flag: 'noCapture', label: 'capture aus' },
   { flag: 'noBlur', label: 'backdrop-filter aus' },
   { flag: 'noSafeArea', label: 'Safe-Area-Padding aus' },
   { flag: 'noScrollLock', label: 'Body-Scroll-Lock aus' },
+  { flag: 'noFrameLoop', label: 'Ruckler-Messung aus' },
 ]
 
 // Flags, die rein per CSS wirken, als Klasse an <html> (Regeln in index.css).
@@ -54,6 +55,7 @@ const flags: Record<DiagFlag, boolean> = {
   noBlur: false,
   noSafeArea: false,
   noScrollLock: false,
+  noFrameLoop: false,
 }
 
 const listeners = new Set<() => void>()

@@ -67,8 +67,18 @@ function useViewportEvents() {
     })
     diagLog(`start · ${snapshot()}`)
 
-    // Frame-Lücken > 80 ms (Jank, GPU-Stall, Hintergrund). Im Hintergrund pausiert rAF –
-    // die eine große Lücke beim Zurückkehren ist erwartbar, viele kleine danach nicht.
+    return () => {
+      handlers.forEach((off) => off())
+    }
+  }, [])
+
+  // Frame-Lücken > 80 ms (Jank, GPU-Stall, Hintergrund). Im Hintergrund pausiert rAF –
+  // die eine große Lücke beim Zurückkehren ist erwartbar, viele kleine danach nicht.
+  // Abschaltbar, weil die Dauerschleife Chrome ständig Frames zeichnen lässt und das
+  // Flackern dadurch womöglich selbst unterdrückt.
+  const noFrameLoop = useDiagFlag('noFrameLoop')
+  useEffect(() => {
+    if (noFrameLoop) return
     let raf = 0
     let last = performance.now()
     const tick = (now: number) => {
@@ -78,12 +88,8 @@ function useViewportEvents() {
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
-
-    return () => {
-      handlers.forEach((off) => off())
-      cancelAnimationFrame(raf)
-    }
-  }, [])
+    return () => cancelAnimationFrame(raf)
+  }, [noFrameLoop])
 }
 
 function copyText(text: string) {
