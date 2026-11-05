@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { BOULDER_COLORS } from '../lib/colors'
 import { DIFFICULTIES } from '../lib/difficulty'
+import { diagLog, useDiagFlag } from '../lib/diagFlags' // TEMPORÄR, Branch diag/foto-flackern
 import { Camera, Picture, X } from './icons'
 
 // Gemeinsame Auswahl-Bausteine für Boulder-Formulare: Grad, Farbe und Foto.
@@ -35,7 +36,9 @@ export function DifficultyPicker({
                 onClick={() => onChange(selected && !required ? null : d.code)}
                 aria-pressed={selected}
                 aria-label={
-                  d.label === '?' || d.label === '!' ? `Schwierigkeit ${d.label}` : `Grad ${d.label}`
+                  d.label === '?' || d.label === '!'
+                    ? `Schwierigkeit ${d.label}`
+                    : `Grad ${d.label}`
                 }
                 className={`flex aspect-square w-[calc((100%-2rem)/5)] items-center justify-center rounded-xl border font-num text-[22px] font-bold transition active:scale-90 ${
                   selected
@@ -127,8 +130,17 @@ export function PhotoField({
     if (galleryInputRef.current) galleryInputRef.current.value = ''
   }, [resetKey])
 
+  // TEMPORÄR (diag/foto-flackern): Gegenprobe ohne capture + Zeitstempel im Diagnose-Log.
+  const noCapture = useDiagFlag('noCapture')
+
   function pick(e: React.ChangeEvent<HTMLInputElement>) {
-    onPick(e.target.files?.[0] ?? null)
+    const f = e.target.files?.[0] ?? null
+    const via = e.target === cameraInputRef.current ? 'kamera' : 'galerie'
+    diagLog(
+      f ? `pick ${via}: ${f.type} ${Math.round(f.size / 1024)} KB` : `pick ${via}: leer`,
+      'pick',
+    )
+    onPick(f)
   }
 
   const previewSrc = previewUrl ?? existingUrl
@@ -142,14 +154,30 @@ export function PhotoField({
         ref={cameraInputRef}
         type="file"
         accept="image/*"
-        capture="environment"
+        capture={noCapture ? undefined : 'environment'}
         className="hidden"
         onChange={pick}
       />
-      <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={pick} />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={pick}
+      />
       {previewSrc ? (
         <div className="relative overflow-hidden rounded-sm2 border border-border-strong">
-          <img src={previewSrc} alt="Vorschau" className="max-h-56 w-full object-cover" />
+          <img
+            src={previewSrc}
+            alt="Vorschau"
+            className="max-h-56 w-full object-cover"
+            onLoad={(e) =>
+              diagLog(
+                `preview geladen ${e.currentTarget.naturalWidth}×${e.currentTarget.naturalHeight}`,
+                'preview',
+              )
+            }
+          />
           <button
             type="button"
             className="absolute right-2 top-2 flex items-center gap-1 rounded-lg bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
