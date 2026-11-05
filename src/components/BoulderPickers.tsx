@@ -181,15 +181,18 @@ export function PhotoField({
         onChange={pick}
       />
       {previewPending ? (
-        <div className="flex h-32 items-center justify-center rounded-sm2 border border-border-strong text-sm text-muted">
-          Vorschau wird erstellt …
+        // Gleiche Box wie die fertige Vorschau (Höhe, Rahmen, Fläche), damit der Wechsel
+        // Platzhalter → Bild nichts verschiebt. Kein sichtbarer Text: das Verkleinern
+        // dauert nur Sekundenbruchteile, ein unlesbar kurz aufblitzendes Wort wirkt als Ruckler.
+        <div className="h-56 rounded-sm2 border border-border-strong bg-surface-2" aria-busy="true">
+          <span className="sr-only">Vorschau wird erstellt …</span>
         </div>
       ) : previewSrc ? (
-        <div className="relative overflow-hidden rounded-sm2 border border-border-strong">
+        <div className="relative h-56 overflow-hidden rounded-sm2 border border-border-strong bg-surface-2">
           <img
             src={previewSrc}
             alt="Vorschau"
-            className="max-h-56 w-full object-cover"
+            className="h-full w-full object-cover"
             onLoad={(e) =>
               diagLog(
                 `preview geladen ${e.currentTarget.naturalWidth}×${e.currentTarget.naturalHeight}`,
