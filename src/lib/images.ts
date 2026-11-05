@@ -69,6 +69,20 @@ function randomUuid(): string {
 }
 
 /**
+ * Verkleinerte Vorschau zu einem frisch gewählten Foto – in derselben Größe, die
+ * später hochgeladen wird, die Vorschau zeigt also genau das Ergebnis.
+ *
+ * Warum nicht einfach URL.createObjectURL(file)? Ein Kamerabild hat schnell 4000 px
+ * Kantenlänge (~30 MB als dekodierte Bitmap). Chrome Android gibt diesen Grafik-
+ * speicher frei, solange die App im Hintergrund ist – und die Kamera schickt sie
+ * genau dorthin. Beim Zurückkehren musste das Riesenbild neu aufgebaut werden, und
+ * der ganze Bildschirm flackerte (siehe BUGREPORT-foto-flackern.md).
+ */
+export function makePreviewBlob(file: File): Promise<Blob> {
+  return downscaleToJpeg(file)
+}
+
+/**
  * Verkleinert das Bild und lädt es in den Storage-Bucket. Der Pfad beginnt mit
  * der user_id (von der Storage-RLS verlangt), gefolgt von einer zufälligen UUID.
  * Gibt den Objekt-Pfad zurück, der in boulders.image_path persistiert wird.

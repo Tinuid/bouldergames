@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.22.1',
+    date: '05.11.2026',
+    text: 'Nach „Foto aufnehmen" sollte der Bildschirm nicht mehr flackern: Die Vorschau im Dialog wird jetzt verkleinert angezeigt und braucht nur noch einen Bruchteil des Speichers.',
+  },
+  {
     version: '1.22.0',
     date: '05.11.2026',
     text: 'Neuer, versteckter Diagnose-Modus, mit dem wir das Bildschirm-Flackern nach dem Fotografieren auf manchen Handys aufspüren. Für dich ändert sich nichts.',

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { BOULDER_COLORS } from '../lib/colors'
 import { DIFFICULTIES } from '../lib/difficulty'
+import { makePreviewBlob } from '../lib/images'
 import { diagLog, useDiagFlag } from '../lib/diagFlags' // Diagnose-Modus (vorübergehend, siehe CLAUDE.md)
 import { Camera, Picture, X } from './icons'
 
@@ -114,16 +115,27 @@ export function PhotoField({
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
-  // Vorschau-URL zum neu gewählten Bild verwalten und sauber wieder freigeben.
+  // Vorschau zum neu gewählten Bild: bewusst verkleinert statt der Originaldatei
+  // (Begründung bei makePreviewBlob). Schlägt das Verkleinern fehl, dient das Original
+  // als Notlösung. URL beim Wechsel/Unmount wieder freigeben.
   useEffect(() => {
-    if (!file) {
-      setPreviewUrl(null)
-      return
+    setPreviewUrl(null)
+    if (!file) return
+    let cancelled = false
+    let url: string | null = null
+    makePreviewBlob(file)
+      .catch((): Blob => file)
+      .then((blob) => {
+        if (cancelled) return
+        url = URL.createObjectURL(blob)
+        setPreviewUrl(url)
+      })
+    return () => {
+      cancelled = true
+      if (url) URL.revokeObjectURL(url)
     }
-    const url = URL.createObjectURL(file)
-    setPreviewUrl(url)
-    return () => URL.revokeObjectURL(url)
   }, [file])
+  const previewPending = file !== null && previewUrl === null
 
   useEffect(() => {
     if (cameraInputRef.current) cameraInputRef.current.value = ''
@@ -168,7 +180,11 @@ export function PhotoField({
         className="hidden"
         onChange={pick}
       />
-      {previewSrc ? (
+      {previewPending ? (
+        <div className="flex h-32 items-center justify-center rounded-sm2 border border-border-strong text-sm text-muted">
+          Vorschau wird erstellt …
+        </div>
+      ) : previewSrc ? (
         <div className="relative overflow-hidden rounded-sm2 border border-border-strong">
           <img
             src={previewSrc}
