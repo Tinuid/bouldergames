@@ -7,7 +7,7 @@ import SessionView from './routes/SessionView'
 import SessionLeaderboard from './routes/SessionLeaderboard'
 import FeedbackList from './routes/FeedbackList'
 import GymMap from './routes/GymMap'
-import ViewportDiag from './components/ViewportDiag' // TEMPORÄR, Branch diag/foto-flackern
+import ViewportDiag from './components/ViewportDiag' // Diagnose-Modus (vorübergehend, siehe CLAUDE.md)
 
 export default function App() {
   const { loading, error } = useAuth()

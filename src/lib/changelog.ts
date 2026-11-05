@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.22.0',
+    date: '05.11.2026',
+    text: 'Neuer, versteckter Diagnose-Modus, mit dem wir das Bildschirm-Flackern nach dem Fotografieren auf manchen Handys aufspüren. Für dich ändert sich nichts.',
+  },
+  {
     version: '1.21.3',
     date: '05.11.2026',
     text: 'Beim allerersten Öffnen der App wird jetzt zuverlässig nur eine Anmeldung angelegt – vorher konnte das Erstellen oder Beitreten einer Challenge in seltenen Fällen bis zum Neuladen scheitern.',

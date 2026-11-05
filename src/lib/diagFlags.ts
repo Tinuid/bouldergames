@@ -1,6 +1,27 @@
-// TEMPORÄR (Branch diag/foto-flackern): Schalter und Log für die Diagnose des
-// Foto-Flackerns, siehe BUGREPORT-foto-flackern.md. Nur im Dev-Build aktiv und nur,
-// wenn die App einmal mit ?diag=1 geöffnet wurde. Nicht nach main mergen.
+// ════════════════ Diagnose-Modus (vorübergehend, siehe CLAUDE.md) ════════════════
+//
+// Zweck: das Foto-Flackern eingrenzen (BUGREPORT-foto-flackern.md). Das Flackern
+// tritt nur auf, wenn Chrome Android die Kamera direkt öffnet – und das tut es nur
+// über HTTPS, also nur in der echten App. Darum läuft die Diagnose bewusst auch im
+// Production-Build, ist aber für normale Nutzer unsichtbar und standardmäßig aus.
+//
+// Einschalten:  5× auf die Versionszeile der Startseite tippen (VersionBadge) –
+//               einziger Weg in der installierten PWA, die keine Adresszeile hat –
+//               oder im Browser-Tab einmal ?diag=1 an die URL hängen.
+// Ausschalten:  „Diagnose aus" im Panel, erneut 5× tippen, oder ?diag=0.
+//
+// Gespeichert im localStorage (gerätelokal, überlebt Neustarts und ein Neuladen der
+// Seite nach der Kamera): bg:diag (an/aus), bg:diag:<flag> (Schalter), bg:diag:log.
+//
+// Rückbau – alle Einhängepunkte:
+//   src/lib/diagFlags.ts             (diese Datei, löschen)
+//   src/components/ViewportDiag.tsx  (Panel, löschen)
+//   src/App.tsx                      (<ViewportDiag /> + Import)
+//   src/components/VersionBadge.tsx  (5×-Tipp-Zähler)
+//   src/components/BoulderPickers.tsx (noCapture-Schalter, diagLog bei pick/preview)
+//   src/hooks/useDialogEscape.ts     (noScrollLock-Schalter)
+//   src/index.css                    (.diag-no-blur / .diag-no-safe-area)
+//   CLAUDE.md                        (Abschnitt „Diagnose-Modus")
 import { useSyncExternalStore } from 'react'
 
 export type DiagFlag = 'noCapture' | 'noBlur' | 'noSafeArea' | 'noScrollLock' | 'noFrameLoop'
@@ -20,11 +41,12 @@ const CSS_CLASS: Partial<Record<DiagFlag, string>> = {
 }
 
 const STORAGE_ACTIVE = 'bg:diag'
+const STORAGE_LOG = 'bg:diag:log'
 const storageKey = (flag: DiagFlag) => `bg:diag:${flag}`
 
 function readStorage(key: string): string | null {
   try {
-    return sessionStorage.getItem(key)
+    return localStorage.getItem(key)
   } catch {
     return null
   }
@@ -32,21 +54,26 @@ function readStorage(key: string): string | null {
 
 function writeStorage(key: string, value: string | null) {
   try {
-    if (value === null) sessionStorage.removeItem(key)
-    else sessionStorage.setItem(key, value)
+    if (value === null) localStorage.removeItem(key)
+    else localStorage.setItem(key, value)
   } catch {
     /* egal – Diagnose */
   }
 }
 
-/** Ob die Diagnose aktiv ist. ?diag=1 schaltet ein, ?diag=0 aus; dazwischen gilt sessionStorage. */
+/** Ob die Diagnose aktiv ist. ?diag=1 schaltet ein, ?diag=0 aus; sonst gilt localStorage. */
 export const diagActive: boolean = (() => {
-  if (!import.meta.env.DEV) return false
   const param = new URLSearchParams(location.search).get('diag')
   if (param === '1') writeStorage(STORAGE_ACTIVE, '1')
   if (param === '0') writeStorage(STORAGE_ACTIVE, null)
   return readStorage(STORAGE_ACTIVE) === '1'
 })()
+
+/** Schaltet die Diagnose um und lädt neu (Einstieg für die installierte PWA). */
+export function toggleDiag() {
+  writeStorage(STORAGE_ACTIVE, diagActive ? null : '1')
+  location.reload()
+}
 
 // ─── Flags ───────────────────────────────────────────────────────────────
 
@@ -101,33 +128,50 @@ export function useDiagFlag(flag: DiagFlag): boolean {
 }
 
 // ─── Log ────────────────────────────────────────────────────────────────
+// Wird bei jedem Eintrag in den localStorage gespiegelt: Lädt Chrome die Seite nach
+// der Kamera neu (oder verwirft sie im Hintergrund), bleibt der Verlauf davor erhalten.
 
 export interface DiagEntry {
-  t: number // ms seit Start des Logs
+  at: number // Date.now() – absolut, damit Einträge über ein Neuladen hinweg vergleichbar bleiben
   msg: string
 }
 
-const MAX_ENTRIES = 40
-let logStart = performance.now()
-let entries: DiagEntry[] = []
-const counts: Record<string, number> = {}
+interface StoredLog {
+  entries: DiagEntry[]
+  counts: Record<string, number>
+}
+
+const MAX_ENTRIES = 80
+
+function loadLog(): StoredLog {
+  if (!diagActive) return { entries: [], counts: {} }
+  try {
+    const parsed = JSON.parse(readStorage(STORAGE_LOG) ?? '') as StoredLog
+    if (Array.isArray(parsed.entries) && parsed.counts) return parsed
+  } catch {
+    /* kein oder kaputtes Log – neu anfangen */
+  }
+  return { entries: [], counts: {} }
+}
+
+let log: StoredLog = loadLog()
 
 /** Eintrag ins Diagnose-Log; `kind` wird gezählt (z.B. 'resize'). No-op ohne Diagnose. */
 export function diagLog(msg: string, kind?: string) {
   if (!diagActive) return
-  if (entries.length === 0) logStart = performance.now()
-  if (kind) counts[kind] = (counts[kind] ?? 0) + 1
-  entries = [...entries.slice(-(MAX_ENTRIES - 1)), { t: performance.now() - logStart, msg }]
+  const counts = kind ? { ...log.counts, [kind]: (log.counts[kind] ?? 0) + 1 } : log.counts
+  log = { entries: [...log.entries.slice(-(MAX_ENTRIES - 1)), { at: Date.now(), msg }], counts }
+  writeStorage(STORAGE_LOG, JSON.stringify(log))
   emit()
 }
 
 export function clearDiagLog() {
-  entries = []
-  for (const k of Object.keys(counts)) delete counts[k]
+  log = { entries: [], counts: {} }
+  writeStorage(STORAGE_LOG, null)
   emit()
 }
 
-export function useDiagLog(): { entries: DiagEntry[]; counts: Record<string, number> } {
+export function useDiagLog(): StoredLog {
   useSyncExternalStore(subscribe, () => version)
-  return { entries, counts }
+  return log
 }

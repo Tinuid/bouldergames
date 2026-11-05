@@ -1,7 +1,7 @@
-// TEMPORÄR (Branch diag/foto-flackern): Diagnose-Overlay für das Foto-Flackern,
-// siehe BUGREPORT-foto-flackern.md. Zeigt Viewport-Werte live, protokolliert alle
-// Viewport-/Sichtbarkeits-Events und hängt Schalter für die Gegenproben an.
-// Nur im Dev-Build und nach einmaligem ?diag=1. Nicht nach main mergen.
+// Diagnose-Modus (vorübergehend, siehe CLAUDE.md und src/lib/diagFlags.ts):
+// Overlay für das Foto-Flackern (BUGREPORT-foto-flackern.md). Zeigt Viewport-Werte
+// live, protokolliert alle Viewport-/Sichtbarkeits-Events und bietet Schalter für
+// die Gegenproben. Rendert nichts, solange die Diagnose nicht eingeschaltet ist.
 import { useEffect, useRef, useState } from 'react'
 import {
   DIAG_FLAGS,
@@ -10,6 +10,7 @@ import {
   diagLog,
   getDiagFlag,
   setDiagFlag,
+  toggleDiag,
   useDiagFlag,
   useDiagLog,
   type DiagFlag,
@@ -65,7 +66,17 @@ function useViewportEvents() {
       target.addEventListener(type, h)
       return () => target.removeEventListener(type, h)
     })
-    diagLog(`start · ${snapshot()}`)
+    // Start-Eintrag: Steht nach dem Foto plötzlich ein zweiter „start" mit nav=reload
+    // oder discarded=true im Log, hat Chrome die Seite neu geladen.
+    const nav = performance.getEntriesByType('navigation')[0] as
+      | PerformanceNavigationTiming
+      | undefined
+    const discarded = (document as Document & { wasDiscarded?: boolean }).wasDiscarded
+    diagLog(
+      `start v${__APP_VERSION__} nav=${nav?.type ?? '?'} discarded=${discarded ?? '?'} ` +
+        `secure=${window.isSecureContext} standalone=${matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches} · ${snapshot()}`,
+      'start',
+    )
 
     return () => {
       handlers.forEach((off) => off())
@@ -138,6 +149,9 @@ function DiagPanel() {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight })
   }, [entries])
 
+  // Zeiten relativ zum ersten Eintrag (Einträge tragen absolute Date.now()-Stempel).
+  const rel = (at: number) => (at - (entries[0]?.at ?? at)) / 1000
+
   const countLine = Object.entries(counts)
     .map(([k, v]) => `${k}:${v}`)
     .join(' ')
@@ -148,7 +162,7 @@ function DiagPanel() {
       `counts: ${countLine}`,
       `flags: ${DIAG_FLAGS.map((f) => `${f.flag}=${getDiagFlag(f.flag) ? 1 : 0}`).join(' ')}`,
       `ua: ${navigator.userAgent}`,
-      ...entries.map((e) => `${(e.t / 1000).toFixed(3).padStart(8)}s ${e.msg}`),
+      ...entries.map((e) => `${rel(e.at).toFixed(3).padStart(8)}s ${e.msg}`),
     ].join('\n')
 
   return (
@@ -180,7 +194,7 @@ function DiagPanel() {
           >
             {entries.map((e, i) => (
               <div key={i}>
-                <span className="text-white/50">{(e.t / 1000).toFixed(2)}s</span> {e.msg}
+                <span className="text-white/50">{rel(e.at).toFixed(2)}s</span> {e.msg}
               </div>
             ))}
           </div>
@@ -198,6 +212,13 @@ function DiagPanel() {
               onClick={() => copyText(asText())}
             >
               Kopieren
+            </button>
+            <button
+              type="button"
+              className="ml-auto rounded bg-white/20 px-1.5 py-0.5"
+              onClick={toggleDiag}
+            >
+              Diagnose aus
             </button>
           </div>
         </>

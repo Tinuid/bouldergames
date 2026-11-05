@@ -240,7 +240,7 @@ body {
   animation: bcFlash 1.1s ease;
 }
 
-/* TEMPORÄR (Branch diag/foto-flackern): Gegenproben-Schalter aus src/lib/diagFlags.ts. */
+/* Diagnose-Modus (vorübergehend, siehe CLAUDE.md): Gegenproben-Schalter aus src/lib/diagFlags.ts. */
 .diag-no-blur .sheet-scrim {
   backdrop-filter: none;
 }

@@ -432,6 +432,40 @@ passwortgeschützt und läuft ausschließlich über die `security definer`-RPC `
 (`deleteFeedback`, prüft das in `app_config` hinterlegte Passwort serverseitig) – es gibt bewusst
 keine delete-Policy auf der Tabelle. Schema/RLS siehe Migrationen `0006`/`0007`.
 
+## Diagnose-Modus (vorübergehend – wieder ausbauen)
+
+Eingebaut in 1.22.0, um das Foto-Flackern einzugrenzen (`BUGREPORT-foto-flackern.md`, untracked im
+Repo-Root): Nach „Foto aufnehmen" flackert in Chrome Android der Bildschirm. Das passiert nur, wenn die
+Kamera **direkt** startet (`capture="environment"`) – und das macht Chrome nur über **HTTPS**. Über den
+Dev-Server per `http://<LAN-IP>` kommt stattdessen ein Auswahl-Dialog, der Fehler ist dort nicht
+nachstellbar. Darum läuft die Diagnose bewusst im **Production-Build**, ist aber standardmäßig aus und
+für normale Nutzer unsichtbar.
+
+- **Einschalten:** 5× innerhalb von 2 s auf die Versionszeile der Startseite tippen (`VersionBadge` –
+  der einzige Weg in der installierten PWA ohne Adresszeile) oder im Tab einmal `?diag=1` anhängen.
+  **Ausschalten:** „Diagnose aus" im Panel, erneut 5× tippen oder `?diag=0`. Beides lädt die Seite neu.
+- **Panel** (`src/components/ViewportDiag.tsx`, in `App.tsx` eingehängt): Live-Werte (Fenstergröße,
+  `visualViewport`, `clientHeight`, Safe-Area-Insets per Probe-Element, DPR), Event-Log mit Zählern
+  (`resize`, `vv.resize/scroll`, Sichtbarkeit, `pagehide/pageshow`, Fokus, Frame-Lücken > 80 ms, Tipp
+  auf „Foto aufnehmen", gewählte Datei samt gerendertem `capture`-Attribut, Vorschau-Auflösung) und ein
+  „Kopieren"-Button. Jeder Seitenstart schreibt einen `start`-Eintrag mit `nav`-Typ,
+  `document.wasDiscarded`, `isSecureContext` und Anzeigemodus – zeigt, ob Chrome die Seite nach der
+  Kamera neu geladen hat.
+- **Schalter für Gegenproben** (`DIAG_FLAGS` in `src/lib/diagFlags.ts`): `capture` aus
+  (`BoulderPickers`), `backdrop-filter` aus und Safe-Area-Padding aus (CSS-Klassen an `<html>`, Regeln
+  in `index.css`), Body-Scroll-Lock aus (`useDialogEscape`, wirkt beim nächsten Öffnen eines Sheets),
+  Ruckler-Messung aus (die rAF-Schleife könnte das Flackern selbst kaschieren).
+- **Speicher:** alles gerätelokal im `localStorage` – `bg:diag` (an/aus), `bg:diag:<flag>`,
+  `bg:diag:log` (max. 80 Einträge, absolute Zeitstempel, überlebt ein Neuladen). Ohne aktive Diagnose
+  sind `diagLog`/`getDiagFlag` No-ops.
+
+**Rückbau-Checkliste** (sobald das Flackern geklärt ist; die Liste steht auch im Kopf von
+`src/lib/diagFlags.ts`): `src/lib/diagFlags.ts` und `src/components/ViewportDiag.tsx` löschen;
+`<ViewportDiag />` + Import aus `src/App.tsx`; den 5×-Tipp-Zähler aus `src/components/VersionBadge.tsx`;
+`noCapture`/`diagLog` aus `src/components/BoulderPickers.tsx` (wieder fest `capture="environment"`);
+`noScrollLock` aus `src/hooks/useDialogEscape.ts`; die `.diag-*`-Regeln aus `src/index.css`; diesen
+Abschnitt aus `CLAUDE.md`. `grep -rn "Diagnose-Modus\|diagFlags" src` muss danach leer sein.
+
 ## Schema-Änderungen
 
 Die `supabase/migrations/*.sql` sind die Schema-Quelle der Wahrheit und werden **manuell** in

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { BOULDER_COLORS } from '../lib/colors'
 import { DIFFICULTIES } from '../lib/difficulty'
-import { diagLog, useDiagFlag } from '../lib/diagFlags' // TEMPORÄR, Branch diag/foto-flackern
+import { diagLog, useDiagFlag } from '../lib/diagFlags' // Diagnose-Modus (vorübergehend, siehe CLAUDE.md)
 import { Camera, Picture, X } from './icons'
 
 // Gemeinsame Auswahl-Bausteine für Boulder-Formulare: Grad, Farbe und Foto.
@@ -130,14 +130,17 @@ export function PhotoField({
     if (galleryInputRef.current) galleryInputRef.current.value = ''
   }, [resetKey])
 
-  // TEMPORÄR (diag/foto-flackern): Gegenprobe ohne capture + Zeitstempel im Diagnose-Log.
+  // Diagnose-Modus (vorübergehend, siehe CLAUDE.md): Gegenprobe ohne capture + Log.
   const noCapture = useDiagFlag('noCapture')
 
   function pick(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0] ?? null
     const via = e.target === cameraInputRef.current ? 'kamera' : 'galerie'
+    const capture = e.target.getAttribute('capture') ?? '–'
     diagLog(
-      f ? `pick ${via}: ${f.type} ${Math.round(f.size / 1024)} KB` : `pick ${via}: leer`,
+      f
+        ? `pick ${via} (capture=${capture}): ${f.type} ${Math.round(f.size / 1024)} KB`
+        : `pick ${via} (capture=${capture}): leer`,
       'pick',
     )
     onPick(f)
@@ -196,7 +199,10 @@ export function PhotoField({
           <button
             type="button"
             className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded-sm2 border border-border-strong bg-surface-2 px-2 py-3.5 text-[13.5px] font-semibold text-ink transition hover:border-accent hover:text-accent active:scale-[0.97]"
-            onClick={() => cameraInputRef.current?.click()}
+            onClick={() => {
+              diagLog('tap „Foto aufnehmen"', 'tap')
+              cameraInputRef.current?.click()
+            }}
           >
             <Camera className="text-[17px]" />
             Foto aufnehmen

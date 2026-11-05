@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { getDiagFlag } from '../lib/diagFlags' // TEMPORÄR, Branch diag/foto-flackern
+import { getDiagFlag } from '../lib/diagFlags' // Diagnose-Modus (vorübergehend, siehe CLAUDE.md)
 
 /**
  * Schließt einen Dialog/Sheet bei Escape und sperrt solange den Body-Scroll.
@@ -18,7 +18,7 @@ export function useDialogEscape(onClose: () => void, active = true) {
     }
     document.addEventListener('keydown', onKey)
     const prev = document.body.style.overflow
-    // TEMPORÄR (diag/foto-flackern): Gegenprobe ohne Body-Scroll-Lock.
+    // Diagnose-Modus (vorübergehend, siehe CLAUDE.md): Gegenprobe ohne Scroll-Lock.
     if (!getDiagFlag('noScrollLock')) document.body.style.overflow = 'hidden'
     return () => {
       document.removeEventListener('keydown', onKey)
