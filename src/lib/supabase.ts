@@ -19,12 +19,30 @@ export const supabase = createClient(
   },
 )
 
+// Laufende Anmeldung, modulweit geteilt. Ohne diese Deduplizierung starten zwei
+// gleichzeitige Aufrufe (z.B. der doppelte Effekt-Lauf unter React StrictMode) je ein
+// signInAnonymously() → zwei anonyme User. supabase-js schickt dann das JWT des einen,
+// der React-State hält die user_id des anderen, und Inserts mit user_id = auth.uid()
+// (z.B. participants_insert) scheitern mit 403.
+let pending: Promise<string> | null = null
+
 /**
  * Stellt sicher, dass das Gerät anonym angemeldet ist, und gibt die user_id zurück.
  * Ohne klassischen Login bekommt jedes Gerät so eine stabile Identität (auth.uid()),
  * mit der RLS-Policies die Rechte durchsetzen können.
  */
-export async function ensureAnonymousSession(): Promise<string> {
+export function ensureAnonymousSession(): Promise<string> {
+  if (!pending) {
+    pending = bootstrapAnonymousSession().catch((err: unknown) => {
+      // Fehler nicht cachen – ein neuer Versuch darf wieder anlaufen.
+      pending = null
+      throw err
+    })
+  }
+  return pending
+}
+
+async function bootstrapAnonymousSession(): Promise<string> {
   if (!isSupabaseConfigured) {
     throw new Error(
       'Supabase ist nicht konfiguriert. Lege eine .env-Datei nach dem Vorbild von .env.example an ' +

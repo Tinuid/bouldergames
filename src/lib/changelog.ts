@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.21.3',
+    date: '05.11.2026',
+    text: 'Beim allerersten Öffnen der App wird jetzt zuverlässig nur eine Anmeldung angelegt – vorher konnte das Erstellen oder Beitreten einer Challenge in seltenen Fällen bis zum Neuladen scheitern.',
+  },
+  {
     version: '1.21.2',
     date: '01.11.2026',
     text: 'Auf der Hallenkarte kannst du jetzt etwas weiter herauszoomen – die ganze Halle liegt dann mit Rand frei.',
