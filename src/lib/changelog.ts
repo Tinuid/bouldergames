@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.23.0',
+    date: '11.11.2026',
+    text: 'Neue Boulder-Farbe „holz-schwarz“ für Holzgriffe mit schwarzem Grip-Belag – auf Wunsch aus dem Feedback.',
+  },
+  {
     version: '1.22.2',
     date: '05.11.2026',
     text: 'Die Foto-Vorschau erscheint jetzt ohne kurzes Zucken: Sie hat von Anfang an ihre feste Größe, statt beim Laden zweimal zu springen.',
