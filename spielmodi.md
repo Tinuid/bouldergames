@@ -149,6 +149,8 @@ Versuchszähler entfällt (`countsAttempts`). Bis 1.29 blieb der Top-Knopf für 
 **Überarbeitet in 1.30.0 – ein Versuch pro Boulder** (Eigenschaft `singleAttempt`): Statt Top gibt es
 links schmal **🪂 „Nope“** (speichert `fail` mit 1 Versuch, 0 Punkte), rechts breit und höher **Flash**
 (3:1, Rechtshänder tippen öfter Flash). Ein Nope gilt als erledigt (`isResultDone`). Keine Migration.
+Seit 1.30.1 bleibt nach der Wahl nur der gewählte Knopf stehen („⚡ Geflasht! · 30 P.“ bzw.
+„🪂 Nope · 0 P.“); Antippen setzt zurück.
 
 ### Time Attack – Punkte gegen die Uhr (M) · [A] [C]
 - **Spielidee:** Alle haben dasselbe Zeitfenster, z.B. 60 Minuten. Wer darin die meisten Punkte holt,

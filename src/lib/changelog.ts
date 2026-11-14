@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.30.1',
+    date: '14.11.2026',
+    text: 'Nur Flash: Nach Flash oder Nope bleibt nur dein Ergebnis stehen – groß und mit Punkten. Vertippt? Einfach antippen, dann ist der Boulder wieder offen.',
+  },
+  {
     version: '1.30.0',
     date: '14.11.2026',
     text: 'Nur Flash: ein Versuch pro Boulder. Rechts ein großer Flash-Knopf, links 🪂 Nope für „nicht geflasht“ – den Top-Knopf gibt es dort nicht mehr. Ein Nope zählt als erledigt und verschwindet mit „erledigte ausblenden“.',

@@ -111,12 +111,18 @@ export default function ResultEditor({
   // Fail mit mehreren Versuchen aus der Zeit, bevor die Session auf diesen Modus umgestellt
   // wurde (beides zählt hier 0). Gespeichert wird erst beim Tippen.
   const nopeActive = status === 'top' || status === 'fail'
+  // Nach der Wahl bleibt nur der gewählte Knopf (volle Breite, mit Punkten); Antippen setzt
+  // den Boulder zurück auf offen, dann sind wieder beide Knöpfe da.
+  const chosen: 'flash' | 'nope' | null =
+    status === 'flash' ? 'flash' : nopeActive ? 'nope' : null
 
   function selectSingle(s: 'flash' | 'nope') {
-    const active = s === 'flash' ? status === 'flash' : nopeActive
-    if (active) apply('open', 0)
-    else if (s === 'flash') apply('flash', 1)
+    if (s === 'flash') apply('flash', 1)
     else apply('fail', 1)
+  }
+
+  function resetSingle() {
+    apply('open', 0)
   }
 
   const preview = computePoints(status, attempts, scoring, difficulty, weekBonus)
@@ -142,17 +148,37 @@ export default function ResultEditor({
         <div className="flex items-center gap-2 border-t border-border py-2.5">
           <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{label}</span>
           <div className="flex gap-1.5">
-            {single ? (
+            {single && chosen ? (
+              // Gewählt: ein Knopf so breit wie beide zusammen (34 + 6 + 72), Zeilen bleiben bündig.
+              <button
+                onClick={resetSingle}
+                aria-label={
+                  chosen === 'flash'
+                    ? 'Geflasht – antippen zum Zurücksetzen'
+                    : 'Nope – antippen zum Zurücksetzen'
+                }
+                title="Antippen zum Zurücksetzen"
+                className={`flex h-[34px] w-[112px] items-center justify-center gap-1.5 rounded-[10px] border font-display text-[13px] font-bold transition ${
+                  chosen === 'flash' ? FLASH_ACTIVE_CLS : NOPE_ACTIVE_CLS
+                }`}
+              >
+                {chosen === 'flash' ? (
+                  <Bolt className="text-[16px]" />
+                ) : (
+                  <span aria-hidden className="text-[16px] leading-none">
+                    🪂
+                  </span>
+                )}
+                {chosen === 'flash' ? 'Geflasht' : 'Nope'}
+              </button>
+            ) : single ? (
               // Gleiche Reihenfolge wie groß: Nope links, Flash rechts und doppelt so breit.
               <>
                 <button
                   onClick={() => selectSingle('nope')}
                   aria-label="Nope – nicht geflasht"
                   title="Nope – nicht geflasht"
-                  aria-pressed={nopeActive}
-                  className={`flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border text-[17px] transition ${
-                    nopeActive ? NOPE_ACTIVE_CLS : INACTIVE_CLS
-                  }`}
+                  className={`flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border text-[17px] transition ${INACTIVE_CLS}`}
                 >
                   <span aria-hidden>🪂</span>
                 </button>
@@ -160,10 +186,7 @@ export default function ResultEditor({
                   onClick={() => selectSingle('flash')}
                   aria-label="Flash"
                   title="Flash"
-                  aria-pressed={status === 'flash'}
-                  className={`flex h-[34px] w-[72px] items-center justify-center rounded-[10px] border text-[18px] transition ${
-                    status === 'flash' ? FLASH_ACTIVE_CLS : INACTIVE_CLS
-                  }`}
+                  className={`flex h-[34px] w-[72px] items-center justify-center rounded-[10px] border text-[18px] transition ${INACTIVE_CLS}`}
                 >
                   <Bolt />
                 </button>
@@ -231,17 +254,43 @@ export default function ResultEditor({
       className="m-0 min-w-0 border-0 p-0 disabled:opacity-60"
     >
       <div className="flex flex-col">
-        {single ? (
+        {single && chosen ? (
+          // Gewählt: ein Knopf über die volle Breite, gleiche Höhe wie vorher (die Karte springt
+          // nicht), Ergebnis links, Punkte rechts. Antippen setzt zurück.
+          <button
+            onClick={resetSingle}
+            aria-label={
+              chosen === 'flash'
+                ? `Geflasht, ${preview} Punkte – antippen zum Zurücksetzen`
+                : `Nope, ${preview} Punkte – antippen zum Zurücksetzen`
+            }
+            title="Antippen zum Zurücksetzen"
+            className={`flex w-full items-center justify-between gap-2 rounded-sm2 border px-4 py-4 font-display text-[19px] font-bold transition ${
+              chosen === 'flash' ? FLASH_ACTIVE_CLS : NOPE_ACTIVE_CLS
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              {chosen === 'flash' ? (
+                <span className="text-[26px]">
+                  <Bolt />
+                </span>
+              ) : (
+                <span aria-hidden className="text-[24px] leading-none">
+                  🪂
+                </span>
+              )}
+              {chosen === 'flash' ? 'Geflasht!' : 'Nope'}
+            </span>
+            <span className="font-num tabular-nums">{preview} P.</span>
+          </button>
+        ) : single ? (
           // 3:1 – Nope schmal links, Flash breit rechts (Rechtshänder tippen öfter Flash).
           <div className="grid grid-cols-4 gap-2">
             <button
               onClick={() => selectSingle('nope')}
-              aria-pressed={nopeActive}
               aria-label="Nope – nicht geflasht"
               title="Nope – nicht geflasht"
-              className={`col-span-1 flex flex-col items-center justify-center gap-1 rounded-sm2 border px-1 py-2 font-display text-[13px] font-bold transition ${
-                nopeActive ? NOPE_ACTIVE_CLS : INACTIVE_CLS
-              }`}
+              className={`col-span-1 flex flex-col items-center justify-center gap-1 rounded-sm2 border px-1 py-2 font-display text-[13px] font-bold transition ${INACTIVE_CLS}`}
             >
               <span aria-hidden className="text-[22px] leading-none">
                 🪂
@@ -250,10 +299,7 @@ export default function ResultEditor({
             </button>
             <button
               onClick={() => selectSingle('flash')}
-              aria-pressed={status === 'flash'}
-              className={`col-span-3 flex items-center justify-center gap-2 rounded-sm2 border px-2 py-4 font-display text-[19px] font-bold transition ${
-                status === 'flash' ? FLASH_ACTIVE_CLS : INACTIVE_CLS
-              }`}
+              className={`col-span-3 flex items-center justify-center gap-2 rounded-sm2 border px-2 py-4 font-display text-[19px] font-bold transition ${INACTIVE_CLS}`}
             >
               <span className="text-[26px]">
                 <Bolt />
@@ -320,7 +366,8 @@ export default function ResultEditor({
           </div>
         )}
 
-        {status !== 'open' && (
+        {/* Bei einem Versuch pro Boulder stehen die Punkte schon im gewählten Knopf. */}
+        {!single && status !== 'open' && (
           <div className="mt-2.5 text-right font-display text-[14px] font-semibold text-muted">
             Punkte:{' '}
             <span className={`ml-1 font-num font-bold ${preview < 0 ? 'text-bad' : 'text-ok'}`}>

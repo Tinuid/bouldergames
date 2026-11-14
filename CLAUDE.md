@@ -237,7 +237,9 @@ Migration für den CHECK auf `game_mode` und seine Wertungsregel (`computePoints
 alles andere 0 – Versuchskosten und Strafmodus wirken nicht, ×Grad und Boulder der Woche schon.
 Seit 1.30.0 mit `singleAttempt`: **ein Versuch pro Boulder**. Der `ResultEditor` zeigt statt Flash/Top
 links schmal **🪂 „Nope“** und rechts breit **Flash** (3:1); Nope speichert `fail` mit 1 Versuch, ein
-altes `top`/`fail` aus der Zeit vor dem Moduswechsel erscheint als Nope. Was als „erledigt“ gilt (Filter
+altes `top`/`fail` aus der Zeit vor dem Moduswechsel erscheint als Nope. Nach der Wahl (seit 1.30.1)
+bleibt nur der gewählte Knopf über die volle Breite, mit den Punkten darin; Antippen setzt auf `open`
+zurück – auch in der kompakten Zeile. Was als „erledigt“ gilt (Filter
 „erledigte ausblenden“), entscheidet `isResultDone(status, config)` in `scoring.ts` – hier jedes
 Ergebnis ≠ `open`, sonst nur Flash/Top. Wechselt der Host danach auf Standard, kostet ein Nope einmal
 `attemptCost` wie ein Fehlversuch.
