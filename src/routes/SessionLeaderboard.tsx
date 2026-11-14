@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useRealtimeSession } from '../hooks/useRealtimeSession'
-import { computeLeaderboardRows, summarizeLeaderboard } from '../lib/leaderboard'
+import { scoreSession, summarizeLeaderboard } from '../lib/leaderboard'
 import { countsAttempts } from '../lib/scoring'
 import { isActiveParticipant } from '../lib/sessionPhase'
 import { scoringFromSession, type Participant } from '../types'
@@ -52,7 +52,12 @@ export default function SessionLeaderboard() {
     else navigate(-1)
   }
 
-  const rows = useMemo(() => computeLeaderboardRows(participants, results), [participants, results])
+  // Einmal je Route gerechnet und an alle Ansichten gereicht (Liste, „Dein Platz“, Vergleich).
+  const scored = useMemo(
+    () => scoreSession({ session, participants, boulders, results }),
+    [session, participants, boulders, results],
+  )
+  const rows = scored.rows
   const summary = useMemo(() => summarizeLeaderboard(rows, userId), [rows, userId])
   const myParticipant = useMemo(
     // Nur als aktiver Teilnehmer ist man „ich“ – wer verlassen hat, sieht die Rangliste
@@ -111,12 +116,7 @@ export default function SessionLeaderboard() {
         {boulders.length === 1 ? '1 Boulder' : `${boulders.length} Boulder`}
       </div>
 
-      <Leaderboard
-        participants={participants}
-        results={results}
-        currentUserId={userId}
-        onSelectPlayer={openPlayer}
-      />
+      <Leaderboard rows={rows} currentUserId={userId} onSelectPlayer={openPlayer} />
 
       {/* Angeheftet, damit der eigene Platz beim Scrollen durch ein großes Feld nie verschwindet.
           Der Abstandshalter mit mt-auto schiebt die Leiste ans untere Ende, solange die Liste
@@ -138,7 +138,7 @@ export default function SessionLeaderboard() {
                 </div>
               </div>
               <span className="font-num text-[22px] font-bold leading-none tracking-[-0.02em] tabular-nums">
-                {summary.me.points}
+                {summary.me.score}
               </span>
             </div>
           </div>
@@ -151,6 +151,8 @@ export default function SessionLeaderboard() {
           meParticipant={myParticipant}
           boulders={boulders}
           results={results}
+          rows={rows}
+          pointsByResult={scored.pointsByResult}
           showAttempts={countsAttempts(scoringFromSession(session))}
           onClose={closePlayer}
           onSelectBoulder={goToBoulder}

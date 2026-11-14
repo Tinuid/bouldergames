@@ -1,51 +1,16 @@
-import { GAME_MODES, UPCOMING_GAME_MODES } from '../lib/gameModes'
-import type { GameMode } from '../types'
 import {
-  Bolt,
-  Check,
-  Coins,
-  Crown,
-  Diamond,
-  Dice,
-  Flag,
-  Grid,
-  Hand,
-  Hash,
-  Palette,
-  Plan,
-  Pyramid,
-  Repeat,
-  Scale,
-  Timer,
-  Trophy,
-  Users,
-} from './icons'
+  GAME_MODES,
+  UPCOMING_EXTRAS,
+  UPCOMING_FORMS,
+  UPCOMING_MODES,
+  type UpcomingEntry,
+} from '../lib/gameModes'
+import type { GameMode } from '../types'
+import { GAME_MODE_ICONS as ICONS } from './gameModeIcons'
 
-// Icon je Modus (Darstellung bleibt hier, die Texte kommen aus lib/gameModes.ts).
-// Schlüssel = `value` aus GAME_MODES bzw. `key` aus UPCOMING_GAME_MODES.
-const ICONS: Record<string, React.ReactNode> = {
-  standard: <Check />,
-  flash_only: <Bolt />,
-  time_attack: <Timer />,
-  color: <Palette />,
-  last_man_standing: <Crown />,
-  bets: <Coins />,
-  few_holds: <Hand />,
-  max_holds: <Hash />,
-  best_n: <Trophy />,
-  rarity: <Diamond />,
-  first_ascent: <Flag />,
-  handicap: <Scale />,
-  teams: <Users />,
-  bingo: <Grid />,
-  area_tour: <Plan />,
-  pyramid: <Pyramid />,
-  horse: <Repeat />,
-  random: <Dice />,
-}
-
-// Auswahl des Spielmodus als Karten-Liste – Schritt 1 beim Erstellen und oben im
-// Edit-Dialog. Reine Darstellung: der gewählte Wert lebt beim Aufrufer.
+// Auswahl des Modus als Karten-Liste – Schritt 1 beim Erstellen (mit den angekündigten
+// Modi, Spielformen und Extras darunter) und oben im Edit-Dialog (nur wählbare Modi).
+// Reine Darstellung: der gewählte Wert lebt beim Aufrufer.
 export default function GameModePicker({
   value,
   onChange,
@@ -53,7 +18,7 @@ export default function GameModePicker({
 }: {
   value: GameMode
   onChange: (mode: GameMode) => void
-  // Angekündigte Modi als ausgegraute „bald“-Karten zeigen (nicht im Edit-Dialog).
+  // Angekündigte Einträge als ausgegraute „bald“-Kacheln zeigen (nicht im Edit-Dialog).
   showUpcoming?: boolean
 }) {
   return (
@@ -86,30 +51,41 @@ export default function GameModePicker({
         )
       })}
 
-      {showUpcoming && UPCOMING_GAME_MODES.length > 0 && (
-        // Angekündigte Modi kompakt im 2er-Raster – es sind viele, und sie sind
-        // nur Vorschau: nicht antippbar, gestrichelt und blass.
-        <div className="mt-4">
-          <h2 className="section-label mb-2.5 px-0.5">Bald verfügbar</h2>
-          <ul className="grid grid-cols-2 gap-2">
-            {UPCOMING_GAME_MODES.map((m) => (
-              <li
-                key={m.key}
-                aria-disabled="true"
-                className="flex min-w-0 flex-col gap-1.5 rounded-sm2 border border-dashed border-border px-3 py-2.5 opacity-55"
-              >
-                <span className="flex min-w-0 items-center gap-1.5">
-                  <span className="shrink-0 text-[15px] text-muted">{ICONS[m.key]}</span>
-                  <span className="truncate font-display text-[13.5px] font-bold leading-tight">
-                    {m.title}
-                  </span>
-                </span>
-                <span className="text-[11.5px] leading-snug text-muted">{m.subtitle}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+      {showUpcoming && (
+        <>
+          <UpcomingSection title="Weitere Modi – bald verfügbar" entries={UPCOMING_MODES} />
+          <UpcomingSection title="Spielform – bald verfügbar" entries={UPCOMING_FORMS} />
+          <UpcomingSection title="Extras – bald verfügbar" entries={UPCOMING_EXTRAS} />
+        </>
       )}
+    </div>
+  )
+}
+
+// Angekündigte Einträge kompakt im 2er-Raster – es sind viele, und sie sind nur Vorschau:
+// nicht antippbar, gestrichelt und blass.
+function UpcomingSection({ title, entries }: { title: string; entries: UpcomingEntry[] }) {
+  if (entries.length === 0) return null
+  return (
+    <div className="mt-4">
+      <h2 className="section-label mb-2.5 px-0.5">{title}</h2>
+      <ul className="grid grid-cols-2 gap-2">
+        {entries.map((m) => (
+          <li
+            key={m.key}
+            aria-disabled="true"
+            className="flex min-w-0 flex-col gap-1.5 rounded-sm2 border border-dashed border-border px-3 py-2.5 opacity-55"
+          >
+            <span className="flex min-w-0 items-center gap-1.5">
+              <span className="shrink-0 text-[15px] text-muted">{ICONS[m.key]}</span>
+              <span className="truncate font-display text-[13.5px] font-bold leading-tight">
+                {m.title}
+              </span>
+            </span>
+            <span className="text-[11.5px] leading-snug text-muted">{m.subtitle}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { computeLeaderboardRows, rankClass, summarizeLeaderboard } from './leaderboard'
+import {
+  computeLeaderboardRows,
+  rankClass,
+  scoreSession,
+  summarizeLeaderboard,
+} from './leaderboard'
 import type { Participant, Result, ResultStatus } from '../types'
 
 function participant(id: string, name: string, userId = `u-${id}`): Participant {
@@ -37,7 +42,7 @@ describe('computeLeaderboardRows', () => {
       [participant('p1', 'Mia'), participant('p2', 'Ben')],
       [result('p1', 'top', 20), result('p1', 'flash', 30), result('p2', 'top', 25)],
     )
-    expect(rows.map((r) => [r.participant.display_name, r.points])).toEqual([
+    expect(rows.map((r) => [r.participant.display_name, r.score])).toEqual([
       ['Mia', 50],
       ['Ben', 25],
     ])
@@ -58,7 +63,7 @@ describe('computeLeaderboardRows', () => {
       [result('p1', 'top', 20)],
     )
     expect(rows[1].participant.display_name).toBe('Ben')
-    expect(rows[1].points).toBe(0)
+    expect(rows[1].score).toBe(0)
     expect(rows[1].rank).toBe(2)
   })
 
@@ -68,7 +73,7 @@ describe('computeLeaderboardRows', () => {
       [result('p1', 'top', 20), result('p99', 'top', 999)],
     )
     expect(rows).toHaveLength(1)
-    expect(rows[0].points).toBe(20)
+    expect(rows[0].score).toBe(20)
   })
 
   it('teilt bei gleicher Punktzahl den Platz und überspringt danach (1, 2, 2, 4)', () => {
@@ -124,7 +129,7 @@ describe('summarizeLeaderboard', () => {
   it('findet die eigene Zeile, den Führenden und den Abstand nach oben', () => {
     const s = summarizeLeaderboard(rows, 'u-p2')
     expect(s.me?.rank).toBe(2)
-    expect(s.me?.points).toBe(112)
+    expect(s.me?.score).toBe(112)
     expect(s.leader?.participant.display_name).toBe('Mia')
     expect(s.total).toBe(3)
     expect(s.gapToNext).toBe(16)
@@ -147,7 +152,7 @@ describe('summarizeLeaderboard', () => {
   it('liefert ohne eigenen Teilnehmer nur den Führenden', () => {
     const s = summarizeLeaderboard(rows, 'u-fremd')
     expect(s.me).toBeNull()
-    expect(s.leader?.points).toBe(128)
+    expect(s.leader?.score).toBe(128)
     expect(s.gapToNext).toBeNull()
   })
 
@@ -198,5 +203,50 @@ describe('Ausgetretene (left_at)', () => {
     const ben = { ...participant('b', 'Ben', 'u-ben'), left_at: '2026-11-14T18:00:00Z' }
     const rows = computeLeaderboardRows([ben], [result('b', 'top', 20)])
     expect(summarizeLeaderboard(rows, 'u-ben').me).toBeNull()
+  })
+})
+
+describe('scoreSession', () => {
+  const session = { game_mode: 'standard' as const }
+
+  it('zählt für Standard die gespeicherten Punkte – je Ergebnis und je Zeile', () => {
+    const r1 = result('a', 'top', 20)
+    const r2 = result('b', 'flash', 30)
+    const { rows, pointsByResult } = scoreSession({
+      session,
+      participants: [participant('a', 'Anna'), participant('b', 'Ben')],
+      boulders: [],
+      results: [r1, r2],
+    })
+    expect(pointsByResult.get(r1.id)).toBe(20)
+    expect(pointsByResult.get(r2.id)).toBe(30)
+    expect(rows.map((r) => [r.participant.display_name, r.score, r.rank])).toEqual([
+      ['Ben', 30, 1],
+      ['Anna', 20, 2],
+    ])
+  })
+
+  it('teilt den Platz bei gleicher Wertung, Tops ordnen nur die Anzeige', () => {
+    const { rows } = scoreSession({
+      session,
+      participants: [participant('a', 'Anna'), participant('b', 'Ben'), participant('c', 'Cem')],
+      boulders: [],
+      results: [
+        result('a', 'top', 10, 'x1'),
+        result('a', 'top', 10, 'x2'),
+        result('b', 'flash', 20),
+        result('c', 'fail', -5),
+      ],
+    })
+    expect(rows.map((r) => [r.participant.display_name, r.rank])).toEqual([
+      ['Anna', 1],
+      ['Ben', 1],
+      ['Cem', 3],
+    ])
+  })
+
+  it('kommt ohne Session aus (noch nicht geladen)', () => {
+    const { rows } = scoreSession({ session: null, participants: [], boulders: [], results: [] })
+    expect(rows).toEqual([])
   })
 })

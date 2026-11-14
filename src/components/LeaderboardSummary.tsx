@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { computeLeaderboardRows, rankClass, summarizeLeaderboard } from '../lib/leaderboard'
-import type { Participant, Result } from '../types'
+import { rankClass, summarizeLeaderboard, type LeaderboardRow } from '../lib/leaderboard'
 import { ChevronRight } from './icons'
 
 /**
@@ -8,29 +7,27 @@ import { ChevronRight } from './icons'
  * und wer führt. Ersetzt die vollständige Liste an dieser Stelle – die steht jetzt auf der
  * eigenen Ranglisten-Seite, die ein Tipp hier öffnet (onOpen).
  *
- * Punkte kommen fertig aus `results.points`; gerechnet wird nur in lib/leaderboard.ts.
+ * Bekommt die fertigen Zeilen aus scoreSession (lib/leaderboard.ts) – hier wird nichts gerechnet.
  */
 export default function LeaderboardSummary({
-  participants,
-  results,
+  rows,
   currentUserId,
   onOpen,
 }: {
-  participants: Participant[]
-  results: Result[]
+  rows: LeaderboardRow[]
   currentUserId: string | null
   onOpen: () => void
 }) {
   const { me, leader, leaderShared, total, leadOverNext } = useMemo(
-    () => summarizeLeaderboard(computeLeaderboardRows(participants, results), currentUserId),
-    [participants, results, currentUserId],
+    () => summarizeLeaderboard(rows, currentUserId),
+    [rows, currentUserId],
   )
 
   // Kurzer Puls, wenn sich die eigene Punktzahl ändert (wie zuvor in der Liste).
   const prevScore = useRef<number | null>(null)
   const [bump, setBump] = useState(false)
   useEffect(() => {
-    const score = me?.points ?? null
+    const score = me?.score ?? null
     if (prevScore.current !== null && score !== null && score !== prevScore.current) {
       setBump(true)
       const t = setTimeout(() => setBump(false), 650)
@@ -47,17 +44,17 @@ export default function LeaderboardSummary({
   if (leader == null) {
     hint = 'Noch keine Teilnehmer'
   } else if (iAmLeader) {
-    if (leaderShared) hint = `Gleichauf an der Spitze mit ${leader.points}`
+    if (leaderShared) hint = `Gleichauf an der Spitze mit ${leader.score}`
     else if (leadOverNext != null) hint = `Du führst mit ${leadOverNext} Punkten Vorsprung`
     else hint = 'Du führst'
   } else {
     // Bewusst ohne den Abstand zum nächsten Platz – die Zahl brauchte hier niemand.
     // Auf der Ranglisten-Seite steht sie weiterhin in der „Dein Platz“-Leiste.
-    hint = `${leader.participant.display_name} führt mit ${leader.points}`
+    hint = `${leader.participant.display_name} führt mit ${leader.score}`
   }
 
   const label = me
-    ? `Leaderboard öffnen – Platz ${me.rank} von ${total}, ${me.points} Punkte`
+    ? `Leaderboard öffnen – Platz ${me.rank} von ${total}, ${me.score} Punkte`
     : 'Leaderboard öffnen'
 
   return (
@@ -97,7 +94,7 @@ export default function LeaderboardSummary({
             </div>
             <div className="flex shrink-0 flex-col items-end">
               <span className="font-num text-[30px] font-bold leading-none tracking-[-0.02em] tabular-nums">
-                {me.points}
+                {me.score}
               </span>
               <span className="mt-[3px] text-[11.5px] text-faint">Punkte</span>
             </div>
@@ -110,12 +107,12 @@ export default function LeaderboardSummary({
                 {total === 1 ? '1 Teilnehmer' : `${total} Teilnehmer`}
               </div>
               <div className="mt-0.5 truncate text-[12.5px] text-muted">
-                {leader ? `${leader.participant.display_name} führt mit ${leader.points}` : hint}
+                {leader ? `${leader.participant.display_name} führt mit ${leader.score}` : hint}
               </div>
             </div>
             {leader && (
               <span className="font-num text-[30px] font-bold leading-none tracking-[-0.02em] tabular-nums text-faint">
-                {leader.points}
+                {leader.score}
               </span>
             )}
           </div>

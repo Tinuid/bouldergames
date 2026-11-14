@@ -1,5 +1,6 @@
 import type { ResultStatus, ScoringConfig } from '../types'
 import { difficultyFactor } from './difficulty'
+import { gameModeInfo } from './gameModes'
 
 /**
  * Punkteberechnung. `attempts` ist die Gesamtzahl der Versuche inkl. des erfolgreichen;
@@ -96,7 +97,7 @@ function applyFactors(
  * Versuchszähler und die Versuchsanzahlen. Bei „Nur Flash“ oder Kosten 0 nicht.
  */
 export function countsAttempts(config: ScoringConfig): boolean {
-  return config.gameMode !== 'flash_only' && config.attemptCost > 0
+  return gameModeInfo(config.gameMode).usesMisses && config.attemptCost > 0
 }
 
 // Punkte-Faktor des Boulders der Woche.

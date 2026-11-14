@@ -153,7 +153,7 @@ export default function CreateSession() {
         <h1 className="mb-2 font-display text-[34px] font-extrabold leading-none tracking-[-0.025em]">
           Neue Challenge
         </h1>
-        <p className="mb-5 text-[15px] text-muted">Welcher Spielmodus?</p>
+        <p className="mb-5 text-[15px] text-muted">Wie wollt ihr spielen?</p>
 
         <GameModePicker value={pickedMode} onChange={setPickedMode} />
 
@@ -180,8 +180,7 @@ export default function CreateSession() {
         Neue Challenge
       </h1>
       <p className="mb-5 text-[15px] text-muted">
-        Spielmodus:{' '}
-        <strong className="font-semibold text-ink">{gameModeInfo(chosenMode).title}</strong>
+        Modus: <strong className="font-semibold text-ink">{gameModeInfo(chosenMode).title}</strong>
         {' · '}
         <button type="button" onClick={backToModeStep} className="font-semibold text-accent">
           ändern

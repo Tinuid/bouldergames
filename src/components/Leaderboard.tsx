@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { computeLeaderboardRows } from '../lib/leaderboard'
+import type { LeaderboardRow } from '../lib/leaderboard'
 import RankMedal from './RankMedal'
-import type { Participant, Result } from '../types'
+import type { Participant } from '../types'
 
 /**
  * Vollständige Leaderboard-Liste. Steht seit der kompakten Kopfzeile in der Challenge
@@ -10,22 +10,18 @@ import type { Participant, Result } from '../types'
  * eine Medaille (RankMedal); ein eigenes Treppchen gibt es bewusst nicht mehr, es hat die
  * Information der Zeile nur doppelt und in einer zweiten Optik gezeigt.
  *
- * Punkte kommen fertig aus `results.points`; gerechnet wird nur in lib/leaderboard.ts.
+ * Bekommt die fertigen Zeilen aus scoreSession (lib/leaderboard.ts) – hier wird nichts gerechnet.
  */
 export default function Leaderboard({
-  participants,
-  results,
+  rows,
   currentUserId,
   onSelectPlayer,
 }: {
-  participants: Participant[]
-  results: Result[]
+  rows: LeaderboardRow[]
   currentUserId: string | null
   // Optional: Klick auf eine Zeile öffnet die Detailansicht des Spielers.
   onSelectPlayer?: (participant: Participant) => void
 }) {
-  const rows = useMemo(() => computeLeaderboardRows(participants, results), [participants, results])
-
   // Kurzer Puls auf der eigenen Zeile, wenn sich die eigene Punktzahl ändert.
   const myRow = useMemo(
     () =>
@@ -37,7 +33,7 @@ export default function Leaderboard({
   const prevScore = useRef<number | null>(null)
   const [bump, setBump] = useState(false)
   useEffect(() => {
-    const score = myRow?.points ?? null
+    const score = myRow?.score ?? null
     if (prevScore.current !== null && score !== null && score !== prevScore.current) {
       setBump(true)
       const t = setTimeout(() => setBump(false), 650)
@@ -90,7 +86,7 @@ export default function Leaderboard({
                   </div>
                 </div>
                 <span className="font-num text-[30px] font-bold leading-none tracking-[-0.02em] tabular-nums">
-                  {row.points}
+                  {row.score}
                 </span>
               </button>
             </li>

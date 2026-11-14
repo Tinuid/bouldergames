@@ -201,8 +201,9 @@ Fehlversuche sind `attempts − 1` (beim Fail zählen alle Versuche als Fehlvers
 `'top_floor'` (Standard – nur Fehlversuche kosten, Flash/Top nie < 0, Fail bleibt negativ),
 `'strict'` (jeder Versuch kostet, auch der erfolgreiche; Top kann negativ werden) und `'misses'`
 (nur Fehlversuche kosten, aber kein Floor). Punkte werden client-seitig berechnet **und** in
-`results.points` persistiert, damit das Leaderboard billig aggregieren kann. Das Leaderboard
-(`src/components/Leaderboard.tsx`) summiert `points` rein client-seitig aus den `results`.
+`results.points` persistiert, damit das Leaderboard billig aggregieren kann. Gewertet wird
+client-seitig an **einer** Stelle: `scoreSession()` in `src/lib/leaderboard.ts` (siehe „Rangliste
+rechnet zentral“).
 `normalizeResult` erzwingt Konsistenz (z.B. Flash ⇒ genau 1 Versuch).
 
 Zwei **Wertungen** (`ScoringConfig.mode`, gespeichert in `sessions.scoring_mode`, im UI-Panel
@@ -213,10 +214,18 @@ Anlegen eines Boulders **Pflicht** (`AddBoulderDialog`-Prop `requireDifficulty`)
 rechnet `computePoints` mit Faktor 1. Darum muss `difficulty` bis in `upsertResult` durchgereicht
 werden.
 
-**Spielmodi (Migration `0021`).** Unabhängig von der Wertung hat jede Session einen
-`sessions.game_mode` (`ScoringConfig.gameMode`). Katalog mit Anzeige-Texten und Reihenfolge:
-`src/lib/gameModes.ts` (`GAME_MODES`, dazu `UPCOMING_GAME_MODES` als ausgegraute „bald“-Karten ohne
-DB-Wert). `'flash_only'` („Nur Flash“): in `computePoints` bringt nur ein Flash die Flash-Punkte,
+**Spielmodi (Migration `0021`, Gerüst seit 1.28.0).** Drei Ebenen: **Spielform** (wie gespielt wird –
+heute nur „frei“, kein DB-Feld), **Modus** (`sessions.game_mode`, `ScoringConfig.gameMode`: wie Punkte
+entstehen) und **Extras** (mit jedem Modus kombinierbar, nie vorbelegt). Nicht zu verwechseln mit der
+**Wertung** (Klassisch/Multiplikator). Der Katalog `src/lib/gameModes.ts` ist die einzige Quelle für
+Texte, Reihenfolge und **Eigenschaften** jedes Modus: `scoresTop`, `usesMisses`, `requiresDifficulty`.
+Einstellungen (`SessionSettingsFields`), Eingabe (`ResultEditor`), Session-Kopf, Grad-Pflicht und
+`countsAttempts` fragen **nur diese Eigenschaften** ab – keine Abfragen auf einzelne Modus-Werte
+verstreuen. Angekündigte Einträge stehen in `UPCOMING_MODES`, `UPCOMING_FORMS` und `UPCOMING_EXTRAS`
+(`defaultOn: false`) und erscheinen in Schritt 1 als graue Kacheln; Icons liegen in
+`src/components/gameModeIcons.tsx`. Ein neuer Modus braucht: Katalog-Eintrag, `GameMode`-Typ,
+Migration für den CHECK auf `game_mode` und seine Wertungsregel (`computePoints` bzw. `scoreSession`).
+`'flash_only'` („Nur Flash“): in `computePoints` bringt nur ein Flash die Flash-Punkte,
 alles andere 0 – Versuchskosten und Strafmodus wirken nicht, ×Grad und Boulder der Woche schon.
 `countsAttempts(config)` entscheidet, ob das UI Versuchszähler und -anzahlen zeigt – statt
 `attemptCost > 0` direkt abzufragen. Die Moduswahl ist **Schritt 1** von `/create` (`GameModePicker`);
@@ -225,6 +234,19 @@ Moduswahl führt; der Router-State (Karten-Vorauswahl) wird beim Schrittwechsel 
 `SessionSettingsFields` wählt den Modus nicht selbst, blendet aber aus, was im Modus nicht zählt.
 Nachträglich änderbar im `EditSessionDialog` (zählt als Punkte-Änderung ⇒ `recomputeSessionResults`).
 Ideen und offene Modi: `spielmodi.md`.
+
+**Rangliste rechnet zentral (`scoreSession`, seit 1.28.0).** `scoreSession({ session, participants,
+boulders, results })` in `src/lib/leaderboard.ts` liefert die fertigen Zeilen (`score`, `tops`,
+`flashes`, `inactive`, `tiebreak`, `rank`) und `pointsByResult` (zählende Punkte je Ergebnis). Jede
+Route rechnet es **einmal** per `useMemo` (`SessionView`, `SessionLeaderboard`) und reicht es weiter:
+`Leaderboard` und `LeaderboardSummary` bekommen fertige `rows`, `PlayerDetail` `rows` +
+`pointsByResult`, `BoulderRanking` `pointsByResult`; der Endstand nimmt die Zeilen mit Rang ≤ 3.
+Außerhalb von `leaderboard.ts` wird `results.points` **nicht** summiert. Für Standard und Nur Flash
+gilt `score` = Summe `results.points` – der Erweiterungspunkt für relative Wertungen (Beste N,
+Seltenheit …) ist der `switch` in `scoreSession`. Platz wird geteilt bei gleichem `score` **und**
+gleichem `tiebreak` (heute leer); Tops und Name ordnen nur die Anzeige. Bewusst weiter bei
+`computePoints`, weil sie Basispunkte zeigen: die Vorschau im `ResultEditor`, die Beispiele in
+`SessionSettingsFields` und `upsertResult`.
 
 **Schwierigkeiten zentralisiert.** Die wählbaren Stufen leben als einzige Quelle der Wahrheit in
 `src/lib/difficulty.ts` (`DIFFICULTIES`): die Grade 1–8 sowie die Sonderstufen `?` und `!`. In

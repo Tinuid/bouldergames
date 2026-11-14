@@ -112,7 +112,7 @@ export default function EditSessionDialog({
           scoringLocked={ended}
           modeSlot={
             <div className="panel mb-[18px]">
-              <div className="panel-title mb-3.5">Spielmodus</div>
+              <div className="panel-title mb-3.5">Modus</div>
               <GameModePicker
                 value={values.gameMode}
                 onChange={(gameMode) => patch({ gameMode })}

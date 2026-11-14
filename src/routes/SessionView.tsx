@@ -19,7 +19,9 @@ import {
   upsertResult,
 } from '../lib/api'
 import { canControlSession, isActiveParticipant } from '../lib/sessionPhase'
-import { computeLeaderboardRows } from '../lib/leaderboard'
+import { scoreSession } from '../lib/leaderboard'
+import { gameModeInfo, isDefaultGameMode } from '../lib/gameModes'
+import { GAME_MODE_ICONS } from '../components/gameModeIcons'
 import { deleteBoulderImage, uploadBoulderImage } from '../lib/images'
 import { forgetSession, rememberSession } from '../lib/localHistory'
 import { DIFFICULTIES } from '../lib/difficulty'
@@ -156,10 +158,13 @@ export default function SessionView() {
 
   // Endstand für die beendete Challenge: die ersten drei (inkl. Ausgetretener, wenn sie
   // vorne liegen – ihre Ergebnisse zählen weiter).
-  const podium = useMemo(
-    () => computeLeaderboardRows(participants, results).filter((r) => r.rank <= 3),
-    [participants, results],
+  // Wertung einmal je Route (lib/leaderboard.ts) – Streifen, Endstand und Boulder-Rangliste
+  // lesen nur dieses Ergebnis.
+  const scored = useMemo(
+    () => scoreSession({ session, participants, boulders, results }),
+    [session, participants, boulders, results],
   )
+  const podium = useMemo(() => scored.rows.filter((r) => r.rank <= 3), [scored])
 
   // "andere ausblenden" – gerätelokaler Toggle pro Session (Default an = aufgeräumte Ansicht,
   // identisch zum Verhalten ohne shared_scoring). Wer für andere einträgt, blendet sie ein.
@@ -324,6 +329,8 @@ export default function SessionView() {
 
   if (!session) return null
   const scoring = scoringFromSession(session)
+  // Eigenschaften des Modus aus dem Katalog – statt Abfragen auf einzelne Modus-Werte.
+  const gameMode = gameModeInfo(scoring.gameMode)
   const sharedScoring = session.shared_scoring
   const isHost = session.host_id === userId
   const showOthers = sharedScoring && !hideOthers
@@ -595,9 +602,7 @@ export default function SessionView() {
                     <span className="min-w-0 flex-1 truncate font-display text-[15px] font-bold">
                       {row.participant.display_name}
                     </span>
-                    <span className="font-num text-[18px] font-bold tabular-nums">
-                      {row.points}
-                    </span>
+                    <span className="font-num text-[18px] font-bold tabular-nums">{row.score}</span>
                   </li>
                 ))}
               </ol>
@@ -613,11 +618,11 @@ export default function SessionView() {
       )}
 
       <div className="mb-[22px] flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] leading-relaxed text-muted">
-        {scoring.gameMode === 'flash_only' && (
+        {!isDefaultGameMode(scoring.gameMode) && (
           <>
             <span className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 font-semibold text-accent">
-              <Bolt className="text-[13px]" />
-              Nur Flash
+              <span className="text-[13px]">{GAME_MODE_ICONS[gameMode.value]}</span>
+              {gameMode.title}
             </span>
             <span className="text-faint">·</span>
           </>
@@ -632,18 +637,17 @@ export default function SessionView() {
           <Bolt className="text-[14px] text-accent" />
           {scoring.flashPoints} Flash
         </span>
-        {scoring.gameMode === 'flash_only' ? (
-          <>
-            <span className="text-faint">·</span>
-            <span>Top zählt 0</span>
-          </>
+        <span className="text-faint">·</span>
+        {gameMode.scoresTop ? (
+          <span className="inline-flex items-center gap-1">
+            <Check className="text-[14px] text-ok" />
+            {scoring.topPoints} Top
+          </span>
         ) : (
+          <span>Top zählt 0</span>
+        )}
+        {gameMode.usesMisses && (
           <>
-            <span className="text-faint">·</span>
-            <span className="inline-flex items-center gap-1">
-              <Check className="text-[14px] text-ok" />
-              {scoring.topPoints} Top
-            </span>
             <span className="text-faint">·</span>
             <span>−{scoring.attemptCost}/Fehlversuch</span>
             <span className="text-faint">·</span>
@@ -654,8 +658,7 @@ export default function SessionView() {
 
       <div className="mb-[26px]">
         <LeaderboardSummary
-          participants={participants}
-          results={results}
+          rows={scored.rows}
           currentUserId={userId}
           onOpen={() => navigate(`/s/${sessionId}/rangliste`)}
         />
@@ -846,7 +849,7 @@ export default function SessionView() {
         onSubmit={handleSubmitBoulder}
         onDelete={editingBoulder ? handleDeleteBoulder : undefined}
         boulder={editingBoulder}
-        requireDifficulty={scoring.mode === 'multiplier'}
+        requireDifficulty={scoring.mode === 'multiplier' || gameMode.requiresDifficulty}
       />
 
       {addSourceOpen && (
@@ -987,6 +990,7 @@ export default function SessionView() {
           boulder={rankingBoulder}
           participants={orderedParticipants}
           resultsByParticipant={byBoulderParticipant.get(rankingBoulder.id)}
+          pointsByResult={scored.pointsByResult}
           currentUserId={userId}
           showAttempts={countsAttempts(scoring)}
           onClose={() => setRankingBoulder(null)}

@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { colorSwatch } from '../lib/colors'
 import { difficultyLabel } from '../lib/difficulty'
 import { STATUS_LABELS } from '../lib/scoring'
+import type { LeaderboardRow } from '../lib/leaderboard'
 import type { Boulder, Participant, Result, ResultStatus } from '../types'
 import { X } from './icons'
 import { useDialogEscape } from '../hooks/useDialogEscape'
@@ -13,7 +14,8 @@ import { useDialogEscape } from '../hooks/useDialogEscape'
  * Andernfalls (eigene Zeile angeklickt oder Betrachter ist kein Teilnehmer) zeigt das Overlay
  * eine Einzel-Liste der vom Spieler versuchten Boulder (inkl. "nicht geschafft").
  *
- * Punkte kommen fertig aus `results.points`; hier wird nichts neu gerechnet.
+ * Punkte und Summen kommen fertig aus scoreSession (lib/leaderboard.ts): Zeilen (`rows`)
+ * und zählende Punkte je Ergebnis (`pointsByResult`) – hier wird nichts neu gerechnet.
  * Schließt per X oder Escape (Body-Scroll wird währenddessen gesperrt, wie ImageLightbox).
  */
 
@@ -69,10 +71,13 @@ function BoulderTag({ boulder }: { boulder: Boulder }) {
 // die jeweils bessere Punktzahl hervor.
 function ResultCell({
   result,
+  points,
   highlight,
   showAttempts,
 }: {
   result: Result | undefined
+  // Zählende Punkte dieses Ergebnisses (aus scoreSession).
+  points: number | null
   highlight: boolean
   showAttempts: boolean
 }) {
@@ -85,7 +90,7 @@ function ResultCell({
       <span
         className={`font-num text-[18px] font-bold tabular-nums ${highlight ? 'text-ok' : 'text-ink'}`}
       >
-        {result.points}
+        {points}
       </span>
       {showAttempts && result.status !== 'flash' && result.attempts > 1 && (
         <span className="text-[11px] text-muted">{result.attempts} Versuche</span>
@@ -99,6 +104,8 @@ export default function PlayerDetail({
   meParticipant,
   boulders,
   results,
+  rows,
+  pointsByResult,
   showAttempts,
   onClose,
   onSelectBoulder,
@@ -107,6 +114,9 @@ export default function PlayerDetail({
   meParticipant: Participant | null
   boulders: Boulder[]
   results: Result[]
+  // Fertige Wertung aus scoreSession: Zeilen (Summen) und zählende Punkte je Ergebnis.
+  rows: LeaderboardRow[]
+  pointsByResult: Map<string, number>
   // Versuchsanzahl nur zeigen, wenn Fehlversuche Punkte kosten. Bei Abzug 0 blendet der
   // ResultEditor den Zähler aus – gespeichert wäre dann nur der Top-Default von 2 Versuchen.
   showAttempts: boolean
@@ -120,29 +130,28 @@ export default function PlayerDetail({
   // Vergleich nur sinnvoll, wenn man selbst Teilnehmer und nicht der gezeigte Spieler ist.
   const canCompare = meParticipant != null && meParticipant.id !== participant.id
 
-  const { theirByBoulder, myByBoulder, theirStats, myTotal } = useMemo(() => {
+  const { theirByBoulder, myByBoulder } = useMemo(() => {
     const theirByBoulder = new Map<string, Result>()
     const myByBoulder = new Map<string, Result>()
-    const theirStats = { points: 0, tops: 0, flashes: 0 }
-    let myTotal = 0
     for (const r of results) {
-      if (r.participant_id === participant.id) {
-        theirByBoulder.set(r.boulder_id, r)
-        theirStats.points += r.points
-        if (r.status === 'flash') {
-          theirStats.flashes += 1
-          theirStats.tops += 1
-        } else if (r.status === 'top') {
-          theirStats.tops += 1
-        }
-      }
-      if (meParticipant && r.participant_id === meParticipant.id) {
-        myByBoulder.set(r.boulder_id, r)
-        myTotal += r.points
-      }
+      if (r.participant_id === participant.id) theirByBoulder.set(r.boulder_id, r)
+      if (meParticipant && r.participant_id === meParticipant.id) myByBoulder.set(r.boulder_id, r)
     }
-    return { theirByBoulder, myByBoulder, theirStats, myTotal }
+    return { theirByBoulder, myByBoulder }
   }, [results, participant.id, meParticipant])
+
+  // Summen aus den fertigen Zeilen (scoreSession).
+  const theirRow = rows.find((r) => r.participant.id === participant.id)
+  const theirStats = {
+    points: theirRow?.score ?? 0,
+    tops: theirRow?.tops ?? 0,
+    flashes: theirRow?.flashes ?? 0,
+  }
+  const myTotal = meParticipant
+    ? (rows.find((r) => r.participant.id === meParticipant.id)?.score ?? 0)
+    : 0
+  const pointsOf = (r: Result | undefined) =>
+    r && r.status !== 'open' ? (pointsByResult.get(r.id) ?? 0) : null
 
   // Normal-Modus: nur Boulder mit einem (nicht-open) Ergebnis des Spielers, nach seq.
   const playedBoulders = useMemo(
@@ -192,8 +201,8 @@ export default function PlayerDetail({
             {boulders.map((b) => {
               const their = theirByBoulder.get(b.id)
               const mine = myByBoulder.get(b.id)
-              const tp = their && their.status !== 'open' ? their.points : null
-              const mp = mine && mine.status !== 'open' ? mine.points : null
+              const tp = pointsOf(their)
+              const mp = pointsOf(mine)
               const theirWins = tp != null && (mp == null || tp > mp)
               const iWin = mp != null && (tp == null || mp > tp)
               return (
@@ -207,10 +216,20 @@ export default function PlayerDetail({
                 >
                   <BoulderTag boulder={b} />
                   <div className="w-[88px]">
-                    <ResultCell result={their} highlight={theirWins} showAttempts={showAttempts} />
+                    <ResultCell
+                      result={their}
+                      points={tp}
+                      highlight={theirWins}
+                      showAttempts={showAttempts}
+                    />
                   </div>
                   <div className="w-[88px]">
-                    <ResultCell result={mine} highlight={iWin} showAttempts={showAttempts} />
+                    <ResultCell
+                      result={mine}
+                      points={mp}
+                      highlight={iWin}
+                      showAttempts={showAttempts}
+                    />
                   </div>
                 </button>
               )
@@ -260,7 +279,7 @@ export default function PlayerDetail({
                     </span>
                   )}
                   <span className="w-[44px] text-right font-num text-[20px] font-bold tabular-nums">
-                    {r.points}
+                    {pointsOf(r)}
                   </span>
                 </button>
               )

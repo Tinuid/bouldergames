@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { getHistory, forgetSession, type HistoryEntry } from '../lib/localHistory'
 import { listPublicSessions, type SessionSummary } from '../lib/api'
 import { supabase } from '../lib/supabase'
-import { gameModeInfo } from '../lib/gameModes'
+import { gameModeInfo, isDefaultGameMode } from '../lib/gameModes'
 import { sessionPhase } from '../lib/sessionPhase'
 import type { GameMode } from '../types'
 import BrandMark from '../components/BrandMark'
@@ -185,6 +185,6 @@ export default function Home() {
 
 // Spielmodus-Hinweis in den Listen – nur für Modi abseits von „Standard“.
 function ModeNote({ mode }: { mode: GameMode | undefined }) {
-  if (!mode || mode === 'standard') return null
+  if (isDefaultGameMode(mode)) return null
   return <span className="font-semibold text-accent"> · {gameModeInfo(mode).title}</span>
 }

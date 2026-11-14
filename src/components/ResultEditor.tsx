@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { computePoints, countsAttempts, normalizeResult } from '../lib/scoring'
+import { gameModeInfo } from '../lib/gameModes'
 import type { Result, ResultStatus, ScoringConfig } from '../types'
 import { Bolt, Check, Minus, Plus } from './icons'
 
@@ -103,7 +104,7 @@ export default function ResultEditor({
   // dann fällt der Knopf weg.
   const showCounter = countsAttempts(scoring)
   // „Nur Flash“: ein Top bleibt für die Statistik eintragbar, zählt aber 0.
-  const topDoesNotCount = scoring.gameMode === 'flash_only' && status === 'top'
+  const topDoesNotCount = !gameModeInfo(scoring.gameMode).scoresTop && status === 'top'
   // Ein Top braucht seinen einen Fehlversuch; darunter geht der Zähler nicht.
   const minusDisabled = status === 'top' && misses <= 1
   const counterCls =

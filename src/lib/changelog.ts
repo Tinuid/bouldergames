@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.28.0',
+    date: '14.11.2026',
+    text: 'Die Moduswahl zeigt jetzt, was kommt: weitere Modi, Spielformen wie Last Man Standing oder Hallen-Bingo und Extras wie ein Zeitlimit, die sich später mit jedem Modus kombinieren lassen. Im Hintergrund rechnen alle Ranglisten jetzt an einer Stelle – die Grundlage für die neuen Spielmodi.',
+  },
+  {
     version: '1.27.0',
     date: '14.11.2026',
     text: 'Neu: Challenges lassen sich beenden – danach steht der Endstand fest, mit Siegertreppchen oben in der Challenge. Wieder öffnen geht jederzeit.\nWer eine Challenge verlässt, behält seine Ergebnisse: sie zählen ausgegraut weiter, und beim Wiederbeitritt geht es dort weiter.\nNeuer Haken „Alle dürfen die Challenge steuern“ (standardmäßig an): dann darf jeder beenden, nicht nur der Host.',

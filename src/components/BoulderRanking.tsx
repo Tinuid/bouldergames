@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { colorSwatch } from '../lib/colors'
 import { difficultyLabel } from '../lib/difficulty'
 import { STATUS_LABELS } from '../lib/scoring'
@@ -12,7 +12,8 @@ import { useDialogEscape } from '../hooks/useDialogEscape'
  * Boulder sortiert. Gleiche Punktzahl teilt sich den Platz (1, 2, 2, 4 …). Teilnehmer ohne
  * (gewertetes) Ergebnis stehen ohne Platzierung am Ende ("noch nicht versucht").
  *
- * Punkte kommen fertig aus `results.points`; hier wird nichts neu gerechnet.
+ * Zählende Punkte kommen fertig aus scoreSession (`pointsByResult`, lib/leaderboard.ts);
+ * hier wird nichts neu gerechnet.
  * Schließt per X oder Escape (Body-Scroll wird währenddessen gesperrt, wie ImageLightbox).
  */
 
@@ -52,6 +53,7 @@ export default function BoulderRanking({
   boulder,
   participants,
   resultsByParticipant,
+  pointsByResult,
   currentUserId,
   showAttempts,
   onClose,
@@ -59,6 +61,8 @@ export default function BoulderRanking({
   boulder: Boulder
   participants: Participant[]
   resultsByParticipant: Map<string, Result> | undefined
+  // Zählende Punkte je Ergebnis (scoreSession).
+  pointsByResult: Map<string, number>
   currentUserId: string | null
   // Versuchsanzahl nur zeigen, wenn Fehlversuche Punkte kosten (sonst zählt niemand mit).
   showAttempts: boolean
@@ -66,6 +70,8 @@ export default function BoulderRanking({
 }) {
   // Escape schließt, Body-Scroll währenddessen sperren (wie ImageLightbox).
   useDialogEscape(onClose)
+
+  const pointsOf = useCallback((r: Result) => pointsByResult.get(r.id) ?? 0, [pointsByResult])
 
   const rows = useMemo<RankRow[]>(() => {
     type Entry = { participant: Participant; result: Result | undefined; scored: boolean }
@@ -80,8 +86,10 @@ export default function BoulderRanking({
     // Gewertete zuerst (Punkte absteigend), dann die übrigen – jeweils stabil nach Name.
     entries.sort((a, b) => {
       if (a.scored !== b.scored) return a.scored ? -1 : 1
-      if (a.scored && b.scored && a.result!.points !== b.result!.points) {
-        return b.result!.points - a.result!.points
+      const pa = a.scored ? pointsOf(a.result!) : 0
+      const pb = b.scored ? pointsOf(b.result!) : 0
+      if (a.scored && b.scored && pa !== pb) {
+        return pb - pa
       }
       return a.participant.display_name.localeCompare(b.participant.display_name)
     })
@@ -90,13 +98,13 @@ export default function BoulderRanking({
     let lastRank = 0
     return entries.map((e, i) => {
       if (!e.scored) return { participant: e.participant, result: undefined, rank: null }
-      const pts = e.result!.points
+      const pts = pointsOf(e.result!)
       const rank = pts === lastPoints ? lastRank : i + 1
       lastPoints = pts
       lastRank = rank
       return { participant: e.participant, result: e.result, rank }
     })
-  }, [participants, resultsByParticipant])
+  }, [participants, resultsByParticipant, pointsOf])
 
   const grade = difficultyLabel(boulder.difficulty)
   const dot = colorSwatch(boulder.color)
@@ -185,7 +193,7 @@ export default function BoulderRanking({
                   )}
                 </div>
                 <span className="font-num text-[24px] font-bold leading-none tabular-nums">
-                  {r ? r.points : '–'}
+                  {r ? pointsOf(r) : '–'}
                 </span>
               </li>
             )
