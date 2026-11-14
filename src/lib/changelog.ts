@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.26.2',
+    date: '14.11.2026',
+    text: 'Zuverlässiger: Neue App-Versionen kommen jetzt an, sobald du in die App zurückkehrst. Nach Bildschirm-aus oder Funkloch lädt die Challenge den aktuellen Stand nach. Und wenn der Host die Punkteregeln ändert, gehen gleichzeitige Einträge anderer nicht mehr verloren.',
+  },
+  {
     version: '1.26.1',
     date: '14.11.2026',
     text: 'Die Moduswahl zeigt jetzt unter „Bald verfügbar“ alle geplanten Spielmodi als Vorschau – von Time Attack über Wetten bis Hallen-Bingo. Sag uns per Feedback, welchen du als Nächstes willst.',

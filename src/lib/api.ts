@@ -195,31 +195,70 @@ export async function updateSession(params: {
 }
 
 // Alle bestehenden Ergebnisse einer Session mit den (geänderten) Punkteregeln neu
-// berechnen und schreiben. Reicht jedes Ergebnis durch upsertResult (onConflict →
-// In-Place-Update, keine Duplikate); der Grad des zugehörigen Boulders ist im
-// Multiplikator-Modus der Punkte-Faktor. Nur der Host darf fremde Ergebnisse
-// korrigieren (RLS results_update via is_session_host).
+// berechnen. Gerechnet wird weiter hier mit computePoints (einzige Punkte-Quelle);
+// geschrieben wird in EINEM Aufruf über die RPC set_result_points (Migration 0022),
+// die nur `points` setzt – und nur dort, wo status/attempts/Grad noch dem hier
+// verwendeten Stand entsprechen. Was sich inzwischen geändert hat oder neu dazukam,
+// meldet sie zurück; dann wird einmal frisch geladen und erneut gerechnet. Nur der
+// Host darf das (Prüfung in der RPC).
+//
+// Restrisiko (bewusst akzeptiert): Speichert ein anderes Gerät zeitgleich noch mit den
+// ALTEN Regeln, behält dieses eine Ergebnis im Einzelfall seine alten Punkte.
 export async function recomputeSessionResults(params: {
   sessionId: string
   results: Result[]
   boulders: Boulder[]
   scoring: ScoringConfig
 }): Promise<void> {
-  const boulderById = new Map(params.boulders.map((b) => [b.id, b]))
-  for (const r of params.results) {
-    const boulder = boulderById.get(r.boulder_id)
-    if (!boulder) continue
-    await upsertResult({
-      sessionId: params.sessionId,
-      boulderId: r.boulder_id,
-      participantId: r.participant_id,
-      status: r.status,
-      attempts: r.attempts,
-      scoring: params.scoring,
-      difficulty: boulder.difficulty,
-      weekBonus: boulder.week_bonus,
-    })
+  let results = params.results
+  let boulders = params.boulders
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const notUpdated = await setResultPoints(
+      params.sessionId,
+      buildPointsPayload(results, boulders, params.scoring),
+    )
+    if (notUpdated.length === 0) return
+    // Stand hat sich zwischendurch geändert – frisch laden und noch einmal rechnen.
+    ;[results, boulders] = await Promise.all([
+      listResults(params.sessionId),
+      listBoulders(params.sessionId),
+    ])
   }
+}
+
+// Ein Eintrag je Ergebnis: neue Punkte plus der Stand, auf dem sie beruhen
+// (unveränderte DB-Werte – die RPC vergleicht damit).
+function buildPointsPayload(results: Result[], boulders: Boulder[], scoring: ScoringConfig) {
+  const boulderById = new Map(boulders.map((b) => [b.id, b]))
+  return results.flatMap((r) => {
+    const boulder = boulderById.get(r.boulder_id)
+    if (!boulder) return []
+    const norm = normalizeResult(r.status, r.attempts)
+    return [
+      {
+        id: r.id,
+        points: computePoints(
+          norm.status,
+          norm.attempts,
+          scoring,
+          boulder.difficulty,
+          boulder.week_bonus,
+        ),
+        status: r.status,
+        attempts: r.attempts,
+        difficulty: boulder.difficulty,
+      },
+    ]
+  })
+}
+
+async function setResultPoints(sessionId: string, points: unknown[]): Promise<string[]> {
+  const { data, error } = await supabase.rpc('set_result_points', {
+    p_session_id: sessionId,
+    p_points: points,
+  })
+  if (error) throw error
+  return (data as string[] | null) ?? []
 }
 
 export async function joinSession(

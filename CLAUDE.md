@@ -30,7 +30,7 @@ TS6310 aus, weil `tsc -b` referenzierte Projekte mit `noEmit` ablehnt). Vite kom
 ## Versionierung (bei jeder spürbaren Änderung mitziehen)
 
 Die `version` in `package.json` wird zur Build-Zeit via `vite.config.ts` `define` eingefroren und
-in der PWA unten als `VersionBadge` angezeigt (`__APP_VERSION__`). Bei der autoUpdate-PWA ist das
+in der PWA unten als `VersionBadge` angezeigt (`__APP_VERSION__`). Bei der PWA ist das
 der einzige sichtbare Hinweis, dass ein Update angekommen ist – darum **immer mitziehen**, wenn
 eine Änderung beim Nutzer ankommt (neues Feature, sichtbares Verhalten, Schema-/Migrationsänderung).
 SemVer-Daumenregel: neues Feature → Minor (`0.3.1` → `0.4.0`), Bugfix/Kleinkram → Patch
@@ -149,6 +149,11 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
     (die App schickt `game_mode` beim Erstellen mit). Legt `sessions.game_mode` an (`'standard'` |
     `'flash_only'`, Default `'standard'`, CHECK `sessions_game_mode_check`). Keine RLS-Änderung, kein
     Trigger nötig. Idempotent. Neue Modi erweitern den CHECK per neuer Migration.
+24. `supabase/migrations/0022_result_points_rpc.sql` ausführen – **vor** dem Deploy der App-Version 1.26.2.
+    Legt die `security definer`-RPC `set_result_points(p_session_id, p_points jsonb)` an, über die
+    `recomputeSessionResults` die neu berechneten Punkte in **einem** Aufruf schreibt (nur `points`, nur
+    wo status/attempts/Grad noch dem mitgeschickten Stand entsprechen; Host-Check; gibt nicht
+    aktualisierte IDs zurück). Idempotent.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.
@@ -283,8 +288,34 @@ erzeugen.
 (Stammdaten + Teilnehmer + Boulder + Ergebnisse) und abonniert `postgres_changes` für
 `participants`/`boulders`/`results`/`sessions`. Bei jeder Änderung wird die betroffene Tabelle
 komplett neu geladen (bewusst einfach gehalten; ausreichend für Gruppengrößen). Mutationen rufen
-zusätzlich `refresh()` für sofortiges Feedback. Realtime ist in der Migration über
-`alter publication supabase_realtime` + `replica identity full` aktiviert.
+zusätzlich `refresh()` für sofortiges Feedback (sofort, ohne Debounce). Realtime ist in der Migration
+über `alter publication supabase_realtime` + `replica identity full` aktiviert. Robustheit (seit
+1.26.2): Realtime-Ereignisse einer Tabelle werden 150 ms gesammelt (höchstens 500 ms aufgeschoben);
+ein **Anfragezähler je Tabelle** verwirft Antworten, die von einer neueren Anfrage überholt wurden
+(auch Antworten einer zuvor angezeigten Session); bei jedem `SUBSCRIBED` (auch nach automatischem
+Rejoin), beim Zurückkehren in die App (`visibilitychange`), bei `online` und `pageshow` wird alles neu
+geladen (gedrosselt auf 2 s), weil Realtime verpasste Ereignisse nicht nachliefert. Fehler beim
+Nachladen im Hintergrund werden still verworfen – der Fehlerbildschirm gilt nur fürs erste Laden.
+
+**Punkte neu berechnen in einem Aufruf.** Ändert der Host die Punkteregeln, rechnet
+`recomputeSessionResults` (`api.ts`) die Punkte weiter client-seitig mit `computePoints`, schreibt sie
+aber über die RPC `set_result_points` (Migration `0022`) in **einer** Anweisung – nur die Spalte
+`points`, nur wo `status`/`attempts`/Grad noch dem verwendeten Stand entsprechen, und nur echte
+Änderungen (sonst setzte `trg_results_touch` `updated_at` neu und jede Zeile erzeugte ein
+Realtime-Ereignis). Übersprungene oder neu hinzugekommene Ergebnisse meldet die RPC zurück; dann wird
+einmal frisch geladen und erneut geschrieben. Früher lief das als Upsert je Ergebnis mit status/attempts
+aus dem React-State des Hosts – gleichzeitige Einträge anderer gingen dabei verloren, ein Netzabbruch
+hinterließ halb umgerechnete Punkte. Restrisiko: speichert ein anderes Gerät zeitgleich noch mit den
+**alten** Regeln, behält dieses Ergebnis im Einzelfall seine alten Punkte.
+
+**PWA-Update kontrolliert (`src/lib/pwaUpdate.ts`).** `registerType: 'prompt'` in `vite.config.ts`: ein
+neuer Service Worker wartet, bis die App ihn aktiviert. Das passiert beim nächsten Zurückkehren in die
+App (`visibilitychange` → sichtbar) – nicht mitten in der Bedienung und nicht, solange ein Dialog
+(`[role="dialog"]`) offen ist (Kamera-Upload macht die Seite kurz „hidden“). Jede Rückkehr prüft
+außerdem per `registration.update()`, ob es eine neue Version gibt. Vorher (`autoUpdate` ohne eigenen
+Code) lief das geöffnete Bundle weiter, eine neue Version kam erst beim übernächsten Öffnen an – riskant,
+sobald sich die Bedeutung gespeicherter Daten ändert. Darum: Migrationen, die die **Bedeutung** von
+Daten ändern, erst ausrollen, wenn die Vorversion einige Tage draußen ist.
 
 **Automatisches Aufräumen verwaister Sessions.** Da ohne Accounts nichts je gelöscht wird, räumt ein
 nächtlicher Cron alte Sessions weg. Die Logik steckt in der `security definer`-RPC

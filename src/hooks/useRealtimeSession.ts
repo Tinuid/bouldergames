@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { getSessionById, listBoulders, listParticipants, listResults } from '../lib/api'
 import type { Boulder, Participant, Result, Session } from '../types'
@@ -14,10 +14,31 @@ interface SessionData {
   refresh: () => void
 }
 
+type Table = 'session' | 'participants' | 'boulders' | 'results'
+const TABLES: Table[] = ['session', 'participants', 'boulders', 'results']
+
+// Realtime-Ereignisse einer Tabelle werden kurz gesammelt (z.B. erzeugt eine
+// Punkte-Neuberechnung viele Ereignisse auf einmal) – höchstens aber MAX_WAIT lang
+// aufgeschoben, damit Dauerfeuer das Nachladen nicht endlos verschiebt.
+const DEBOUNCE_MS = 150
+const MAX_WAIT_MS = 500
+// Nachladen beim Aufwachen/Reconnect höchstens so oft.
+const WAKE_THROTTLE_MS = 2000
+
 /**
  * Lädt eine komplette Session (Stammdaten + Teilnehmer + Boulder + Ergebnisse)
  * und hält sie via Supabase-Realtime aktuell. Bei jeder relevanten Änderung
  * werden die betroffenen Tabellen neu geladen (einfach & robust für MVP-Größen).
+ *
+ * Robustheit:
+ *  - Je Tabelle zählt ein Anfragezähler mit; kommt eine ältere Antwort nach einer
+ *    neueren an, wird sie verworfen (sonst überschriebe alter Stand den neuen).
+ *  - Antworten einer vorherigen Session (sessionId gewechselt) werden verworfen.
+ *  - Nach Bildschirm-aus / Tab-Wechsel, nach Netz-Rückkehr und nach jedem
+ *    (Re-)Subscribe des Realtime-Kanals wird alles neu geladen – verpasste
+ *    Ereignisse gibt es sonst nicht nachgeliefert.
+ *  - Nachladen im Hintergrund schluckt Fehler still: der Fehlerbildschirm ist nur
+ *    für das erste Laden gedacht.
  */
 export function useRealtimeSession(sessionId: string | undefined): SessionData {
   const [session, setSession] = useState<Session | null>(null)
@@ -27,83 +48,157 @@ export function useRealtimeSession(sessionId: string | undefined): SessionData {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notFound, setNotFound] = useState(false)
-  const [reloadKey, setReloadKey] = useState(0)
 
-  const refresh = useCallback(() => setReloadKey((k) => k + 1), [])
+  // Aktuell angezeigte Session – späte Antworten anderer Sessions werden verworfen.
+  const activeId = useRef<string | undefined>(sessionId)
+  activeId.current = sessionId
+  const seq = useRef<Record<Table, number>>({ session: 0, participants: 0, boulders: 0, results: 0 })
+  const lastFullLoad = useRef(0)
 
-  useEffect(() => {
-    if (!sessionId) return
-    let cancelled = false
-
-    async function loadAll() {
-      try {
-        const s = await getSessionById(sessionId!)
-        if (cancelled) return
-        if (!s) {
-          setNotFound(true)
-          setLoading(false)
-          return
+  // Eine Tabelle neu laden; verwirft die Antwort, wenn inzwischen eine neuere
+  // Anfrage für dieselbe Tabelle (oder eine andere Session) unterwegs ist.
+  const loadTable = useCallback(async (sid: string, table: Table) => {
+    const n = ++seq.current[table]
+    const fresh = () => activeId.current === sid && seq.current[table] === n
+    try {
+      switch (table) {
+        case 'session': {
+          const s = await getSessionById(sid)
+          if (fresh() && s) setSession(s)
+          break
         }
-        const [p, b, r] = await Promise.all([
-          listParticipants(sessionId!),
-          listBoulders(sessionId!),
-          listResults(sessionId!),
-        ])
-        if (cancelled) return
-        setSession(s)
-        setParticipants(p)
-        setBoulders(b)
-        setResults(r)
-        setLoading(false)
-      } catch (err) {
-        if (cancelled) return
-        setError(err instanceof Error ? err.message : 'Laden fehlgeschlagen.')
-        setLoading(false)
+        case 'participants': {
+          const p = await listParticipants(sid)
+          if (fresh()) setParticipants(p)
+          break
+        }
+        case 'boulders': {
+          const b = await listBoulders(sid)
+          if (fresh()) setBoulders(b)
+          break
+        }
+        case 'results': {
+          const r = await listResults(sid)
+          if (fresh()) setResults(r)
+          break
+        }
       }
+    } catch {
+      /* Hintergrund-Nachladen: beim nächsten Ereignis / Aufwachen wieder */
     }
+  }, [])
 
-    loadAll()
-    return () => {
-      cancelled = true
+  // Alles laden. `initial` = erstes Laden der Session (setzt loading/error/notFound).
+  const loadAll = useCallback(async (sid: string, initial: boolean) => {
+    lastFullLoad.current = Date.now()
+    // Alle vier Zähler erhöhen: eine noch laufende Einzel-Anfrage ist damit veraltet,
+    // und dieses Gesamt-Laden darf auch keine frischere Einzel-Antwort überschreiben.
+    const n = { ...seq.current }
+    for (const t of TABLES) n[t] = ++seq.current[t]
+    const fresh = (t: Table) => activeId.current === sid && seq.current[t] === n[t]
+    try {
+      const s = await getSessionById(sid)
+      if (activeId.current !== sid) return
+      if (!s) {
+        setNotFound(true)
+        setLoading(false)
+        return
+      }
+      const [p, b, r] = await Promise.all([
+        listParticipants(sid),
+        listBoulders(sid),
+        listResults(sid),
+      ])
+      if (fresh('session')) setSession(s)
+      if (fresh('participants')) setParticipants(p)
+      if (fresh('boulders')) setBoulders(b)
+      if (fresh('results')) setResults(r)
+      if (activeId.current === sid) setLoading(false)
+    } catch (err) {
+      if (!initial || activeId.current !== sid) return
+      setError(err instanceof Error ? err.message : 'Laden fehlgeschlagen.')
+      setLoading(false)
     }
-  }, [sessionId, reloadKey])
+  }, [])
 
-  // Realtime-Abos: bei Änderungen die jeweilige Tabelle neu laden.
+  // Nach eigenen Mutationen sofort (ohne Debounce/Drossel) neu laden.
+  const refresh = useCallback(() => {
+    if (activeId.current) void loadAll(activeId.current, false)
+  }, [loadAll])
+
+  // Erstes Laden.
   useEffect(() => {
     if (!sessionId) return
-    const filter = `session_id=eq.${sessionId}`
+    void loadAll(sessionId, true)
+  }, [sessionId, loadAll])
+
+  // Realtime-Abos + Nachladen beim Aufwachen.
+  useEffect(() => {
+    if (!sessionId) return
+    const sid = sessionId
+    const filter = `session_id=eq.${sid}`
+
+    // Debounce je Tabelle (mit Höchstwartezeit).
+    const pending = new Map<Table, { timer: ReturnType<typeof setTimeout>; firstAt: number }>()
+    function schedule(table: Table) {
+      const now = Date.now()
+      const prev = pending.get(table)
+      if (prev) clearTimeout(prev.timer)
+      const firstAt = prev?.firstAt ?? now
+      const delay = Math.max(0, Math.min(DEBOUNCE_MS, firstAt + MAX_WAIT_MS - now))
+      const timer = setTimeout(() => {
+        pending.delete(table)
+        void loadTable(sid, table)
+      }, delay)
+      pending.set(table, { timer, firstAt })
+    }
+
+    // Gedrosseltes Komplett-Nachladen (Aufwachen, Netz zurück, Re-Subscribe).
+    function wake() {
+      if (Date.now() - lastFullLoad.current < WAKE_THROTTLE_MS) return
+      void loadAll(sid, false)
+    }
 
     const channel = supabase
-      .channel(`session:${sessionId}`)
+      .channel(`session:${sid}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter }, () =>
-        listParticipants(sessionId)
-          .then(setParticipants)
-          .catch(() => {}),
+        schedule('participants'),
       )
       .on('postgres_changes', { event: '*', schema: 'public', table: 'boulders', filter }, () =>
-        listBoulders(sessionId)
-          .then(setBoulders)
-          .catch(() => {}),
+        schedule('boulders'),
       )
       .on('postgres_changes', { event: '*', schema: 'public', table: 'results', filter }, () =>
-        listResults(sessionId)
-          .then(setResults)
-          .catch(() => {}),
+        schedule('results'),
       )
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `id=eq.${sessionId}` },
-        () =>
-          getSessionById(sessionId)
-            .then((s) => s && setSession(s))
-            .catch(() => {}),
+        { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `id=eq.${sid}` },
+        () => schedule('session'),
       )
-      .subscribe()
+      // SUBSCRIBED kommt beim ersten Beitritt und nach jedem automatischen Rejoin –
+      // dazwischen verpasste Ereignisse werden nicht nachgeliefert, darum neu laden.
+      // Fehler-Status (CHANNEL_ERROR/TIMED_OUT) nicht selbst behandeln: realtime-js
+      // versucht den Beitritt von sich aus erneut.
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') wake()
+      })
+
+    function onVisible() {
+      if (document.visibilityState === 'visible') wake()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('online', wake)
+    window.addEventListener('pageshow', wake)
 
     return () => {
+      for (const p of pending.values()) clearTimeout(p.timer)
+      pending.clear()
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('online', wake)
+      window.removeEventListener('pageshow', wake)
       supabase.removeChannel(channel)
     }
-  }, [sessionId])
+  }, [sessionId, loadAll, loadTable])
 
   return { session, participants, boulders, results, loading, error, notFound, refresh }
 }

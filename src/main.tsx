@@ -17,6 +17,9 @@ import '@fontsource/hanken-grotesk/700.css'
 // (src/lib/mapStyle.ts). Nur der Latin-Schnitt – mehr Zeichen braucht die Karte nicht.
 import '@fontsource/caveat/latin-600.css'
 import './index.css'
+import { setupPwaUpdates } from './lib/pwaUpdate'
+
+setupPwaUpdates()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

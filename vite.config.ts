@@ -15,7 +15,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt': ein neuer Service Worker wartet, bis src/lib/pwaUpdate.ts ihn bei der
+      // nächsten Rückkehr in die App aktiviert und neu lädt (nicht mitten in der Bedienung).
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icon.svg'],
       manifest: {
         name: 'Boulder Challenges',
