@@ -6,6 +6,7 @@ import { useSvgPanZoom } from '../hooks/useSvgPanZoom'
 import { DEFAULT_GYM_SLUG } from '../lib/gyms'
 import { areaAt, areaLabel, LAGEPLAN_MAP_KEY, LAGEPLAN_VIEWBOX } from '../lib/areas'
 import { difficultyLabel } from '../lib/difficulty'
+import { isBoulderOfWeek } from '../lib/scoring'
 import {
   CROWDED_SHRINK,
   SEPARATE_MIN_ZOOM,
@@ -23,6 +24,7 @@ import {
   isWrongPasswordError,
   listBoulders,
   moveGymBoulder,
+  setGymBoulderFeatured,
   setGymBoulderRemoved,
   setGymTick,
   upsertGymBoulder,
@@ -227,6 +229,7 @@ export default function GymMap() {
           color: b.color,
           label: difficultyLabel(b.difficulty) ?? '?',
           tick,
+          featured: isBoulderOfWeek(b),
           dimmed: !matchesFilter(filter, b, tick),
           // Aus einer Challenge geöffnet: alles, was nicht dazugehört, tritt zurück.
           // Nur im Browse-Modus – beim Auswählen sucht man ja gerade die anderen.
@@ -236,6 +239,7 @@ export default function GymMap() {
             `Grad ${difficultyLabel(b.difficulty)}`,
             b.color,
             area,
+            isBoulderOfWeek(b) ? 'Boulder der Woche' : null,
             tick === 'done' ? 'erledigt' : tick === 'project' ? 'Projekt' : null,
           ]
             .filter(Boolean)
@@ -486,7 +490,7 @@ export default function GymMap() {
       if (values.image) imagePath = await uploadBoulderImage(values.image, userId)
       else if (values.removeImage) imagePath = null
 
-      await upsertGymBoulder({
+      const saved = await upsertGymBoulder({
         key: adminKey,
         id: target?.id ?? null,
         gymId: gym.id,
@@ -497,6 +501,14 @@ export default function GymMap() {
         color: values.color,
         imagePath,
       })
+
+      // Boulder der Woche: eigene RPC, die dem bisherigen der Halle die Markierung abnimmt.
+      // Angehakt wird immer gesetzt (idempotent, der Zeitstempel bleibt) – falls ihn in der
+      // Zwischenzeit ein anderer Boulder abgelöst hat; abgehakt nur, wenn er es vorher war.
+      const wasFeatured = target?.featured_at != null
+      if (values.featured || wasFeatured) {
+        await setGymBoulderFeatured({ key: adminKey, id: saved.id, featured: values.featured })
+      }
 
       // Ersetztes/entferntes Foto best-effort aufräumen (fremde Uploads darf die
       // Storage-Policy nicht löschen – das schluckt deleteBoulderImage).

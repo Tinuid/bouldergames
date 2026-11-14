@@ -141,6 +141,10 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
     Ersetzt die Rescale-Trigger-Funktion (Mapping Code 10 = Grad 8 → Faktor 8; ab jetzt die maßgebliche
     Fassung statt 0008) und erweitert `gym_boulders_difficulty_check` auf 1–10. Idempotent. **0008 und
     0015 danach nicht erneut ausführen** – sie setzten Funktion bzw. CHECK auf den Stand ohne Grad 8 zurück.
+22. `supabase/migrations/0020_boulder_of_week.sql` ausführen – **vor** dem Deploy der App-Version 1.25.0.
+    Legt `gym_boulders.featured_at` (+ partieller Unique-Index: höchstens einer pro Halle), die
+    Passwort-RPC `set_gym_boulder_featured` (Lageplan-Passwort wie 0016), `boulders.week_bonus` und den
+    Trigger `trg_boulder_week_bonus` an. Idempotent.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.
@@ -370,6 +374,22 @@ hervorgehoben, Ausschnitt eingepasst) und „+ Hinzufügen → Vom Lageplan" auf
 (startet direkt im Auswahlmodus und fügt ohne Zwischendialog in genau diese Challenge ein). Die
 Vorauswahl für eine **neue** Challenge reist bewusst im Router-State nach `/create` und nicht in der URL –
 sie ist flüchtig und muss einen Reload nicht überleben.
+
+**Boulder der Woche (Migration `0020`).** Hallenweit ist höchstens **ein** Karten-Boulder markiert
+(`gym_boulders.featured_at`, partieller Unique-Index je `gym_id`). Gesetzt wird im normalen
+Bearbeitungsmodus der Karte über den Schalter in `MapBoulderDialog` → `setGymBoulderFeatured`
+(`security definer`-RPC `set_gym_boulder_featured`, Lageplan-Passwort): sie sperrt die `gyms`-Zeile,
+nimmt dem bisherigen die Markierung ab und markiert den neuen – es gibt keine Laufzeit, er bleibt es,
+bis ein anderer markiert wird. Aktiv heißt markiert **und** nicht abgeschraubt (`isBoulderOfWeek` in
+`scoring.ts`); die Karte zeigt ihn mit Stern (`MapDot`) und Badge (`BoulderMapSheet`). In Challenges
+wirkt er als **Schnappschuss**, nicht als Spiegel: der `before insert or update`-Trigger
+`trg_boulder_week_bonus` setzt `boulders.week_bonus` beim Übernehmen serverseitig (der Client schickt
+nichts mit, `addBouldersFromGym` bleibt unverändert) und hält ihn danach unveränderlich. Ein späterer
+Wechsel auf der Karte ändert also keine laufende oder alte Challenge – verdiente Punkte bleiben.
+`computePoints(…, weekBonus)` verdoppelt das **ganze** Ergebnis (auch Minuspunkte, beide Spielmodi) als
+letzten Schritt; `weekBonus` muss darum überall neben `difficulty` mitlaufen (`upsertResult`,
+`recomputeSessionResults`, `ResultEditor`-Vorschau). Der Rescale-Trigger braucht keine Anpassung: er
+skaliert über `old_f/new_f`, der Faktor 2 kürzt sich heraus.
 
 **Erfolge aus der Challenge setzen die Karten-Marke.** Ein `flash`/`top` auf einem übernommenen
 Boulder markiert ihn auf der Karte als „erledigt“ (`gym_ticks.state = 'done'`). Das läuft bewusst

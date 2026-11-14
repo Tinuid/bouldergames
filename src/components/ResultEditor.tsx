@@ -32,6 +32,7 @@ export default function ResultEditor({
   result,
   scoring,
   difficulty = null,
+  weekBonus = false,
   onSave,
   label,
   compact = false,
@@ -40,6 +41,8 @@ export default function ResultEditor({
   scoring: ScoringConfig
   // Schwierigkeitsgrad des Boulders – im Multiplikator-Modus der Punkte-Faktor.
   difficulty?: number | null
+  // Boulder der Woche ⇒ die Punkte-Vorschau zählt doppelt (wie beim Speichern).
+  weekBonus?: boolean
   onSave: (status: ResultStatus, attempts: number) => void
   // Kompakte Variante für Fremd-Zeilen (Ergebnis für andere eintragen): Name links,
   // platzsparende Icon-Buttons rechts, ohne Punkte-Vorschau.
@@ -91,7 +94,7 @@ export default function ResultEditor({
     else apply('fail', misses - 1)
   }
 
-  const preview = computePoints(status, attempts, scoring, difficulty)
+  const preview = computePoints(status, attempts, scoring, difficulty, weekBonus)
   // Kosten Fehlversuche keine Punkte, gibt es nichts zu zählen – dann fällt der Knopf weg.
   const showCounter = scoring.attemptCost > 0
   // Ein Top braucht seinen einen Fehlversuch; darunter geht der Zähler nicht.

@@ -21,6 +21,21 @@ export function Bolt(p: IconProps) {
   )
 }
 
+// Gefüllter Stern – Kennzeichen des Boulders der Woche.
+export function Star(p: IconProps) {
+  return (
+    <svg {...base} {...p}>
+      <path
+        d="m12 2.8 2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3-4.6-4.4 6.3-.9L12 2.8Z"
+        fill="currentColor"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 export function Check(p: IconProps) {
   return (
     <svg {...base} {...p}>

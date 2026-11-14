@@ -6,7 +6,7 @@ import MiniMap from './lageplan/MiniMap'
 import { colorSwatch } from '../lib/colors'
 import { difficultyLabel } from '../lib/difficulty'
 import type { Boulder, Participant, Result, ResultStatus, ScoringConfig } from '../types'
-import { Edit } from './icons'
+import { Edit, Star } from './icons'
 
 export default function BoulderCard({
   boulder,
@@ -122,6 +122,12 @@ export default function BoulderCard({
                 {boulder.color}
               </span>
             )}
+            {boulder.week_bonus && (
+              <span className="mt-1 inline-flex items-center gap-1 rounded-md bg-accent-soft px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-accent">
+                <Star className="text-[11px]" />
+                Boulder der Woche ×2
+              </span>
+            )}
           </span>
         </button>
         <div className="flex shrink-0 items-center gap-2">
@@ -143,6 +149,7 @@ export default function BoulderCard({
         result={myResult}
         scoring={scoring}
         difficulty={boulder.difficulty}
+        weekBonus={boulder.week_bonus}
         onSave={onSaveResult}
       />
 
@@ -158,6 +165,7 @@ export default function BoulderCard({
               result={resultsByParticipant?.get(p.id)}
               scoring={scoring}
               difficulty={boulder.difficulty}
+              weekBonus={boulder.week_bonus}
               onSave={(status, attempts) => onSaveResultFor(p.id, status, attempts)}
             />
           ))}

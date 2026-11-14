@@ -4,7 +4,8 @@ import { colorSwatch } from '../../lib/colors'
 import { difficultyLabel } from '../../lib/difficulty'
 import { areaLabel } from '../../lib/areas'
 import ImageLightbox from '../ImageLightbox'
-import { Check, Crosshair, Edit, Flag, X } from '../icons'
+import { Check, Crosshair, Edit, Flag, Star, X } from '../icons'
+import { isBoulderOfWeek } from '../../lib/scoring'
 import type { GymBoulder, GymTickState } from '../../types'
 
 /**
@@ -75,6 +76,12 @@ export default function BoulderMapSheet({
                   {area ? ` · ${area}` : ''}
                 </span>
               </div>
+              {isBoulderOfWeek(boulder) && (
+                <span className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-accent-soft px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-accent">
+                  <Star className="text-[11px]" />
+                  Boulder der Woche · zählt ×2
+                </span>
+              )}
             </div>
 
             <button

@@ -203,9 +203,10 @@ export async function recomputeSessionResults(params: {
   boulders: Boulder[]
   scoring: ScoringConfig
 }): Promise<void> {
-  const difficultyByBoulder = new Map(params.boulders.map((b) => [b.id, b.difficulty]))
+  const boulderById = new Map(params.boulders.map((b) => [b.id, b]))
   for (const r of params.results) {
-    if (!difficultyByBoulder.has(r.boulder_id)) continue
+    const boulder = boulderById.get(r.boulder_id)
+    if (!boulder) continue
     await upsertResult({
       sessionId: params.sessionId,
       boulderId: r.boulder_id,
@@ -213,7 +214,8 @@ export async function recomputeSessionResults(params: {
       status: r.status,
       attempts: r.attempts,
       scoring: params.scoring,
-      difficulty: difficultyByBoulder.get(r.boulder_id) ?? null,
+      difficulty: boulder.difficulty,
+      weekBonus: boulder.week_bonus,
     })
   }
 }
@@ -381,9 +383,17 @@ export async function upsertResult(params: {
   scoring: ScoringConfig
   // Schwierigkeitsgrad des Boulders – im Multiplikator-Modus der Punkte-Faktor.
   difficulty: number | null
+  // Boulder der Woche (boulders.week_bonus) ⇒ Ergebnis zählt doppelt.
+  weekBonus: boolean
 }): Promise<Result> {
   const norm = normalizeResult(params.status, params.attempts)
-  const points = computePoints(norm.status, norm.attempts, params.scoring, params.difficulty)
+  const points = computePoints(
+    norm.status,
+    norm.attempts,
+    params.scoring,
+    params.difficulty,
+    params.weekBonus,
+  )
   const { data, error } = await supabase
     .from('results')
     .upsert(
@@ -537,6 +547,21 @@ export async function upsertGymBoulder(params: {
   return data as GymBoulder
 }
 
+// Boulder der Woche setzen (nimmt dem bisherigen der Halle die Markierung) oder entfernen.
+// Eigene schmale RPC wie moveGymBoulder, damit die generische Upsert unverändert bleibt.
+export async function setGymBoulderFeatured(params: {
+  key: string
+  id: string
+  featured: boolean
+}): Promise<void> {
+  const { error } = await supabase.rpc('set_gym_boulder_featured', {
+    p_key: params.key,
+    p_id: params.id,
+    p_featured: params.featured,
+  })
+  if (error) throw error
+}
+
 // Nur die Position ändern (Ergebnis des Verschiebens). Eigene schmale RPC, damit
 // ein Zug nicht alle Felder überschreibt.
 export async function moveGymBoulder(params: {
@@ -632,6 +657,9 @@ export async function listGymBouldersByIds(ids: string[]): Promise<GymBoulder[]>
  *
  * Grad und Farbe werden KOPIERT, image_path bleibt null – das Foto kommt in der
  * Anzeige über gym_boulder_id (siehe Kommentar an Boulder.gym_boulder_id).
+ *
+ * week_bonus wird bewusst NICHT mitgeschickt: der Trigger trg_boulder_week_bonus (0020)
+ * setzt ihn serverseitig, wenn der Karten-Boulder gerade Boulder der Woche ist.
  */
 export async function addBouldersFromGym(params: {
   sessionId: string

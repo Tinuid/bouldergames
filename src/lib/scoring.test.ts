@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computePoints, normalizeResult } from './scoring'
+import { computePoints, isBoulderOfWeek, normalizeResult } from './scoring'
 import { DEFAULT_SCORING } from '../types'
 
 // Standard-Strafmodus ist 'top_floor' (Top nie negativ).
@@ -101,6 +101,32 @@ describe('computePoints im Multiplikator-Modus (Grad × Ergebnis)', () => {
   // Grad 8 hat Code 10, weil Code 8 schon "?" ist.
   it('Flash auf Grad 8 (Code 10) = 30 × 8 = 240', () => {
     expect(computePoints('flash', 1, cfg, 10)).toBe(240)
+  })
+
+  it('Boulder der Woche im Multiplikator: Flash auf Grad 4 = 30 × 4 × 2 = 240', () => {
+    expect(computePoints('flash', 1, cfg, 4, true)).toBe(240)
+  })
+})
+
+describe('Boulder der Woche (×2)', () => {
+  const classic = { ...DEFAULT_SCORING, mode: 'classic' as const, penaltyMode: 'top_floor' as const }
+
+  it('verdoppelt einen Top im klassischen Modus: (25 − 5) × 2 = 40', () => {
+    expect(computePoints('top', 2, classic, null, true)).toBe(40)
+  })
+
+  it('verdoppelt auch Minuspunkte: Fail mit 3 Versuchen = −15 × 2 = −30', () => {
+    expect(computePoints('fail', 3, classic, null, true)).toBe(-30)
+  })
+
+  it('ohne Bonus unverändert', () => {
+    expect(computePoints('top', 2, classic, null, false)).toBe(20)
+  })
+
+  it('isBoulderOfWeek: nur markiert und nicht abgeschraubt', () => {
+    expect(isBoulderOfWeek({ featured_at: '2026-11-14', removed_at: null })).toBe(true)
+    expect(isBoulderOfWeek({ featured_at: null, removed_at: null })).toBe(false)
+    expect(isBoulderOfWeek({ featured_at: '2026-11-14', removed_at: '2026-11-15' })).toBe(false)
   })
 })
 

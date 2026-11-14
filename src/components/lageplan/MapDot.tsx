@@ -25,6 +25,10 @@ export function ColorDefs({ idPrefix }: { idPrefix: string }) {
   )
 }
 
+// Goldton des Boulder-der-Woche-Sterns: muss sich auf jeder Hallenfarbe und von den
+// Marken-Badges (ok/accent) abheben.
+const STAR_FILL = '#f2b705'
+
 interface Props {
   x: number
   y: number
@@ -34,6 +38,8 @@ interface Props {
   // Anzeige-Label des Grades ("1"…"7", "?", "!").
   label: string
   tick: GymTickState | null
+  // Boulder der Woche: Stern-Badge oben links (gegenüber dem Marken-Badge oben rechts).
+  featured?: boolean
   idPrefix: string
   selected?: boolean
   // Vom Filter ausgeschlossen: bleibt als Ortsmarke sichtbar, ist aber nicht
@@ -55,6 +61,7 @@ function MapDot({
   color,
   label,
   tick,
+  featured = false,
   idPrefix,
   selected = false,
   dimmed = false,
@@ -65,6 +72,7 @@ function MapDot({
   const badgeR = r * 0.46
   const badgeX = x + r * 0.78
   const badgeY = y - r * 0.78
+  const starX = x - r * 0.78
 
   return (
     <g opacity={dimmed ? 0.18 : faded ? 0.28 : 1} role="img" aria-label={ariaLabel}>
@@ -104,6 +112,20 @@ function MapDot({
         >
           {label}
         </text>
+      )}
+
+      {!dimmed && featured && (
+        // Stern aus icons.tsx (24×24) auf den Badge-Durchmesser skaliert, mit Rand in
+        // Papierfarbe wie der Marken-Badge.
+        <path
+          transform={`translate(${starX - badgeR * 1.15} ${badgeY - badgeR * 1.15}) scale(${(2.3 * badgeR) / 24})`}
+          d="m12 2.8 2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3-4.6-4.4 6.3-.9L12 2.8Z"
+          fill={STAR_FILL}
+          stroke="var(--bg)"
+          strokeWidth={2.2}
+          strokeLinejoin="round"
+          paintOrder="stroke fill"
+        />
       )}
 
       {!dimmed && tick && (

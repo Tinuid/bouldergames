@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.25.0',
+    date: '14.11.2026',
+    text: 'Neu: Boulder der Woche – auf der Hallenkarte mit einem Stern markiert. Wer ihn in eine Challenge übernimmt, bekommt dort doppelte Punkte, auch wenn später ein neuer Boulder der Woche gewählt wird. Auf Wunsch aus dem Feedback.',
+  },
+  {
     version: '1.24.0',
     date: '14.11.2026',
     text: 'Neuer Schwierigkeitsgrad 8 – auf Wunsch aus dem Feedback. Im Multiplikator-Modus zählt er 8-fach.',

@@ -15,6 +15,8 @@ export interface MapDotVM {
   // Anzeige-Label des Grades ("1"…"7", "?", "!").
   label: string
   tick: GymTickState | null
+  // Boulder der Woche – bekommt einen Stern.
+  featured?: boolean
   // Vom Filter ausgeschlossen.
   dimmed: boolean
   // Gehört nicht zur geöffneten Challenge – nur zurückgenommen dargestellt.
@@ -72,6 +74,7 @@ function MapDots({
           color={d.color}
           label={d.label}
           tick={d.tick}
+          featured={d.featured}
           dimmed={d.dimmed}
           faded={d.faded}
           selected={selectedIds.has(d.id)}

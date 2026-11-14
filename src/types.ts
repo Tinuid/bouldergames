@@ -76,6 +76,10 @@ export interface Boulder {
   // Objekt-Pfad im Storage-Bucket 'boulder-images' (nicht die volle URL), z.B.
   // "<user_id>/<uuid>.jpg". null = kein Bild. Siehe src/lib/images.ts.
   image_path: string | null
+  // Boulder der Woche (Migration 0020): true, wenn er übernommen wurde, während sein
+  // Karten-Boulder markiert war ⇒ zählt in dieser Challenge doppelt. Setzt nur der
+  // DB-Trigger beim Insert; danach unveränderlich (Schnappschuss, kein Spiegel).
+  week_bonus: boolean
   created_by: string
   created_at: string
 }
@@ -137,6 +141,9 @@ export interface GymBoulder {
   image_path: string | null
   // Gesetzt = abgeschraubt: nicht mehr auf der Karte, Marken bleiben.
   removed_at: string | null
+  // Gesetzt = Boulder der Woche (höchstens einer pro Halle, Migration 0020). Aktiv nur,
+  // solange er nicht abgeschraubt ist – siehe isBoulderOfWeek in src/lib/scoring.ts.
+  featured_at: string | null
   created_by: string | null
   created_at: string
   updated_at: string

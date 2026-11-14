@@ -332,22 +332,23 @@ export default function SessionView() {
   }
 
   async function handleSaveResult(
-    boulderId: string,
+    boulder: Boulder,
     participantId: string,
     status: ResultStatus,
     attempts: number,
-    difficulty: number | null,
   ) {
     if (!myParticipant) return
     try {
       await upsertResult({
         sessionId: session!.id,
-        boulderId,
+        boulderId: boulder.id,
         participantId,
         status,
         attempts,
         scoring,
-        difficulty,
+        // Im Multiplikator-Modus der Punkte-Faktor; Boulder der Woche zählt doppelt.
+        difficulty: boulder.difficulty,
+        weekBonus: boulder.week_bonus,
       })
       refresh()
     } catch (err) {
@@ -669,7 +670,7 @@ export default function SessionView() {
               myResult={mine.get(b.id)}
               scoring={scoring}
               onSaveResult={(status, attempts) =>
-                handleSaveResult(b.id, myParticipant.id, status, attempts, b.difficulty)
+                handleSaveResult(b, myParticipant.id, status, attempts)
               }
               onEdit={() => openEditBoulder(b)}
               onOpenRanking={() => setRankingBoulder(b)}
@@ -679,7 +680,7 @@ export default function SessionView() {
               myParticipantId={myParticipant.id}
               showOthers={showOthers}
               onSaveResultFor={(participantId, status, attempts) =>
-                handleSaveResult(b.id, participantId, status, attempts, b.difficulty)
+                handleSaveResult(b, participantId, status, attempts)
               }
             />
           )

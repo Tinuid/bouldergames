@@ -11,6 +11,7 @@ function boulder(id: string, seq: number, gymBoulderId: string | null): Boulder 
     difficulty: 4,
     color: 'gruen',
     image_path: null,
+    week_bonus: false,
     created_by: 'u1',
     created_at: '2026-08-30T10:00:00Z',
   }

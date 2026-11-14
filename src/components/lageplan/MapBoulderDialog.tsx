@@ -4,6 +4,7 @@ import { HALL_AREAS, areaLabel } from '../../lib/areas'
 import { useDialogEscape } from '../../hooks/useDialogEscape'
 import { ColorPicker, DifficultyPicker, PhotoField } from '../BoulderPickers'
 import type { GymBoulder } from '../../types'
+import { Star } from '../icons'
 
 export interface MapBoulderFormValues {
   difficulty: number
@@ -11,6 +12,8 @@ export interface MapBoulderFormValues {
   area: string | null
   image: File | null
   removeImage: boolean
+  // Boulder der Woche – höchstens einer pro Halle; Setzen nimmt dem bisherigen die Markierung.
+  featured: boolean
 }
 
 /**
@@ -50,6 +53,7 @@ export default function MapBoulderDialog({
   const [area, setArea] = useState<string | null>(null)
   const [image, setImage] = useState<File | null>(null)
   const [removeImage, setRemoveImage] = useState(false)
+  const [featured, setFeatured] = useState(false)
   const [saving, setSaving] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -62,6 +66,7 @@ export default function MapBoulderDialog({
     setArea(boulder?.area ?? suggestedArea)
     setImage(null)
     setRemoveImage(false)
+    setFeatured(boulder?.featured_at != null)
     setError(null)
     setResetKey((k) => k + 1)
     // Nur beim Öffnen bzw. Boulder-Wechsel vorbelegen – sonst überschriebe eine
@@ -96,6 +101,7 @@ export default function MapBoulderDialog({
         area,
         image,
         removeImage,
+        featured,
       })
       onClose()
     } catch (err) {
@@ -137,6 +143,20 @@ export default function MapBoulderDialog({
           Schwierigkeit <span className="font-medium text-faint">(Pflicht)</span>
         </div>
         <DifficultyPicker value={difficulty} onChange={setDifficulty} required />
+
+        <button
+          type="button"
+          aria-pressed={featured}
+          onClick={() => setFeatured((f) => !f)}
+          className={`chip mt-3 w-full flex-row items-center justify-center gap-2 py-2.5 text-[13px] font-semibold${featured ? ' is-active' : ''}`}
+        >
+          <Star className="text-[15px]" />
+          Boulder der Woche
+        </button>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
+          Zählt doppelt in jeder Challenge, die ihn übernimmt, solange er markiert ist. Es gibt nur
+          einen – wer einen neuen markiert, nimmt dem bisherigen die Markierung.
+        </p>
 
         <div className="mb-[11px] mt-[18px] font-display text-[13px] font-semibold text-muted">
           Farbe

@@ -27,12 +27,18 @@ import { difficultyFactor } from './difficulty'
  * mit dem Schwierigkeits-Faktor multipliziert (fehlender Grad = Faktor 1). `difficulty`
  * ist der gespeicherte Code; das Code→Faktor-Mapping liegt in difficulty.ts (Grade 1–7
  * = sich selbst, Grad 8 = Code 10, Sonderstufen "?"=4 / "!"=6).
+ *
+ * `weekBonus` (Boulder der Woche, `boulders.week_bonus`) verdoppelt zum Schluss das
+ * GANZE Ergebnis – in beiden Spielmodi und bewusst auch Minuspunkte, analog zum
+ * Grad-Faktor. Der Server-Rescale (0019) bleibt dadurch korrekt: er skaliert über das
+ * Verhältnis alter/neuer Grad-Faktor, der Bonus-Faktor kürzt sich heraus.
  */
 export function computePoints(
   status: ResultStatus,
   attempts: number,
   config: ScoringConfig,
   difficulty: number | null = null,
+  weekBonus = false,
 ): number {
   const tries = Math.max(0, attempts)
   const failed = Math.max(0, tries - 1)
@@ -62,9 +68,17 @@ export function computePoints(
   if (config.mode === 'multiplier') {
     // `difficulty` ist der gespeicherte Code; der Faktor kommt aus difficulty.ts
     // (Grade 1–7 = sich selbst, Grad 8 = Code 10, Sonderstufen "?"=4 / "!"=6, fehlend = 1).
-    return base * difficultyFactor(difficulty)
+    base = base * difficultyFactor(difficulty)
   }
-  return base
+  return weekBonus ? base * WEEK_BONUS_FACTOR : base
+}
+
+// Punkte-Faktor des Boulders der Woche.
+export const WEEK_BONUS_FACTOR = 2
+
+/** Ob ein Karten-Boulder gerade Boulder der Woche ist (markiert und nicht abgeschraubt). */
+export function isBoulderOfWeek(b: { featured_at: string | null; removed_at: string | null }) {
+  return b.featured_at != null && b.removed_at == null
 }
 
 /**
