@@ -26,7 +26,7 @@ import { difficultyFactor } from './difficulty'
  * Im Multiplikator-Modus (`mode === 'multiplier'`) wird das (ggf. gedeckelte) Ergebnis
  * mit dem Schwierigkeits-Faktor multipliziert (fehlender Grad = Faktor 1). `difficulty`
  * ist der gespeicherte Code; das Code→Faktor-Mapping liegt in difficulty.ts (Grade 1–7
- * = sich selbst, Sonderstufen "?"=4 / "!"=6).
+ * = sich selbst, Grad 8 = Code 10, Sonderstufen "?"=4 / "!"=6).
  */
 export function computePoints(
   status: ResultStatus,
@@ -61,7 +61,7 @@ export function computePoints(
 
   if (config.mode === 'multiplier') {
     // `difficulty` ist der gespeicherte Code; der Faktor kommt aus difficulty.ts
-    // (Grade 1–7 = sich selbst, Sonderstufen "?"=4 / "!"=6, fehlend = 1).
+    // (Grade 1–7 = sich selbst, Grad 8 = Code 10, Sonderstufen "?"=4 / "!"=6, fehlend = 1).
     return base * difficultyFactor(difficulty)
   }
   return base

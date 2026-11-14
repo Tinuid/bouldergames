@@ -5,10 +5,14 @@
 // Markierungen und bekommen darum einen eigenen Code (8 / 9), der NICHT mit 1–7
 // kollidiert – nur so bleiben sie überall als "?"/"!" erkennbar statt als Grad 4/6.
 // Ihr Wertungs-Faktor (Multiplikator-Modus) ist davon entkoppelt: "?" zählt 4, "!" 6.
+// Grad 8 kam später dazu; Code 8 war da schon "?", darum hat er den Code 10 (Faktor 8).
+//
+// Die Reihenfolge der Liste ist die Anzeige-Reihenfolge (Picker, Filter) – nicht die der Codes.
 //
 // Neue Stufen NUR hier ergänzen. Wer den Faktor serverseitig braucht (Rescale-Trigger
 // bei nachträglicher Grad-Änderung), muss das Mapping in der SQL-Migration spiegeln –
-// siehe supabase/migrations/0008_difficulty_special_grades.sql.
+// siehe supabase/migrations/0019_grade_8.sql (aktuelle Fassung des Triggers) – und den
+// CHECK auf gym_boulders.difficulty erweitern.
 
 export interface DifficultyOption {
   // In boulders.difficulty gespeicherter Wert.
@@ -27,6 +31,7 @@ export const DIFFICULTIES: DifficultyOption[] = [
   { code: 5, label: '5', factor: 5 },
   { code: 6, label: '6', factor: 6 },
   { code: 7, label: '7', factor: 7 },
+  { code: 10, label: '8', factor: 8 },
   { code: 8, label: '?', factor: 4 },
   { code: 9, label: '!', factor: 6 },
 ]

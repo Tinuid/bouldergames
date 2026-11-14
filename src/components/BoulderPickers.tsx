@@ -24,7 +24,7 @@ export function DifficultyPicker({
 }) {
   return (
     <>
-      {/* 9 Stufen (1–7 plus "?"/"!") in zwei zentrierten Reihen: oben 5, unten 4. */}
+      {/* 10 Stufen (1–8 plus "?"/"!") in zwei zentrierten Reihen à 5. */}
       {[DIFFICULTIES.slice(0, 5), DIFFICULTIES.slice(5)].map((row, rowIndex) => (
         <div key={rowIndex} className={`flex justify-center gap-2${rowIndex > 0 ? ' mt-2' : ''}`}>
           {row.map((d) => {

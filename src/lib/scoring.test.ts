@@ -97,6 +97,11 @@ describe('computePoints im Multiplikator-Modus (Grad × Ergebnis)', () => {
   it('Flash auf "!" (Code 9) = 30 × 6 = 180', () => {
     expect(computePoints('flash', 1, cfg, 9)).toBe(180)
   })
+
+  // Grad 8 hat Code 10, weil Code 8 schon "?" ist.
+  it('Flash auf Grad 8 (Code 10) = 30 × 8 = 240', () => {
+    expect(computePoints('flash', 1, cfg, 10)).toBe(240)
+  })
 })
 
 describe('normalizeResult', () => {

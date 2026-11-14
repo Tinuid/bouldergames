@@ -69,7 +69,7 @@ export interface Boulder {
   // weil es keine Wertung beeinflusst – und weil ein geteilter image_path vom
   // nächtlichen Aufräumen mitgelöscht würde.
   gym_boulder_id: string | null
-  // Schwierigkeits-Code (siehe src/lib/difficulty.ts): 1–7 = Grad, 8 = "?", 9 = "!".
+  // Schwierigkeits-Code (siehe src/lib/difficulty.ts): 1–7 = Grad, 8 = "?", 9 = "!", 10 = Grad 8.
   // null = ohne Grad. Anzeige via difficultyLabel, Wertungs-Faktor via difficultyFactor.
   difficulty: number | null
   color: string | null
@@ -127,7 +127,7 @@ export interface GymBoulder {
   // Bereichs-Id aus src/lib/areas.ts, beim Setzen aus x/y vorbelegt und danach
   // gespeichert. null = außerhalb aller Flächen.
   area: string | null
-  // Code wie boulders.difficulty: 1–7 = Grad, 8 = "?", 9 = "!".
+  // Code wie boulders.difficulty: 1–7 = Grad, 8 = "?", 9 = "!", 10 = Grad 8.
   difficulty: number
   // Farbname aus src/lib/colors.ts.
   color: string

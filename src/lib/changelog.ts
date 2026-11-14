@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.24.0',
+    date: '14.11.2026',
+    text: 'Neuer Schwierigkeitsgrad 8 – auf Wunsch aus dem Feedback. Im Multiplikator-Modus zählt er 8-fach.',
+  },
+  {
     version: '1.23.2',
     date: '14.11.2026',
     text: 'Kosten Fehlversuche in einer Challenge keine Punkte, zeigen Spieler-Vergleich und Boulder-Rangliste keine Versuchsanzahl mehr an – vorher stand dort bei jedem Top „2 Versuche“. Danke an Philipp fürs Feedback!',
