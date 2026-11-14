@@ -190,7 +190,8 @@ export default function SessionSettingsFields({
             )}
             {!scoresTop && !usesMisses && (
               <p className="mt-1 text-[12.5px] leading-relaxed text-muted">
-                Top und nicht geschaffte Boulder zählen 0 – Minuspunkte gibt es keine.
+                Ein Versuch pro Boulder. Wer nicht flasht, drückt 🪂 Nope – das zählt 0,
+                Minuspunkte gibt es keine.
               </p>
             )}
           </div>

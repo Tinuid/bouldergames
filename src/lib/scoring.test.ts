@@ -1,6 +1,33 @@
 import { describe, it, expect } from 'vitest'
-import { computePoints, countsAttempts, isBoulderOfWeek, normalizeResult } from './scoring'
+import {
+  computePoints,
+  countsAttempts,
+  isBoulderOfWeek,
+  isResultDone,
+  normalizeResult,
+} from './scoring'
 import { DEFAULT_SCORING } from '../types'
+
+describe('isResultDone – Filter „erledigte ausblenden“', () => {
+  const standard = { gameMode: 'standard' as const }
+  const flashOnly = { gameMode: 'flash_only' as const }
+
+  it('Standard: nur Flash und Top sind erledigt, ein Fail nicht', () => {
+    expect(isResultDone('flash', standard)).toBe(true)
+    expect(isResultDone('top', standard)).toBe(true)
+    expect(isResultDone('fail', standard)).toBe(false)
+    expect(isResultDone('open', standard)).toBe(false)
+    expect(isResultDone(undefined, standard)).toBe(false)
+  })
+
+  it('Nur Flash: jedes eingetragene Ergebnis ist erledigt, auch ein Nope', () => {
+    expect(isResultDone('flash', flashOnly)).toBe(true)
+    expect(isResultDone('fail', flashOnly)).toBe(true)
+    expect(isResultDone('top', flashOnly)).toBe(true)
+    expect(isResultDone('open', flashOnly)).toBe(false)
+    expect(isResultDone(undefined, flashOnly)).toBe(false)
+  })
+})
 
 // Standard-Strafmodus ist 'top_floor' (Top nie negativ).
 describe('computePoints – top_floor (Default 30 / 25 / 5)', () => {

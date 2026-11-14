@@ -100,6 +100,20 @@ export function countsAttempts(config: ScoringConfig): boolean {
   return gameModeInfo(config.gameMode).usesMisses && config.attemptCost > 0
 }
 
+/**
+ * Ist der Boulder für diese Person erledigt (Filter „erledigte ausblenden“)? Normal nur nach
+ * Flash oder Top – ein Fail lässt sich noch zum Top machen. Bei einem Versuch pro Boulder
+ * (`singleAttempt`, „Nur Flash“) ist dagegen jedes eingetragene Ergebnis endgültig.
+ */
+export function isResultDone(
+  status: ResultStatus | undefined,
+  config: Pick<ScoringConfig, 'gameMode'>,
+): boolean {
+  if (status == null || status === 'open') return false
+  if (gameModeInfo(config.gameMode).singleAttempt) return true
+  return status === 'flash' || status === 'top'
+}
+
 // Punkte-Faktor des Boulders der Woche.
 export const WEEK_BONUS_FACTOR = 2
 

@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.30.0',
+    date: '14.11.2026',
+    text: 'Nur Flash: ein Versuch pro Boulder. Rechts ein großer Flash-Knopf, links 🪂 Nope für „nicht geflasht“ – den Top-Knopf gibt es dort nicht mehr. Ein Nope zählt als erledigt und verschwindet mit „erledigte ausblenden“.',
+  },
+  {
     version: '1.29.0',
     date: '14.11.2026',
     text: 'Unter der Haube: Grade werden jetzt so gespeichert, wie sie heißen (Grad 8 ist 8), mit Platz für künftige Grade 9 und 10. Punkte bleiben gleich. Ein gespeicherter Filter auf der Hallenkarte wird dabei einmal zurückgesetzt.',

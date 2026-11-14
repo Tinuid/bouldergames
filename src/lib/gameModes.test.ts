@@ -15,6 +15,11 @@ describe('Modus-Katalog', () => {
     expect(gameModeInfo('flash_only')).toMatchObject({ scoresTop: false, usesMisses: false })
   })
 
+  it('Nur Flash hat genau einen Versuch pro Boulder, Standard nicht', () => {
+    expect(gameModeInfo('standard').singleAttempt).toBe(false)
+    expect(gameModeInfo('flash_only').singleAttempt).toBe(true)
+  })
+
   it('unbekannte oder fehlende Werte fallen auf Standard zurück', () => {
     expect(gameModeInfo(undefined).value).toBe('standard')
     expect(isDefaultGameMode(undefined)).toBe(true)

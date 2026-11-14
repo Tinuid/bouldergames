@@ -225,7 +225,8 @@ werden.
 heute nur „frei“, kein DB-Feld), **Modus** (`sessions.game_mode`, `ScoringConfig.gameMode`: wie Punkte
 entstehen) und **Extras** (mit jedem Modus kombinierbar, nie vorbelegt). Nicht zu verwechseln mit der
 **Wertung** (Klassisch/Multiplikator). Der Katalog `src/lib/gameModes.ts` ist die einzige Quelle für
-Texte, Reihenfolge und **Eigenschaften** jedes Modus: `scoresTop`, `usesMisses`, `requiresDifficulty`.
+Texte, Reihenfolge und **Eigenschaften** jedes Modus: `scoresTop`, `usesMisses`, `singleAttempt`,
+`requiresDifficulty`.
 Einstellungen (`SessionSettingsFields`), Eingabe (`ResultEditor`), Session-Kopf, Grad-Pflicht und
 `countsAttempts` fragen **nur diese Eigenschaften** ab – keine Abfragen auf einzelne Modus-Werte
 verstreuen. Angekündigte Einträge stehen in `UPCOMING_MODES`, `UPCOMING_FORMS` und `UPCOMING_EXTRAS`
@@ -234,6 +235,12 @@ verstreuen. Angekündigte Einträge stehen in `UPCOMING_MODES`, `UPCOMING_FORMS`
 Migration für den CHECK auf `game_mode` und seine Wertungsregel (`computePoints` bzw. `scoreSession`).
 `'flash_only'` („Nur Flash“): in `computePoints` bringt nur ein Flash die Flash-Punkte,
 alles andere 0 – Versuchskosten und Strafmodus wirken nicht, ×Grad und Boulder der Woche schon.
+Seit 1.30.0 mit `singleAttempt`: **ein Versuch pro Boulder**. Der `ResultEditor` zeigt statt Flash/Top
+links schmal **🪂 „Nope“** und rechts breit **Flash** (3:1); Nope speichert `fail` mit 1 Versuch, ein
+altes `top`/`fail` aus der Zeit vor dem Moduswechsel erscheint als Nope. Was als „erledigt“ gilt (Filter
+„erledigte ausblenden“), entscheidet `isResultDone(status, config)` in `scoring.ts` – hier jedes
+Ergebnis ≠ `open`, sonst nur Flash/Top. Wechselt der Host danach auf Standard, kostet ein Nope einmal
+`attemptCost` wie ein Fehlversuch.
 `countsAttempts(config)` entscheidet, ob das UI Versuchszähler und -anzahlen zeigt – statt
 `attemptCost > 0` direkt abzufragen. Die Moduswahl ist **Schritt 1** von `/create` (`GameModePicker`);
 Schritt 2 liegt unter `/create?modus=<wert>` – bewusst in der URL, damit der Zurück-Button zur

@@ -25,7 +25,7 @@ import { GAME_MODE_ICONS } from '../components/gameModeIcons'
 import { deleteBoulderImage, uploadBoulderImage } from '../lib/images'
 import { forgetSession, rememberSession } from '../lib/localHistory'
 import { DIFFICULTIES } from '../lib/difficulty'
-import { countsAttempts } from '../lib/scoring'
+import { countsAttempts, isResultDone } from '../lib/scoring'
 import { BOULDER_COLORS, colorSwatch } from '../lib/colors'
 import {
   scoringFromSession,
@@ -248,18 +248,19 @@ export default function SessionView() {
   }, [filterColor, availableColors])
 
   // Sichtbare Boulder nach Grad-/Farb-Auswahl und Filter "erledigte ausblenden".
-  // "Erledigt" = eigenes Ergebnis ist flash/top (ein Fail gilt nicht als erledigt).
+  // "Erledigt" entscheidet isResultDone: normal Flash/Top, bei einem Versuch pro Boulder
+  // („Nur Flash“) auch ein Nope.
+  const gameModeValue = session?.game_mode ?? 'standard'
   const visibleBoulders = useMemo(() => {
     return boulders.filter((b) => {
-      if (hideDone) {
-        const status = mine.get(b.id)?.status
-        if (status === 'flash' || status === 'top') return false
+      if (hideDone && isResultDone(mine.get(b.id)?.status, { gameMode: gameModeValue })) {
+        return false
       }
       if (filterDifficulty != null && b.difficulty !== filterDifficulty) return false
       if (filterColor != null && b.color !== filterColor) return false
       return true
     })
-  }, [boulders, filterDifficulty, filterColor, hideDone, mine])
+  }, [boulders, filterDifficulty, filterColor, hideDone, mine, gameModeValue])
   const filtering = filterDifficulty != null || filterColor != null || hideDone
   const resetFilters = useCallback(() => {
     setFilterDifficulty(null)
@@ -643,6 +644,8 @@ export default function SessionView() {
             <Check className="text-[14px] text-ok" />
             {scoring.topPoints} Top
           </span>
+        ) : gameMode.singleAttempt ? (
+          <span>1 Versuch pro Boulder</span>
         ) : (
           <span>Top zählt 0</span>
         )}

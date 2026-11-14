@@ -24,9 +24,13 @@ export interface GameModeInfo {
   subtitle: string
   // Ein, zwei Sätze Erklärung
   description: string
-  // Bringt ein Top (nach Fehlversuchen) Punkte? Sonst blenden Einstellungen „Punkte für
-  // Top“ aus und die Eingabe zeigt „zählt nur Flash“.
+  // Bringt ein Top (nach Fehlversuchen) Punkte? Sonst blenden die Einstellungen „Punkte für
+  // Top“ aus.
   scoresTop: boolean
+  // Ein Versuch pro Boulder: Die Eingabe bietet nur Flash oder „Nope“ (gespeichert als
+  // `fail` mit 1 Versuch), einen Top-Knopf gibt es nicht. Jedes Ergebnis ≠ offen gilt als
+  // erledigt (isResultDone in scoring.ts).
+  singleAttempt: boolean
   // Wirken Fehlversuche (Kosten pro Fehlversuch, Strafmodus)? Sonst entfallen diese
   // Einstellungen und der Versuchszähler (countsAttempts).
   usesMisses: boolean
@@ -43,16 +47,18 @@ export const GAME_MODES: GameModeInfo[] = [
     description: 'Flash und Top bringen Punkte, Fehlversuche kosten – wie du es einstellst.',
     scoresTop: true,
     usesMisses: true,
+    singleAttempt: false,
     requiresDifficulty: false,
   },
   {
     value: 'flash_only',
     title: 'Nur Flash',
-    subtitle: 'Top zählt nichts',
+    subtitle: 'Ein Versuch pro Boulder',
     description:
-      'Nur ein Flash bringt Punkte. Ein Top nach Fehlversuchen oder ein nicht geschaffter Boulder zählt 0 – Minuspunkte gibt es keine.',
+      'Ein Versuch pro Boulder: Ein Flash bringt Punkte, danach ist der Boulder durch. Minuspunkte gibt es keine.',
     scoresTop: false,
     usesMisses: false,
+    singleAttempt: true,
     requiresDifficulty: false,
   },
 ]

@@ -144,7 +144,11 @@ Bausteine, die schon stehen.
 ### Nur Flash – ✅ gebaut in 1.26.0
 „Flash oder nichts“. Ein Flash bringt die Flash-Punkte, alles andere bringt 0, ohne Minuspunkte.
 Versuchskosten und Strafmodus sind ausgeblendet, ×Grad und Boulder der Woche wirken weiter. Der
-Top-Knopf bleibt für die Statistik („zählt nur Flash“), der Versuchszähler entfällt (`countsAttempts`).
+Versuchszähler entfällt (`countsAttempts`). Bis 1.29 blieb der Top-Knopf für die Statistik.
+
+**Überarbeitet in 1.30.0 – ein Versuch pro Boulder** (Eigenschaft `singleAttempt`): Statt Top gibt es
+links schmal **🪂 „Nope“** (speichert `fail` mit 1 Versuch, 0 Punkte), rechts breit und höher **Flash**
+(3:1, Rechtshänder tippen öfter Flash). Ein Nope gilt als erledigt (`isResultDone`). Keine Migration.
 
 ### Time Attack – Punkte gegen die Uhr (M) · [A] [C]
 - **Spielidee:** Alle haben dasselbe Zeitfenster, z.B. 60 Minuten. Wer darin die meisten Punkte holt,
