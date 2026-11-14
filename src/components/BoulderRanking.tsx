@@ -53,12 +53,15 @@ export default function BoulderRanking({
   participants,
   resultsByParticipant,
   currentUserId,
+  showAttempts,
   onClose,
 }: {
   boulder: Boulder
   participants: Participant[]
   resultsByParticipant: Map<string, Result> | undefined
   currentUserId: string | null
+  // Versuchsanzahl nur zeigen, wenn Fehlversuche Punkte kosten (sonst zählt niemand mit).
+  showAttempts: boolean
   onClose: () => void
 }) {
   // Escape schließt, Body-Scroll währenddessen sperren (wie ImageLightbox).
@@ -168,7 +171,9 @@ export default function BoulderRanking({
                   {r ? (
                     <div className="mt-0.5 flex items-center gap-1.5 text-[12px] text-muted">
                       <StatusBadge status={r.status as Exclude<ResultStatus, 'open'>} />
-                      {r.status !== 'flash' && r.attempts > 1 && <span>{r.attempts} Versuche</span>}
+                      {showAttempts && r.status !== 'flash' && r.attempts > 1 && (
+                        <span>{r.attempts} Versuche</span>
+                      )}
                     </div>
                   ) : (
                     <div className="mt-0.5 text-[12px] text-faint">noch nicht versucht</div>

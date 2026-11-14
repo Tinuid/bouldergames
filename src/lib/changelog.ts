@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.23.2',
+    date: '14.11.2026',
+    text: 'Kosten Fehlversuche in einer Challenge keine Punkte, zeigen Spieler-Vergleich und Boulder-Rangliste keine Versuchsanzahl mehr an – vorher stand dort bei jedem Top „2 Versuche“. Danke an Philipp fürs Feedback!',
+  },
+  {
     version: '1.23.1',
     date: '14.11.2026',
     text: 'Der versteckte Diagnose-Modus ist wieder ausgebaut – das Bildschirm-Flackern nach dem Fotografieren ist behoben. Für dich ändert sich nichts.',

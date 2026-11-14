@@ -833,6 +833,7 @@ export default function SessionView() {
           participants={orderedParticipants}
           resultsByParticipant={byBoulderParticipant.get(rankingBoulder.id)}
           currentUserId={userId}
+          showAttempts={scoring.attemptCost > 0}
           onClose={() => setRankingBoulder(null)}
         />
       )}

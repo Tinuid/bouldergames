@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { useAuth } from '../hooks/useAuth'
 import { useRealtimeSession } from '../hooks/useRealtimeSession'
 import { computeLeaderboardRows, summarizeLeaderboard } from '../lib/leaderboard'
-import type { Participant } from '../types'
+import { scoringFromSession, type Participant } from '../types'
 import { ChevronLeft } from '../components/icons'
 import Leaderboard from '../components/Leaderboard'
 import RankMedal from '../components/RankMedal'
@@ -146,6 +146,7 @@ export default function SessionLeaderboard() {
           meParticipant={myParticipant}
           boulders={boulders}
           results={results}
+          showAttempts={scoringFromSession(session).attemptCost > 0}
           onClose={closePlayer}
           onSelectBoulder={goToBoulder}
         />

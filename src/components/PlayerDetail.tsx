@@ -67,7 +67,15 @@ function BoulderTag({ boulder }: { boulder: Boulder }) {
 
 // Eine Ergebnis-Zelle (Status + Versuche + Punkte) für den Vergleich. `highlight` hebt
 // die jeweils bessere Punktzahl hervor.
-function ResultCell({ result, highlight }: { result: Result | undefined; highlight: boolean }) {
+function ResultCell({
+  result,
+  highlight,
+  showAttempts,
+}: {
+  result: Result | undefined
+  highlight: boolean
+  showAttempts: boolean
+}) {
   if (!result || result.status === 'open') {
     return <div className="flex items-center justify-center text-[15px] text-faint">–</div>
   }
@@ -79,7 +87,7 @@ function ResultCell({ result, highlight }: { result: Result | undefined; highlig
       >
         {result.points}
       </span>
-      {result.status !== 'flash' && result.attempts > 1 && (
+      {showAttempts && result.status !== 'flash' && result.attempts > 1 && (
         <span className="text-[11px] text-muted">{result.attempts} Versuche</span>
       )}
     </div>
@@ -91,6 +99,7 @@ export default function PlayerDetail({
   meParticipant,
   boulders,
   results,
+  showAttempts,
   onClose,
   onSelectBoulder,
 }: {
@@ -98,6 +107,9 @@ export default function PlayerDetail({
   meParticipant: Participant | null
   boulders: Boulder[]
   results: Result[]
+  // Versuchsanzahl nur zeigen, wenn Fehlversuche Punkte kosten. Bei Abzug 0 blendet der
+  // ResultEditor den Zähler aus – gespeichert wäre dann nur der Top-Default von 2 Versuchen.
+  showAttempts: boolean
   onClose: () => void
   // Klick auf eine Boulder-Zeile: meldet den Boulder; der Aufrufer schließt und springt hin.
   onSelectBoulder?: (boulderId: string) => void
@@ -195,10 +207,10 @@ export default function PlayerDetail({
                 >
                   <BoulderTag boulder={b} />
                   <div className="w-[88px]">
-                    <ResultCell result={their} highlight={theirWins} />
+                    <ResultCell result={their} highlight={theirWins} showAttempts={showAttempts} />
                   </div>
                   <div className="w-[88px]">
-                    <ResultCell result={mine} highlight={iWin} />
+                    <ResultCell result={mine} highlight={iWin} showAttempts={showAttempts} />
                   </div>
                 </button>
               )
@@ -242,7 +254,7 @@ export default function PlayerDetail({
                     <BoulderTag boulder={b} />
                   </div>
                   <StatusBadge status={r.status} />
-                  {r.status !== 'flash' && r.attempts > 1 && (
+                  {showAttempts && r.status !== 'flash' && r.attempts > 1 && (
                     <span className="whitespace-nowrap text-[11.5px] text-muted">
                       {r.attempts} Vers.
                     </span>
