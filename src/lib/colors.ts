@@ -45,6 +45,8 @@ export const BOULDER_COLORS: BoulderColor[] = [
   color('hellblau', '#84CDF5'),
   color('orange-schwarz', '#F97316', '#1B2130'),
   color('grün', '#27B24A'),
+  // Holzgriffe (Multiplex-Schichtholz) mit schwarzem Grip-Belag auf der Greiffläche.
+  color('holz-schwarz', '#D9B98A', '#1B2130'),
 ]
 
 const BY_NAME = new Map(BOULDER_COLORS.map((c) => [c.name, c]))
