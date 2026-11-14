@@ -98,7 +98,7 @@ Zusätze, die mit jedem Modus Sinn ergeben:
 
 | Eher **Modus** (schließen sich aus) | Eher **Option** (kombinierbar) |
 |---|---|
-| Nur Flash, X Griffe, Wenige Griffe, Seltenheit, Beste N, Last Man Standing, H-O-R-S-E, Hallen-Bingo, Bereichs-Tour, Pyramide, Handicap, Wetten | **Zeitlimit** (Time Attack), **Teams**, **Erstbegehungs-Bonus**, **Zufalls-Boulder** |
+| Nur Flash, X Griffe, Wenige Griffe, Seltenheit, Beste N, Last Man Standing, H-O-R-S-E, Hallen-Bingo, Bereichs-Tour, King of the Hill, Pyramide, Handicap, Wetten | **Zeitlimit** (Time Attack), **Teams**, **Erstbegehungs-Bonus**, **Zufalls-Boulder** |
 
 **Empfehlung:** Die Optionen bekommen später ein eigenes Panel „Extras“ in den Einstellungen und werden
 in `game_config` gespeichert, nicht als `game_mode`. So geht z.B. „Nur Flash + 60 Minuten + Teams“. In
@@ -398,6 +398,45 @@ Seit 1.30.1 bleibt nach der Wahl nur der gewählte Knopf stehen („⚡ Geflasht
   bei dem **nur** gezogene Boulder zählen.
 - **Offen:** Wer darf würfeln? Wie oft?
 
+### King of the Hill – Bereiche erobern und halten (L) · [E] [F] [B]
+*Idee aus dem Chat vom 14.11.2026.*
+- **Spielidee:** Einzelne Spieler oder Teams [F] erobern Hallenbereiche und halten sie.
+  - Ein Boulder gehört dem, der ihn **zuletzt getoppt** hat.
+  - Ein Bereich gehört dem Team oder Spieler mit den **meisten** Bouldern dort. Beispiel: Moor-Door hat
+    10 Boulder, Team A hält davon 6 ⇒ Moor-Door gehört Team A.
+  - Bei Gleichstand behält der bisherige Halter den Bereich. Ohne Halter ist der Bereich neutral.
+  - Jeder gehaltene Bereich bringt **jede Minute Punkte** (`game_config`).
+- **Ablauf:**
+  - Es zählen nur Boulder von der Hallenkarte, weil nur sie einen Bereich haben (wie bei der
+    Bereichs-Tour).
+  - Der Kopf der Session zeigt einen großen Grundriss (Bausteine `HALL_AREAS`, `MAP_STYLE.mini`). Die
+    Bereiche sind live in der Farbe ihres Halters eingefärbt.
+  - Zurückerobert wird ein Boulder, indem ihn jemand anderes toppt.
+- **Wertung ([B] + [E]):**
+  - Aus den Top-Zeitpunkten entsteht eine Zeitleiste. `scoreSession` spielt sie durch und summiert je
+    Halter die gehaltenen Minuten × Punkte pro Minute.
+  - Ein Takt auf dem Server ist nicht nötig, weil sich die Punkte jederzeit aus der Zeitleiste ergeben.
+    Die Rangliste tickt im Client.
+  - Die Uhr stoppt bei `ends_at`. Das Spielende gibt es schon, und ein Zeitlimit [C] passt gut dazu.
+- **Varianten:**
+  - **Einzelne Boulder als Hügel:** Jeder Boulder ist sein eigener Hügel. Der letzte Topper hält ihn
+    und bekommt pro Minute Punkte, vielleicht × Grad. Das geht auch ohne Hallenkarte.
+  - **Farbgebiete (Vorbild: die Felder bei Ingress von Niantic):** Gehaltene Boulder derselben
+    Grifffarbe spannen auf der Karte ein Gebiet auf, z.B. drei blaue Boulder ein Dreieck. Die Fläche
+    bringt Punkte nach ihrer Größe. Dafür braucht es die Karten-Positionen; die Geometrie gehört nach
+    `mapGeometry.ts`.
+- **Offen:**
+  - **Nochmal toppen:** `results` hat eine Zeile je Boulder und Spieler. Wer einen Boulder schon selbst
+    getoppt hat, kann ihn nach dem Verlust nicht zurückholen. Zwei Wege:
+    - eine Ereignistabelle `tops`, in der jeder Top ein eigener Eintrag ist;
+    - ein Knopf „Zurückerobert“, der `topped_at` neu setzt.
+
+    Davon hängt ab, ob Baustein [E] reicht.
+  - Punkte pro Minute fest oder nach Größe des Bereichs (Anzahl Boulder)?
+  - Zählt ein Flash mehr?
+  - Ein korrigierter Top (zurück auf `open`) verschiebt die Zeitleiste rückwirkend. Ist das gewollt?
+  - Gegen die Taktik „erst kurz vor Schluss toppen“: Braucht es einen Bonus für den Halter am Ende?
+
 ---
 
 ## Empfohlene Reihenfolge (aktualisiert)
@@ -416,7 +455,7 @@ Geordnet so, dass jeder Schritt einen Baustein legt, den spätere Modi wiederver
    **Zufalls-Boulder** günstig.
 7. **Handicap** und **Pyramide**: teilen sich `participants.level`.
 8. **Last Man Standing** (M–L): baut [D], danach **H-O-R-S-E**.
-9. **Hallen-Bingo**, **Bereichs-Tour**.
+9. **Hallen-Bingo**, **Bereichs-Tour**, **King of the Hill** (braucht [E] und [F]).
 10. **Wenige Griffe** [G]: erst nach Rückfrage zur Bedeutung.
 11. **Wetten** (L): zuletzt, wenn [B] erprobt ist.
 
