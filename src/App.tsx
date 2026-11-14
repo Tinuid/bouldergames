@@ -7,8 +7,20 @@ import SessionView from './routes/SessionView'
 import SessionLeaderboard from './routes/SessionLeaderboard'
 import FeedbackList from './routes/FeedbackList'
 import GymMap from './routes/GymMap'
+import UpdateBanner from './components/UpdateBanner'
 
 export default function App() {
+  // Der Update-Hinweis erscheint in jedem Zustand – auch wenn die App am Auth-Bootstrap
+  // hängt, soll eine neue (womöglich reparierte) Version ankommen.
+  return (
+    <>
+      <UpdateBanner />
+      <AppContent />
+    </>
+  )
+}
+
+function AppContent() {
   const { loading, error } = useAuth()
 
   if (error) {

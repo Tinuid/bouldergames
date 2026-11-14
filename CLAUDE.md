@@ -364,6 +364,14 @@ außerdem per `registration.update()`, ob es eine neue Version gibt. Vorher (`au
 Code) lief das geöffnete Bundle weiter, eine neue Version kam erst beim übernächsten Öffnen an – riskant,
 sobald sich die Bedeutung gespeicherter Daten ändert. Darum: Migrationen, die die **Bedeutung** von
 Daten ändern, erst ausrollen, wenn die Vorversion einige Tage draußen ist.
+Seit 1.30.2 zeigt `UpdateBanner` (oben, `role="status"` – **nicht** `dialog`, sonst blockierte es das
+automatische Neuladen) „Update verfügbar“ mit „Neu laden“ (`applyUpdate`, ohne Dialog-Prüfung, weil der
+Nutzer es auslöst), sobald `onNeedRefresh` feuert; ✕ blendet es aus, dann greift die nächste Rückkehr.
+Solange die App sichtbar ist, wird zusätzlich alle 15 Minuten nach Updates gesehen. Ohne Banner (bis
+1.30.1) kam ein Update erst bei der **zweiten** Rückkehr an: die erste findet es nur. Und: Wie ein Update
+abläuft, entscheidet immer die **laufende** Version – Änderungen hier wirken erst beim übernächsten
+Release. Der Sprung von 1.26.1 (`autoUpdate`) auf 1.26.2 brauchte einmalig einen kompletten Neustart der
+App, weil die alte Seite den wartenden Service Worker nicht aktivieren konnte.
 
 **Automatisches Aufräumen verwaister Sessions.** Da ohne Accounts nichts je gelöscht wird, räumt ein
 nächtlicher Cron alte Sessions weg. Die Logik steckt in der `security definer`-RPC

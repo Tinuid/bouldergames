@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.30.2',
+    date: '14.11.2026',
+    text: 'Neue Versionen melden sich jetzt oben mit „Update verfügbar“ – ein Tipp auf „Neu laden“, und sie ist da. Wer das wegklickt, bekommt das Update beim nächsten Zurückkehren in die App.',
+  },
+  {
     version: '1.30.1',
     date: '14.11.2026',
     text: 'Nur Flash: Nach Flash oder Nope bleibt nur dein Ergebnis stehen – groß und mit Punkten. Vertippt? Einfach antippen, dann ist der Boulder wieder offen.',
