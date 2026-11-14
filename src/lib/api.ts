@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { generateJoinCode, normalizeJoinCode } from './codes'
 import { computePoints, normalizeResult } from './scoring'
+import { sessionPhase } from './sessionPhase'
 import { deleteBoulderImage } from './images'
 import type {
   Boulder,
@@ -59,6 +60,9 @@ export async function createSession(params: {
   sharedScoring?: boolean
   // true: erscheint auf der Startseite als laufende Session (siehe Migration 0013).
   isPublic?: boolean
+  // true (Default): alle Teilnehmer dürfen die Challenge steuern (beenden/wieder öffnen;
+  // Migration 0023, RLS-Hilfsfunktion can_control_session).
+  sharedControl?: boolean
 }): Promise<Session> {
   // Bis zu wenige Versuche, falls ein Code zufällig schon vergeben ist.
   let lastError: unknown = null
@@ -78,6 +82,7 @@ export async function createSession(params: {
         game_mode: params.scoring.gameMode,
         shared_scoring: params.sharedScoring ?? false,
         is_public: params.isPublic ?? false,
+        shared_control: params.sharedControl ?? true,
       })
       .select()
       .single<Session>()
@@ -114,14 +119,21 @@ export async function listPublicSessions(): Promise<SessionSummary[]> {
     .select('*, participants(count)')
     .eq('status', 'active')
     .eq('is_public', true)
+    // Nur aktive Teilnehmer zählen (Ausgetretene behalten ihre Zeile, Migration 0023).
+    .is('participants.left_at', null)
     .order('created_at', { ascending: false })
   if (error) throw error
-  return (data ?? []).map((row) => {
-    const { participants, ...session } = row as Session & {
-      participants: { count: number }[]
-    }
-    return { ...session, participantCount: participants?.[0]?.count ?? 0 }
-  })
+  return (
+    (data ?? [])
+      // Beendete Challenges laufen nicht mehr – sie gehören nicht in „Laufende Sessions“.
+      .filter((row) => sessionPhase(row as Session) !== 'ended')
+      .map((row) => {
+        const { participants, ...session } = row as Session & {
+          participants: { count: number }[]
+        }
+        return { ...session, participantCount: participants?.[0]?.count ?? 0 }
+      })
+  )
 }
 
 export async function getSessionByCode(code: string): Promise<Session | null> {
@@ -168,6 +180,7 @@ export async function updateSession(params: {
   scoring: ScoringConfig
   sharedScoring: boolean
   isPublic: boolean
+  sharedControl: boolean
 }): Promise<Session> {
   // .select() zurückfordern, um ein per RLS blockiertes Update zu erkennen
   // (es wirft keinen Fehler, betrifft aber 0 Zeilen).
@@ -183,6 +196,7 @@ export async function updateSession(params: {
       game_mode: params.scoring.gameMode,
       shared_scoring: params.sharedScoring,
       is_public: params.isPublic,
+      shared_control: params.sharedControl,
     })
     .eq('id', params.sessionId)
     .select()
@@ -217,8 +231,8 @@ export async function recomputeSessionResults(params: {
       params.sessionId,
       buildPointsPayload(results, boulders, params.scoring),
     )
-    if (notUpdated.length === 0) return
-    // Stand hat sich zwischendurch geändert – frisch laden und noch einmal rechnen.
+    if (notUpdated.length === 0)
+      return // Stand hat sich zwischendurch geändert – frisch laden und noch einmal rechnen.
     ;[results, boulders] = await Promise.all([
       listResults(params.sessionId),
       listBoulders(params.sessionId),
@@ -273,6 +287,8 @@ export async function joinSession(
         session_id: sessionId,
         user_id: userId,
         display_name: displayName.trim() || 'Anonym',
+        // Wiederbeitritt nach „Verlassen“: Markierung zurücknehmen – Ergebnisse sind noch da.
+        left_at: null,
       },
       { onConflict: 'session_id,user_id' },
     )
@@ -282,21 +298,44 @@ export async function joinSession(
   return data
 }
 
-// Challenge verlassen: nur die eigene Teilnehmer-Zeile löschen (RLS participants_delete
-// erlaubt user_id = auth.uid()). Eigene Ergebnisse fallen per on-delete-cascade weg; die
-// Challenge bleibt für alle anderen bestehen.
+// Challenge verlassen: die eigene Teilnehmer-Zeile wird NICHT gelöscht, sondern mit
+// left_at markiert (Migration 0023). Die eigenen Ergebnisse bleiben in der Rangliste
+// (ausgegraut), und ein erneuter Beitritt (joinSession) macht dort weiter. Die Rechte
+// fallen trotzdem weg: is_session_member/owns_participant zählen nur aktive Teilnehmer.
 export async function leaveSession(participantId: string): Promise<void> {
-  // .select() wie bei deleteSession: ein per RLS blockiertes DELETE wirft keinen Fehler,
+  // .select() wie bei deleteSession: ein per RLS blockiertes UPDATE wirft keinen Fehler,
   // betrifft aber 0 Zeilen.
   const { data, error } = await supabase
     .from('participants')
-    .delete()
+    .update({ left_at: new Date().toISOString() })
     .eq('id', participantId)
     .select('id')
   if (error) throw error
   if (!data || data.length === 0) {
-    throw new Error('Verlassen fehlgeschlagen – die Teilnahme konnte nicht entfernt werden.')
+    throw new Error('Verlassen fehlgeschlagen – die Teilnahme konnte nicht beendet werden.')
   }
+}
+
+// Challenge beenden (end = true) bzw. wieder öffnen (false). Läuft über die RPC
+// set_session_end (Migration 0023): Serverzeit, Recht über can_control_session
+// (Host oder – bei shared_control – jedes aktive Mitglied).
+export async function setSessionEnd(sessionId: string, end: boolean): Promise<void> {
+  const { error } = await supabase.rpc('set_session_end', {
+    p_session_id: sessionId,
+    p_end: end,
+  })
+  if (error) throw error
+}
+
+// Fehler des Sperr-Triggers trg_results_session_open (SQLSTATE 'BCEND'): die Challenge
+// ist beendet, Ergebnisse lassen sich nicht mehr ändern.
+export function isSessionEndedError(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    (err as { code?: unknown }).code === 'BCEND'
+  )
 }
 
 export async function getMyParticipant(
@@ -664,15 +703,22 @@ export async function listMySessions(userId: string): Promise<MySession[]> {
     .from('participants')
     .select('display_name, sessions(*)')
     .eq('user_id', userId)
+    // Verlassene Challenges nicht anbieten – dort fehlen die Schreibrechte (Migration 0023).
+    .is('left_at', null)
   if (error) throw error
 
-  return (data ?? [])
-    .map((row) => {
-      const r = row as unknown as { display_name: string; sessions: Session | null }
-      return r.sessions ? { ...r.sessions, displayName: r.display_name } : null
-    })
-    .filter((s): s is MySession => s != null && s.status === 'active')
-    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+  return (
+    (data ?? [])
+      .map((row) => {
+        const r = row as unknown as { display_name: string; sessions: Session | null }
+        return r.sessions ? { ...r.sessions, displayName: r.display_name } : null
+      })
+      // Beendete Challenges ebenfalls nicht: dort kommt nichts mehr hinzu.
+      .filter(
+        (s): s is MySession => s != null && s.status === 'active' && sessionPhase(s) !== 'ended',
+      )
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+  )
 }
 
 // Karten-Boulder zu einer Menge von Ids – löst die Fotos übernommener Boulder in

@@ -4,6 +4,7 @@ import { getHistory, forgetSession, type HistoryEntry } from '../lib/localHistor
 import { listPublicSessions, type SessionSummary } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import { gameModeInfo } from '../lib/gameModes'
+import { sessionPhase } from '../lib/sessionPhase'
 import type { GameMode } from '../types'
 import BrandMark from '../components/BrandMark'
 import VersionBadge from '../components/VersionBadge'
@@ -95,6 +96,9 @@ export default function Home() {
                   <div className="mt-0.5 truncate text-[13px] text-muted">
                     Code {h.code} · als {h.displayName}
                     <ModeNote mode={h.gameMode} />
+                    {h.endedAt && sessionPhase({ ends_at: h.endedAt }) === 'ended' && (
+                      <span className="font-semibold"> · beendet</span>
+                    )}
                   </div>
                 </button>
                 <button

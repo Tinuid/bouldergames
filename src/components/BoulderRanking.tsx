@@ -69,11 +69,14 @@ export default function BoulderRanking({
 
   const rows = useMemo<RankRow[]>(() => {
     type Entry = { participant: Participant; result: Result | undefined; scored: boolean }
-    const entries: Entry[] = participants.map((p) => {
-      const result = resultsByParticipant?.get(p.id)
-      const scored = result != null && result.status !== 'open'
-      return { participant: p, result: scored ? result : undefined, scored }
-    })
+    const entries: Entry[] = participants
+      .map((p) => {
+        const result = resultsByParticipant?.get(p.id)
+        const scored = result != null && result.status !== 'open'
+        return { participant: p, result: scored ? result : undefined, scored }
+      })
+      // Wer die Challenge verlassen hat, erscheint nur noch mit einem Ergebnis.
+      .filter((e) => e.scored || e.participant.left_at == null)
     // Gewertete zuerst (Punkte absteigend), dann die übrigen – jeweils stabil nach Name.
     entries.sort((a, b) => {
       if (a.scored !== b.scored) return a.scored ? -1 : 1
@@ -139,12 +142,14 @@ export default function BoulderRanking({
         <h2 className="section-label mb-2 px-1">Rangliste</h2>
         <ol className="flex flex-col gap-1.5">
           {rows.map((row) => {
-            const isMe = currentUserId !== null && row.participant.user_id === currentUserId
+            const inactive = row.participant.left_at != null
+            const isMe =
+              !inactive && currentUserId !== null && row.participant.user_id === currentUserId
             const r = row.result
             return (
               <li
                 key={row.participant.id}
-                className={`card flex items-center gap-3 !px-3 !py-2.5 ${
+                className={`card flex items-center gap-3 !px-3 !py-2.5 ${inactive ? 'opacity-50' : ''} ${
                   isMe
                     ? '!bg-ok-soft shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ok)_40%,transparent)]'
                     : ''

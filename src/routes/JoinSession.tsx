@@ -39,6 +39,7 @@ export default function JoinSession() {
         name: session.name,
         displayName: displayName.trim(),
         gameMode: session.game_mode,
+        endedAt: session.ends_at,
       })
       navigate(`/s/${session.id}`)
     } catch (err) {

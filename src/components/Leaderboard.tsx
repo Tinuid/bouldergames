@@ -28,7 +28,10 @@ export default function Leaderboard({
 
   // Kurzer Puls auf der eigenen Zeile, wenn sich die eigene Punktzahl ändert.
   const myRow = useMemo(
-    () => rows.find((r) => currentUserId !== null && r.participant.user_id === currentUserId),
+    () =>
+      rows.find(
+        (r) => !r.inactive && currentUserId !== null && r.participant.user_id === currentUserId,
+      ),
     [rows, currentUserId],
   )
   const prevScore = useRef<number | null>(null)
@@ -49,11 +52,12 @@ export default function Leaderboard({
       <h2 className="section-label px-3 pb-2.5 pt-3.5">Leaderboard</h2>
       <ol className="flex flex-col gap-1">
         {rows.map((row) => {
-          const isMe = currentUserId !== null && row.participant.user_id === currentUserId
+          const isMe =
+            !row.inactive && currentUserId !== null && row.participant.user_id === currentUserId
           return (
             <li
               key={row.participant.id}
-              className={`rounded-sm2 ${
+              className={`rounded-sm2 ${row.inactive ? 'opacity-50' : ''} ${
                 isMe
                   ? 'bg-ok-soft shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ok)_40%,transparent)]'
                   : ''
@@ -73,6 +77,11 @@ export default function Leaderboard({
                     {isMe && (
                       <span className="rounded-md bg-ok-soft px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-ok">
                         du
+                      </span>
+                    )}
+                    {row.inactive && (
+                      <span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-muted">
+                        hat verlassen
                       </span>
                     )}
                   </div>

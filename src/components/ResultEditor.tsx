@@ -36,6 +36,7 @@ export default function ResultEditor({
   onSave,
   label,
   compact = false,
+  lockedReason,
 }: {
   result: Result | undefined
   scoring: ScoringConfig
@@ -48,6 +49,9 @@ export default function ResultEditor({
   // platzsparende Icon-Buttons rechts, ohne Punkte-Vorschau.
   label?: string
   compact?: boolean
+  // Eingabe gesperrt (z.B. „Die Challenge ist beendet“): das Ergebnis wird nur angezeigt.
+  // Später auch für „Zeit ist um“ oder „ausgeschieden“. Der Text erscheint als Tooltip.
+  lockedReason?: string
 }) {
   const [status, setStatus] = useState<ResultStatus>(result?.status ?? 'open')
   const [attempts, setAttempts] = useState<number>(result?.attempts ?? 1)
@@ -109,30 +113,98 @@ export default function ResultEditor({
 
   if (compact) {
     return (
-      <div className="flex items-center gap-2 border-t border-border py-2.5">
-        <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{label}</span>
-        <div className="flex gap-1.5">
+      <fieldset
+        disabled={lockedReason != null}
+        title={lockedReason}
+        className="m-0 min-w-0 border-0 p-0 disabled:opacity-60"
+      >
+        <div className="flex items-center gap-2 border-t border-border py-2.5">
+          <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{label}</span>
+          <div className="flex gap-1.5">
+            {OPTIONS.map((o) => {
+              const active = status === o.status
+              return (
+                <button
+                  key={o.status}
+                  onClick={() => selectStatus(o.status)}
+                  aria-label={o.label}
+                  title={o.label}
+                  aria-pressed={active}
+                  className={`flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border text-[16px] transition ${
+                    active ? o.activeCls : 'border-border-strong bg-surface-2 text-ink'
+                  }`}
+                >
+                  {o.icon}
+                </button>
+              )
+            })}
+
+            {showCounter && (
+              <div
+                className={`flex h-[34px] items-stretch overflow-hidden rounded-[10px] border transition ${counterCls}`}
+              >
+                {misses > 0 && (
+                  <button
+                    onClick={removeMiss}
+                    disabled={minusDisabled}
+                    aria-label="Ein Versuch weniger"
+                    title="Ein Versuch weniger"
+                    className="flex w-7 shrink-0 items-center justify-center transition disabled:opacity-35"
+                    style={dividerStyle}
+                  >
+                    <Minus className="text-[15px]" />
+                  </button>
+                )}
+                <button
+                  onClick={addMiss}
+                  aria-label="Ein Versuch mehr"
+                  title="Ein Versuch mehr"
+                  className="flex min-w-[34px] items-center justify-center px-1.5"
+                >
+                  {misses > 0 ? (
+                    <span className="font-num text-[15px] font-bold tabular-nums">{misses}</span>
+                  ) : (
+                    <Plus className="text-[16px]" />
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </fieldset>
+    )
+  }
+
+  return (
+    <fieldset
+      disabled={lockedReason != null}
+      title={lockedReason}
+      className="m-0 min-w-0 border-0 p-0 disabled:opacity-60"
+    >
+      <div className="flex flex-col">
+        <div className={`grid gap-2 ${showCounter ? 'grid-cols-3' : 'grid-cols-2'}`}>
           {OPTIONS.map((o) => {
             const active = status === o.status
             return (
               <button
                 key={o.status}
                 onClick={() => selectStatus(o.status)}
-                aria-label={o.label}
-                title={o.label}
                 aria-pressed={active}
-                className={`flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border text-[16px] transition ${
+                className={`flex items-center justify-center gap-1.5 rounded-sm2 border px-1.5 py-2.5 font-display text-[14px] font-bold transition ${
                   active ? o.activeCls : 'border-border-strong bg-surface-2 text-ink'
                 }`}
               >
-                {o.icon}
+                <span className="text-[16px]">{o.icon}</span>
+                {o.label}
               </button>
             )
           })}
 
           {showCounter && (
+            // Zweigeteilt, optisch weiter ein Knopf im Raster: schmales Minus zum Korrigieren
+            // (erst ab dem ersten Versuch), breite Plus-Hälfte als Hauptaktion.
             <div
-              className={`flex h-[34px] items-stretch overflow-hidden rounded-[10px] border transition ${counterCls}`}
+              className={`flex items-stretch overflow-hidden rounded-sm2 border font-display text-[14px] font-bold transition ${counterCls}`}
             >
               {misses > 0 && (
                 <button
@@ -140,99 +212,43 @@ export default function ResultEditor({
                   disabled={minusDisabled}
                   aria-label="Ein Versuch weniger"
                   title="Ein Versuch weniger"
-                  className="flex w-7 shrink-0 items-center justify-center transition disabled:opacity-35"
+                  className="flex w-10 shrink-0 items-center justify-center transition disabled:opacity-35"
                   style={dividerStyle}
                 >
-                  <Minus className="text-[15px]" />
+                  <Minus className="text-[16px]" />
                 </button>
               )}
               <button
                 onClick={addMiss}
                 aria-label="Ein Versuch mehr"
                 title="Ein Versuch mehr"
-                className="flex min-w-[34px] items-center justify-center px-1.5"
+                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 px-1.5 py-2.5"
               >
                 {misses > 0 ? (
-                  <span className="font-num text-[15px] font-bold tabular-nums">{misses}</span>
+                  <span className="font-num text-lg font-bold tabular-nums">{misses}</span>
                 ) : (
-                  <Plus className="text-[16px]" />
+                  <>
+                    <span className="text-[16px]">
+                      <Plus />
+                    </span>
+                    Versuch
+                  </>
                 )}
               </button>
             </div>
           )}
         </div>
-      </div>
-    )
-  }
 
-  return (
-    <div className="flex flex-col">
-      <div className={`grid gap-2 ${showCounter ? 'grid-cols-3' : 'grid-cols-2'}`}>
-        {OPTIONS.map((o) => {
-          const active = status === o.status
-          return (
-            <button
-              key={o.status}
-              onClick={() => selectStatus(o.status)}
-              aria-pressed={active}
-              className={`flex items-center justify-center gap-1.5 rounded-sm2 border px-1.5 py-2.5 font-display text-[14px] font-bold transition ${
-                active ? o.activeCls : 'border-border-strong bg-surface-2 text-ink'
-              }`}
-            >
-              <span className="text-[16px]">{o.icon}</span>
-              {o.label}
-            </button>
-          )
-        })}
-
-        {showCounter && (
-          // Zweigeteilt, optisch weiter ein Knopf im Raster: schmales Minus zum Korrigieren
-          // (erst ab dem ersten Versuch), breite Plus-Hälfte als Hauptaktion.
-          <div
-            className={`flex items-stretch overflow-hidden rounded-sm2 border font-display text-[14px] font-bold transition ${counterCls}`}
-          >
-            {misses > 0 && (
-              <button
-                onClick={removeMiss}
-                disabled={minusDisabled}
-                aria-label="Ein Versuch weniger"
-                title="Ein Versuch weniger"
-                className="flex w-10 shrink-0 items-center justify-center transition disabled:opacity-35"
-                style={dividerStyle}
-              >
-                <Minus className="text-[16px]" />
-              </button>
-            )}
-            <button
-              onClick={addMiss}
-              aria-label="Ein Versuch mehr"
-              title="Ein Versuch mehr"
-              className="flex min-w-0 flex-1 items-center justify-center gap-1.5 px-1.5 py-2.5"
-            >
-              {misses > 0 ? (
-                <span className="font-num text-lg font-bold tabular-nums">{misses}</span>
-              ) : (
-                <>
-                  <span className="text-[16px]">
-                    <Plus />
-                  </span>
-                  Versuch
-                </>
-              )}
-            </button>
+        {status !== 'open' && (
+          <div className="mt-2.5 text-right font-display text-[14px] font-semibold text-muted">
+            Punkte:{' '}
+            <span className={`ml-1 font-num font-bold ${preview < 0 ? 'text-bad' : 'text-ok'}`}>
+              {preview}
+            </span>
+            {topDoesNotCount && <span className="ml-1.5 font-medium">· zählt nur Flash</span>}
           </div>
         )}
       </div>
-
-      {status !== 'open' && (
-        <div className="mt-2.5 text-right font-display text-[14px] font-semibold text-muted">
-          Punkte:{' '}
-          <span className={`ml-1 font-num font-bold ${preview < 0 ? 'text-bad' : 'text-ok'}`}>
-            {preview}
-          </span>
-          {topDoesNotCount && <span className="ml-1.5 font-medium">· zählt nur Flash</span>}
-        </div>
-      )}
-    </div>
+    </fieldset>
   )
 }

@@ -83,6 +83,7 @@ export default function CreateSession() {
     penaltyMode: DEFAULT_SCORING.penaltyMode,
     sharedScoring: false,
     isPublic: false,
+    sharedControl: true,
   })
   const [hostName, setHostName] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -114,6 +115,7 @@ export default function CreateSession() {
         },
         sharedScoring: settings.sharedScoring,
         isPublic: settings.isPublic,
+        sharedControl: settings.sharedControl,
       })
       // Boulder von der Karte übernehmen, solange wir noch im try-Block sind: ein
       // Fehler landet damit in derselben Meldung und die Challenge bleibt bestehen.

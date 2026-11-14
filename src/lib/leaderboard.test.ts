@@ -9,6 +9,7 @@ function participant(id: string, name: string, userId = `u-${id}`): Participant 
     user_id: userId,
     display_name: name,
     joined_at: '2026-08-30T10:00:00Z',
+    left_at: null,
   }
 }
 
@@ -176,5 +177,26 @@ describe('rankClass', () => {
     expect(rankClass(2)).toContain('bg-silver')
     expect(rankClass(3)).toContain('bg-bronze')
     expect(rankClass(4)).toContain('bg-surface-3')
+  })
+})
+
+describe('Ausgetretene (left_at)', () => {
+  it('bleiben mit ihren Punkten in der Wertung, aber als inaktiv markiert', () => {
+    const anna = participant('a', 'Anna')
+    const ben = { ...participant('b', 'Ben'), left_at: '2026-11-14T18:00:00Z' }
+    const rows = computeLeaderboardRows(
+      [anna, ben],
+      [result('a', 'top', 20), result('b', 'flash', 30)],
+    )
+    expect(rows.map((r) => [r.participant.display_name, r.rank, r.inactive])).toEqual([
+      ['Ben', 1, true],
+      ['Anna', 2, false],
+    ])
+  })
+
+  it('sind nie „ich“ in der Zusammenfassung', () => {
+    const ben = { ...participant('b', 'Ben', 'u-ben'), left_at: '2026-11-14T18:00:00Z' }
+    const rows = computeLeaderboardRows([ben], [result('b', 'top', 20)])
+    expect(summarizeLeaderboard(rows, 'u-ben').me).toBeNull()
   })
 })

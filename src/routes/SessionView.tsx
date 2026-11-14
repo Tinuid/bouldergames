@@ -4,17 +4,22 @@ import { useAuth } from '../hooks/useAuth'
 import { useRealtimeSession } from '../hooks/useRealtimeSession'
 import { useDialogEscape } from '../hooks/useDialogEscape'
 import { useGymTickSync } from '../hooks/useGymTickSync'
+import { useSessionPhase } from '../hooks/useSessionPhase'
 import {
   addBoulder,
   deleteBoulder,
   deleteSession,
+  isSessionEndedError,
   joinSession,
   leaveSession,
   listGymBouldersByIds,
   reorderBoulders,
+  setSessionEnd,
   updateBoulder,
   upsertResult,
 } from '../lib/api'
+import { canControlSession, isActiveParticipant } from '../lib/sessionPhase'
+import { computeLeaderboardRows } from '../lib/leaderboard'
 import { deleteBoulderImage, uploadBoulderImage } from '../lib/images'
 import { forgetSession, rememberSession } from '../lib/localHistory'
 import { DIFFICULTIES } from '../lib/difficulty'
@@ -28,7 +33,8 @@ import {
   type ResultStatus,
 } from '../types'
 import type { BoulderFormValues } from '../components/AddBoulderDialog'
-import { Bolt, Check, ChevronLeft, Edit, More, Plan, Plus, Trash } from '../components/icons'
+import { Bolt, Check, ChevronLeft, Edit, Flag, More, Plan, Plus, Trash } from '../components/icons'
+import RankMedal from '../components/RankMedal'
 
 const PENALTY_LABELS: Record<PenaltyMode, string> = {
   top_floor: 'Top nie negativ',
@@ -88,10 +94,19 @@ export default function SessionView() {
     return () => clearTimeout(t)
   }, [saveError])
 
+  // Nur als AKTIVER Teilnehmer ist man dabei. Wer verlassen hat (left_at, Migration 0023),
+  // sieht wieder das Beitrittsformular – vorbelegt mit dem alten Namen; seine Ergebnisse
+  // sind noch da und gehören nach dem Wiederbeitritt wieder ihm.
   const myParticipant = useMemo(
-    () => participants.find((p) => p.user_id === userId) ?? null,
+    () => participants.find((p) => p.user_id === userId && isActiveParticipant(p)) ?? null,
     [participants, userId],
   )
+  const myFormerParticipant = useMemo(
+    () => participants.find((p) => p.user_id === userId && !isActiveParticipant(p)) ?? null,
+    [participants, userId],
+  )
+  const phase = useSessionPhase(session)
+  const ended = phase === 'ended'
 
   // Karten-Boulder zu allen übernommenen Bouldern (Migration 0017): liefert das Foto
   // – die tragen bewusst keinen eigenen image_path, sonst löschte das nächtliche
@@ -126,11 +141,25 @@ export default function SessionView() {
     }
   }, [gymRefKey])
 
-  // Teilnehmer für die Pro-Spieler-Eingabe: ich zuerst, dann die übrigen (Beitritts-Reihenfolge).
+  // Alle Teilnehmer, ich zuerst, dann die übrigen (Beitritts-Reihenfolge) – für Ranglisten,
+  // dort erscheinen auch Ausgetretene (ausgegraut).
   const orderedParticipants = useMemo(() => {
     if (!myParticipant) return participants
     return [myParticipant, ...participants.filter((p) => p.id !== myParticipant.id)]
   }, [participants, myParticipant])
+  // Nur aktive Teilnehmer – für die Eingabezeilen („für andere eintragen“): wer verlassen
+  // hat, bekommt keine Ergebnisse mehr.
+  const activeParticipants = useMemo(
+    () => orderedParticipants.filter(isActiveParticipant),
+    [orderedParticipants],
+  )
+
+  // Endstand für die beendete Challenge: die ersten drei (inkl. Ausgetretener, wenn sie
+  // vorne liegen – ihre Ergebnisse zählen weiter).
+  const podium = useMemo(
+    () => computeLeaderboardRows(participants, results).filter((r) => r.rank <= 3),
+    [participants, results],
+  )
 
   // "andere ausblenden" – gerätelokaler Toggle pro Session (Default an = aufgeräumte Ansicht,
   // identisch zum Verhalten ohne shared_scoring). Wer für andere einträgt, blendet sie ein.
@@ -157,6 +186,7 @@ export default function SessionView() {
         name: session.name,
         displayName: myParticipant.display_name,
         gameMode: session.game_mode,
+        endedAt: session.ends_at,
       })
     }
   }, [session, myParticipant])
@@ -297,15 +327,21 @@ export default function SessionView() {
   const sharedScoring = session.shared_scoring
   const isHost = session.host_id === userId
   const showOthers = sharedScoring && !hideOthers
+  // Darf dieses Gerät beenden/wieder öffnen? (Host oder – bei shared_control – jeder.)
+  const canControl = canControlSession(session, userId, myParticipant)
+  // Gesperrte Eingabe nach Spielende; der Server lehnt Änderungen ohnehin ab (BCEND).
+  const lockedReason = ended ? 'Die Challenge ist beendet.' : undefined
 
-  // Noch nicht beigetreten (z.B. über geteilten Link geöffnet) -> Name abfragen.
+  // Noch nicht beigetreten (z.B. über geteilten Link geöffnet) oder verlassen -> Name abfragen.
   if (!myParticipant) {
+    // Wer schon einmal dabei war, bekommt seinen alten Namen vorgeschlagen.
+    const nameValue = joinName || (myFormerParticipant?.display_name ?? '')
     async function doJoin(e: React.FormEvent) {
       e.preventDefault()
-      if (!userId || !joinName.trim() || joining) return
+      if (!userId || !nameValue.trim() || joining) return
       setJoining(true)
       try {
-        await joinSession(session!.id, userId, joinName)
+        await joinSession(session!.id, userId, nameValue)
         refresh()
       } finally {
         setJoining(false)
@@ -316,17 +352,21 @@ export default function SessionView() {
         <h1 className="font-display text-[34px] font-extrabold tracking-[-0.025em]">
           {session.name}
         </h1>
-        <p className="text-muted">Tritt der Challenge bei, um mitzumachen.</p>
+        <p className="text-muted">
+          {myFormerParticipant
+            ? 'Du hast diese Challenge verlassen. Tritt wieder bei – deine Ergebnisse sind noch da.'
+            : 'Tritt der Challenge bei, um mitzumachen.'}
+        </p>
         <form className="flex flex-col gap-3" onSubmit={doJoin}>
           <input
             className="input"
             placeholder="Dein Name"
-            value={joinName}
+            value={nameValue}
             onChange={(e) => setJoinName(e.target.value)}
             autoFocus
           />
           <button className="btn-primary" disabled={joining}>
-            {joining ? 'Trete bei …' : 'Beitreten'}
+            {joining ? 'Trete bei …' : myFormerParticipant ? 'Wieder beitreten' : 'Beitreten'}
           </button>
         </form>
       </div>
@@ -358,9 +398,11 @@ export default function SessionView() {
       // Nutzer informieren (z.B. schlechtes WLAN in der Halle) und den optimistischen
       // Editor-Stand via refresh() auf den echten DB-Wert zurücksetzen.
       setSaveError(
-        err instanceof Error
-          ? `Nicht gespeichert: ${err.message}`
-          : 'Ergebnis konnte nicht gespeichert werden – bitte erneut versuchen.',
+        isSessionEndedError(err)
+          ? 'Die Challenge ist beendet – Ergebnisse lassen sich nicht mehr ändern.'
+          : err instanceof Error
+            ? `Nicht gespeichert: ${err.message}`
+            : 'Ergebnis konnte nicht gespeichert werden – bitte erneut versuchen.',
       )
       refresh()
     }
@@ -431,7 +473,7 @@ export default function SessionView() {
   async function handleLeave() {
     if (!myParticipant) return
     const confirmed = window.confirm(
-      'Challenge verlassen? Deine Ergebnisse in dieser Challenge gehen verloren. Die Challenge bleibt für die anderen bestehen.',
+      'Challenge verlassen? Deine Ergebnisse bleiben erhalten und zählen in der Rangliste weiter. Mit dem Code kannst du jederzeit wieder beitreten.',
     )
     if (!confirmed) return
     try {
@@ -441,6 +483,22 @@ export default function SessionView() {
     } catch (err) {
       console.error('Challenge verlassen fehlgeschlagen', err)
       alert(err instanceof Error ? err.message : 'Verlassen fehlgeschlagen.')
+    }
+  }
+
+  async function handleSetEnded(end: boolean) {
+    if (end) {
+      const confirmed = window.confirm(
+        'Challenge beenden? Danach lassen sich keine Ergebnisse mehr eintragen – der Endstand steht fest. Du kannst sie später wieder öffnen.',
+      )
+      if (!confirmed) return
+    }
+    try {
+      await setSessionEnd(session!.id, end)
+      refresh()
+    } catch (err) {
+      console.error('Challenge beenden/öffnen fehlgeschlagen', err)
+      alert(err instanceof Error ? err.message : 'Das hat nicht geklappt.')
     }
   }
 
@@ -492,9 +550,67 @@ export default function SessionView() {
         {session.name}
       </h1>
 
-      <div className="mb-4">
-        <ShareSession code={session.join_code} />
-      </div>
+      {ended && (
+        <div className="card mb-4 !p-0">
+          <div className="flex items-center justify-between gap-3 border-b border-border px-[14px] py-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <Flag className="shrink-0 text-[17px] text-accent" />
+              <div className="min-w-0">
+                <div className="font-display text-[15px] font-bold">Challenge beendet</div>
+                {session.ends_at && (
+                  <div className="text-[12px] text-muted">
+                    {new Date(session.ends_at).toLocaleString('de-DE', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+            {canControl && (
+              <button
+                type="button"
+                className="shrink-0 text-[13px] font-bold text-accent"
+                onClick={() => handleSetEnded(false)}
+              >
+                Wieder öffnen
+              </button>
+            )}
+          </div>
+          <div className="px-[14px] pb-3 pt-2.5">
+            <div className="section-label mb-2">Endstand</div>
+            {podium.length === 0 ? (
+              <p className="text-[13px] text-muted">Keine Ergebnisse.</p>
+            ) : (
+              <ol className="flex flex-col gap-1.5">
+                {podium.map((row) => (
+                  <li
+                    key={row.participant.id}
+                    className={`flex items-center gap-3 ${row.inactive ? 'opacity-50' : ''}`}
+                  >
+                    <RankMedal rank={row.rank} />
+                    <span className="min-w-0 flex-1 truncate font-display text-[15px] font-bold">
+                      {row.participant.display_name}
+                    </span>
+                    <span className="font-num text-[18px] font-bold tabular-nums">
+                      {row.points}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!ended && (
+        <div className="mb-4">
+          <ShareSession code={session.join_code} />
+        </div>
+      )}
 
       <div className="mb-[22px] flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] leading-relaxed text-muted">
         {scoring.gameMode === 'flash_only' && (
@@ -551,13 +667,15 @@ export default function SessionView() {
             Boulder (
             {filtering ? `${visibleBoulders.length} / ${boulders.length}` : boulders.length})
           </h2>
-          <button
-            className="flex items-center gap-1 text-[12px] font-bold text-accent"
-            onClick={openAddBoulder}
-          >
-            <Plus className="text-[15px]" />
-            Hinzufügen
-          </button>
+          {!ended && (
+            <button
+              className="flex items-center gap-1 text-[12px] font-bold text-accent"
+              onClick={openAddBoulder}
+            >
+              <Plus className="text-[15px]" />
+              Hinzufügen
+            </button>
+          )}
         </div>
 
         {boulders.length > 0 && (
@@ -692,16 +810,17 @@ export default function SessionView() {
               onSaveResult={(status, attempts) =>
                 handleSaveResult(b, myParticipant.id, status, attempts)
               }
-              onEdit={() => openEditBoulder(b)}
+              onEdit={ended ? undefined : () => openEditBoulder(b)}
               onOpenRanking={() => setRankingBoulder(b)}
               highlight={b.id === highlightBoulderId}
-              participants={orderedParticipants}
+              participants={activeParticipants}
               resultsByParticipant={byBoulderParticipant.get(b.id)}
               myParticipantId={myParticipant.id}
               showOthers={showOthers}
               onSaveResultFor={(participantId, status, attempts) =>
                 handleSaveResult(b, participantId, status, attempts)
               }
+              lockedReason={lockedReason}
             />
           )
         })}
@@ -710,13 +829,15 @@ export default function SessionView() {
           <p className="px-0.5 py-2 text-[14px] text-muted">Keine Boulder passen zum Filter.</p>
         )}
 
-        <button
-          className="flex w-full items-center justify-center gap-2 rounded-card border-[1.5px] border-dashed border-border-strong bg-transparent p-[15px] font-display text-[15px] font-bold text-muted transition hover:border-accent hover:text-accent"
-          onClick={openAddBoulder}
-        >
-          <Plus className="text-[18px]" />
-          Boulder hinzufügen
-        </button>
+        {!ended && (
+          <button
+            className="flex w-full items-center justify-center gap-2 rounded-card border-[1.5px] border-dashed border-border-strong bg-transparent p-[15px] font-display text-[15px] font-bold text-muted transition hover:border-accent hover:text-accent"
+            onClick={openAddBoulder}
+          >
+            <Plus className="text-[18px]" />
+            Boulder hinzufügen
+          </button>
+        )}
       </section>
 
       <AddBoulderDialog
@@ -803,6 +924,19 @@ export default function SessionView() {
               <Plan className="text-[20px]" />
               Auf der Karte zeigen
             </button>
+            {canControl && (
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-btn px-1 py-3.5 text-[16px] font-semibold transition hover:bg-surface-2"
+                onClick={() => {
+                  closeMenu()
+                  handleSetEnded(!ended)
+                }}
+              >
+                <Flag className="text-[20px]" />
+                {ended ? 'Challenge wieder öffnen' : 'Challenge beenden'}
+              </button>
+            )}
             <button
               type="button"
               className="flex w-full items-center gap-2.5 rounded-btn px-1 py-3.5 text-[16px] font-semibold text-bad transition hover:bg-surface-2"
@@ -839,7 +973,7 @@ export default function SessionView() {
         />
       )}
 
-      {isHost && (
+      {isHost && !ended && (
         <ReorderBouldersDialog
           open={reorderOpen}
           boulders={boulders}

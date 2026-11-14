@@ -24,6 +24,7 @@ export default function BoulderCard({
   myParticipantId,
   showOthers = false,
   onSaveResultFor,
+  lockedReason,
 }: {
   boulder: Boulder
   myResult: Result | undefined
@@ -55,6 +56,8 @@ export default function BoulderCard({
   myParticipantId?: string
   showOthers?: boolean
   onSaveResultFor?: (participantId: string, status: ResultStatus, attempts: number) => void
+  // Eingabe gesperrt (z.B. Challenge beendet) – Ergebnisse werden nur angezeigt.
+  lockedReason?: string
 }) {
   // Bewusst nicht auf der Karte: die laufende Nummer (die Reihenfolge der Liste sagt
   // dasselbe, und ReorderBouldersDialog zeigt sie weiterhin) und die Zahl der Tops
@@ -151,6 +154,7 @@ export default function BoulderCard({
         difficulty={boulder.difficulty}
         weekBonus={boulder.week_bonus}
         onSave={onSaveResult}
+        lockedReason={lockedReason}
       />
 
       {showOthers &&
@@ -167,6 +171,7 @@ export default function BoulderCard({
               difficulty={boulder.difficulty}
               weekBonus={boulder.week_bonus}
               onSave={(status, attempts) => onSaveResultFor(p.id, status, attempts)}
+              lockedReason={lockedReason}
             />
           ))}
 

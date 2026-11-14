@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { recomputeSessionResults, updateSession } from '../lib/api'
 import { useDialogEscape } from '../hooks/useDialogEscape'
+import { sessionPhase } from '../lib/sessionPhase'
 import { scoringFromSession, type Boulder, type Result, type Session } from '../types'
 import SessionSettingsFields, { type SessionSettingsValues } from './SessionSettingsFields'
 import GameModePicker from './GameModePicker'
@@ -26,6 +27,9 @@ export default function EditSessionDialog({
   onReorderBoulders: () => void
 }) {
   const initialScoring = scoringFromSession(session)
+  // Beendete Challenge: nichts ändern, was den Endstand verschiebt (Modus, Punkteregeln,
+  // Reihenfolge) – Name, Sichtbarkeit und die Haken bleiben änderbar.
+  const ended = sessionPhase(session) === 'ended'
   const [values, setValues] = useState<SessionSettingsValues>({
     name: session.name,
     gameMode: initialScoring.gameMode,
@@ -36,6 +40,7 @@ export default function EditSessionDialog({
     penaltyMode: initialScoring.penaltyMode,
     sharedScoring: session.shared_scoring,
     isPublic: session.is_public,
+    sharedControl: session.shared_control,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -75,6 +80,7 @@ export default function EditSessionDialog({
         scoring,
         sharedScoring: values.sharedScoring,
         isPublic: values.isPublic,
+        sharedControl: values.sharedControl,
       })
       if (willRecompute) {
         await recomputeSessionResults({ sessionId: session.id, results, boulders, scoring })
@@ -103,6 +109,7 @@ export default function EditSessionDialog({
         <SessionSettingsFields
           values={values}
           onChange={patch}
+          scoringLocked={ended}
           modeSlot={
             <div className="panel mb-[18px]">
               <div className="panel-title mb-3.5">Spielmodus</div>
@@ -115,7 +122,7 @@ export default function EditSessionDialog({
           }
         />
 
-        {boulders.length >= 2 && (
+        {boulders.length >= 2 && !ended && (
           <>
             <div className="mb-1 mt-1 border-t border-border" />
             <button

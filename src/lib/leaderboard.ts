@@ -13,6 +13,9 @@ export interface LeaderboardRow {
   // Inklusive der Flashes (ein Flash ist ein Top).
   tops: number
   flashes: number
+  // Hat die Challenge verlassen (participants.left_at, Migration 0023): bleibt mit
+  // seinen Ergebnissen in der Wertung, wird aber ausgegraut und ist nie „du“.
+  inactive: boolean
   // Platzierung, 1-basiert. Gleiche PUNKTZAHL teilt sich den Platz (1, 2, 2, 4 …) –
   // dieselbe Konvention wie in der Rangliste eines einzelnen Boulders (BoulderRanking).
   rank: number
@@ -51,7 +54,13 @@ export function computeLeaderboardRows(
 ): LeaderboardRow[] {
   const byParticipant = new Map<string, Omit<LeaderboardRow, 'rank'>>()
   for (const p of participants) {
-    byParticipant.set(p.id, { participant: p, points: 0, tops: 0, flashes: 0 })
+    byParticipant.set(p.id, {
+      participant: p,
+      points: 0,
+      tops: 0,
+      flashes: 0,
+      inactive: p.left_at != null,
+    })
   }
   for (const r of results) {
     const row = byParticipant.get(r.participant_id)
@@ -113,7 +122,7 @@ export function summarizeLeaderboard(
   const me =
     currentUserId === null
       ? null
-      : (rows.find((r) => r.participant.user_id === currentUserId) ?? null)
+      : (rows.find((r) => !r.inactive && r.participant.user_id === currentUserId) ?? null)
 
   let gapToNext: number | null = null
   let nextRank: number | null = null

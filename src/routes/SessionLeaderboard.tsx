@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useRealtimeSession } from '../hooks/useRealtimeSession'
 import { computeLeaderboardRows, summarizeLeaderboard } from '../lib/leaderboard'
 import { countsAttempts } from '../lib/scoring'
+import { isActiveParticipant } from '../lib/sessionPhase'
 import { scoringFromSession, type Participant } from '../types'
 import { ChevronLeft } from '../components/icons'
 import Leaderboard from '../components/Leaderboard'
@@ -54,9 +55,12 @@ export default function SessionLeaderboard() {
   const rows = useMemo(() => computeLeaderboardRows(participants, results), [participants, results])
   const summary = useMemo(() => summarizeLeaderboard(rows, userId), [rows, userId])
   const myParticipant = useMemo(
-    () => participants.find((p) => p.user_id === userId) ?? null,
+    // Nur als aktiver Teilnehmer ist man „ich“ – wer verlassen hat, sieht die Rangliste
+    // wie ein Zuschauer (Migration 0023).
+    () => participants.find((p) => p.user_id === userId && isActiveParticipant(p)) ?? null,
     [participants, userId],
   )
+  const activeCount = useMemo(() => participants.filter(isActiveParticipant).length, [participants])
 
   // Aus der Spieler-Detailansicht zu einem Boulder springen: zurück in die Challenge,
   // die den Boulder anhand des Router-States markiert und anspringt. Bewusst nicht der
@@ -103,7 +107,7 @@ export default function SessionLeaderboard() {
         Leaderboard
       </h1>
       <div className="mb-[22px] mt-[5px] text-[13px] text-muted">
-        {participants.length === 1 ? '1 Teilnehmer' : `${participants.length} Teilnehmer`} ·{' '}
+        {activeCount === 1 ? '1 Teilnehmer' : `${activeCount} Teilnehmer`} ·{' '}
         {boulders.length === 1 ? '1 Boulder' : `${boulders.length} Boulder`}
       </div>
 

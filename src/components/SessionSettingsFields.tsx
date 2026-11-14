@@ -17,6 +17,8 @@ export interface SessionSettingsValues {
   penaltyMode: PenaltyMode
   sharedScoring: boolean
   isPublic: boolean
+  // Alle aktiven Teilnehmer dürfen die Challenge steuern (beenden/wieder öffnen).
+  sharedControl: boolean
 }
 
 // Auswählbare Strafmodi (siehe PenaltyMode in types.ts).
@@ -45,11 +47,15 @@ export default function SessionSettingsFields({
   values,
   onChange,
   modeSlot,
+  scoringLocked = false,
 }: {
   values: SessionSettingsValues
   onChange: (patch: Partial<SessionSettingsValues>) => void
   // Optionaler Inhalt direkt nach dem Namen – im Edit-Dialog die Moduswahl.
   modeSlot?: React.ReactNode
+  // Beendete Challenge: alles, was den Endstand verschieben würde (Modus, Wertung,
+  // Punkteregeln, Minuspunkte), ist bis „Wieder öffnen“ gesperrt und ausgeblendet.
+  scoringLocked?: boolean
 }) {
   const {
     name,
@@ -61,6 +67,7 @@ export default function SessionSettingsFields({
     penaltyMode,
     sharedScoring,
     isPublic,
+    sharedControl,
   } = values
   // „Nur Flash“: Top-Punkte, Versuchskosten und Strafmodus wirken nicht – ausblenden.
   const flashOnly = gameMode === 'flash_only'
@@ -95,121 +102,132 @@ export default function SessionSettingsFields({
         />
       </div>
 
-      {modeSlot}
-
-      <div className="panel mb-[18px]">
-        <div className="panel-title mb-3.5">Wertung</div>
-        <div className="seg">
-          <SegOption
-            active={mode === 'classic'}
-            title="Klassisch"
-            sub="Feste Punkte"
-            onClick={() => onChange({ mode: 'classic' })}
-          />
-          <SegOption
-            active={mode === 'multiplier'}
-            title="Multiplikator"
-            sub="Grad × Punkte"
-            onClick={() => onChange({ mode: 'multiplier' })}
-          />
-        </div>
-        <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
-          {mode === 'multiplier' && flashOnly ? (
-            <>
-              Der Schwierigkeitsgrad multipliziert die Punkte. Beispiel: ein Flash (klassisch{' '}
-              {flashPoints}) zählt auf Grad 4 = {flashPoints * 4}. Grad ist beim Anlegen eines
-              Boulders Pflicht.
-            </>
-          ) : mode === 'multiplier' ? (
-            <>
-              Der Schwierigkeitsgrad multipliziert die Punkte. Beispiel: ein Top mit 1 Fehlversuch
-              (klassisch {exTop1}) zählt auf Grad 4 = {exTop1 * 4}. Grad ist beim Anlegen eines
-              Boulders Pflicht.
-            </>
-          ) : flashOnly ? (
-            <>
-              Feste Punkte pro Flash; der Schwierigkeitsgrad dient nur zur Info. Beispiel: ein Flash
-              zählt {flashPoints} Punkte – unabhängig vom Grad.
-            </>
-          ) : (
-            <>
-              Feste Punkte pro Boulder; der Schwierigkeitsgrad dient nur zur Info. Beispiel: ein Top
-              mit 1 Fehlversuch zählt {exTop1} Punkte – unabhängig vom Grad.
-            </>
-          )}
+      {scoringLocked ? (
+        <p className="mb-[18px] rounded-card border border-border bg-surface-2 px-4 py-3 text-[13px] leading-relaxed text-muted">
+          Die Challenge ist beendet. Spielmodus und Punkteregeln sind gesperrt, damit sich der
+          Endstand nicht verschiebt – öffne sie wieder, um sie zu ändern.
         </p>
-      </div>
+      ) : (
+        <>
+          {modeSlot}
 
-      <div className="panel mb-[18px]">
-        <div className="panel-title mb-3.5">
-          {mode === 'multiplier' ? 'Punkteregeln (pro Grad)' : 'Punkteregeln'}
-        </div>
-        {/* Bei „Nur Flash“ bleiben die ausgeblendeten Werte gespeichert und greifen wieder,
-            wenn der Host zurück auf „Standard“ wechselt. */}
-        <RuleRow
-          icon={<Bolt />}
-          tone="flash"
-          label="Punkte für Flash"
-          value={flashPoints}
-          onChange={(n) => onChange({ flashPoints: n })}
-        />
-        {!flashOnly && (
-          <>
-            <RuleRow
-              icon={<Check />}
-              tone="top"
-              label="Punkte für Top"
-              value={topPoints}
-              onChange={(n) => onChange({ topPoints: n })}
-            />
-            <RuleRow
-              icon={<X />}
-              tone="miss"
-              label="Kosten pro Fehlversuch"
-              value={attemptCost}
-              min={0}
-              onChange={(n) => onChange({ attemptCost: n })}
-            />
-          </>
-        )}
-        {flashOnly && (
-          <p className="mt-1 text-[12.5px] leading-relaxed text-muted">
-            Top und nicht geschaffte Boulder zählen 0 – Minuspunkte gibt es keine.
-          </p>
-        )}
-      </div>
-
-      {!flashOnly && (
-        <div className="panel mb-[18px]">
-          <div className="panel-title mb-3.5">Minuspunkte</div>
-          <div className="grid grid-cols-3 gap-2">
-            {PENALTY_MODES.map((p) => (
-              <button
-                key={p.value}
-                type="button"
-                aria-pressed={penaltyMode === p.value}
-                onClick={() => onChange({ penaltyMode: p.value })}
-                className={`chip${penaltyMode === p.value ? ' is-active' : ''}`}
-              >
-                <span className="font-display text-[13px] font-bold leading-tight">{p.title}</span>
-                <span
-                  className={`text-[11px] ${penaltyMode === p.value ? 'text-accent-ink/80' : 'text-muted'}`}
-                >
-                  {p.subtitle}
-                </span>
-              </button>
-            ))}
+          <div className="panel mb-[18px]">
+            <div className="panel-title mb-3.5">Wertung</div>
+            <div className="seg">
+              <SegOption
+                active={mode === 'classic'}
+                title="Klassisch"
+                sub="Feste Punkte"
+                onClick={() => onChange({ mode: 'classic' })}
+              />
+              <SegOption
+                active={mode === 'multiplier'}
+                title="Multiplikator"
+                sub="Grad × Punkte"
+                onClick={() => onChange({ mode: 'multiplier' })}
+              />
+            </div>
+            <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
+              {mode === 'multiplier' && flashOnly ? (
+                <>
+                  Der Schwierigkeitsgrad multipliziert die Punkte. Beispiel: ein Flash (klassisch{' '}
+                  {flashPoints}) zählt auf Grad 4 = {flashPoints * 4}. Grad ist beim Anlegen eines
+                  Boulders Pflicht.
+                </>
+              ) : mode === 'multiplier' ? (
+                <>
+                  Der Schwierigkeitsgrad multipliziert die Punkte. Beispiel: ein Top mit 1
+                  Fehlversuch (klassisch {exTop1}) zählt auf Grad 4 = {exTop1 * 4}. Grad ist beim
+                  Anlegen eines Boulders Pflicht.
+                </>
+              ) : flashOnly ? (
+                <>
+                  Feste Punkte pro Flash; der Schwierigkeitsgrad dient nur zur Info. Beispiel: ein
+                  Flash zählt {flashPoints} Punkte – unabhängig vom Grad.
+                </>
+              ) : (
+                <>
+                  Feste Punkte pro Boulder; der Schwierigkeitsgrad dient nur zur Info. Beispiel: ein
+                  Top mit 1 Fehlversuch zählt {exTop1} Punkte – unabhängig vom Grad.
+                </>
+              )}
+            </p>
           </div>
-          <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
-            {PENALTY_MODES.find((p) => p.value === penaltyMode)?.hint}
-          </p>
-          <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
-            Beispiel: Flash = <b className="text-ink">{exFlash}</b> · Top, 1 Fehlversuch ={' '}
-            <b className="text-ink">{exTop1}</b> · Top, 8 Fehlversuche ={' '}
-            <b className="text-ink">{exTopMany}</b> · 3× nicht geschafft ={' '}
-            <b className="text-ink">{exFail}</b>.
-          </p>
-        </div>
+
+          <div className="panel mb-[18px]">
+            <div className="panel-title mb-3.5">
+              {mode === 'multiplier' ? 'Punkteregeln (pro Grad)' : 'Punkteregeln'}
+            </div>
+            {/* Bei „Nur Flash“ bleiben die ausgeblendeten Werte gespeichert und greifen wieder,
+            wenn der Host zurück auf „Standard“ wechselt. */}
+            <RuleRow
+              icon={<Bolt />}
+              tone="flash"
+              label="Punkte für Flash"
+              value={flashPoints}
+              onChange={(n) => onChange({ flashPoints: n })}
+            />
+            {!flashOnly && (
+              <>
+                <RuleRow
+                  icon={<Check />}
+                  tone="top"
+                  label="Punkte für Top"
+                  value={topPoints}
+                  onChange={(n) => onChange({ topPoints: n })}
+                />
+                <RuleRow
+                  icon={<X />}
+                  tone="miss"
+                  label="Kosten pro Fehlversuch"
+                  value={attemptCost}
+                  min={0}
+                  onChange={(n) => onChange({ attemptCost: n })}
+                />
+              </>
+            )}
+            {flashOnly && (
+              <p className="mt-1 text-[12.5px] leading-relaxed text-muted">
+                Top und nicht geschaffte Boulder zählen 0 – Minuspunkte gibt es keine.
+              </p>
+            )}
+          </div>
+
+          {!flashOnly && (
+            <div className="panel mb-[18px]">
+              <div className="panel-title mb-3.5">Minuspunkte</div>
+              <div className="grid grid-cols-3 gap-2">
+                {PENALTY_MODES.map((p) => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    aria-pressed={penaltyMode === p.value}
+                    onClick={() => onChange({ penaltyMode: p.value })}
+                    className={`chip${penaltyMode === p.value ? ' is-active' : ''}`}
+                  >
+                    <span className="font-display text-[13px] font-bold leading-tight">
+                      {p.title}
+                    </span>
+                    <span
+                      className={`text-[11px] ${penaltyMode === p.value ? 'text-accent-ink/80' : 'text-muted'}`}
+                    >
+                      {p.subtitle}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
+                {PENALTY_MODES.find((p) => p.value === penaltyMode)?.hint}
+              </p>
+              <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
+                Beispiel: Flash = <b className="text-ink">{exFlash}</b> · Top, 1 Fehlversuch ={' '}
+                <b className="text-ink">{exTop1}</b> · Top, 8 Fehlversuche ={' '}
+                <b className="text-ink">{exTopMany}</b> · 3× nicht geschafft ={' '}
+                <b className="text-ink">{exFail}</b>.
+              </p>
+            </div>
+          )}
+        </>
       )}
 
       <div className="panel mb-[18px]">
@@ -226,6 +244,19 @@ export default function SessionSettingsFields({
         <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
           Jeder Teilnehmer darf Ergebnisse für alle Mitspieler eintragen – praktisch, wenn einer mit
           dem Handy für die Gruppe mitschreibt. Ohne Haken trägt jeder nur für sich selbst ein.
+        </p>
+        <button
+          type="button"
+          aria-pressed={sharedControl}
+          onClick={() => onChange({ sharedControl: !sharedControl })}
+          className={`chip mt-4 w-full flex-row items-center justify-center gap-2 py-2.5 text-[13px] font-semibold${sharedControl ? ' is-active' : ''}`}
+        >
+          {sharedControl && <Check className="text-[15px]" />}
+          Alle dürfen die Challenge steuern
+        </button>
+        <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
+          Jeder Teilnehmer darf die Challenge beenden und wieder öffnen – praktisch, wenn der Host
+          schon weg ist. Ohne Haken darf das nur der Host.
         </p>
       </div>
 

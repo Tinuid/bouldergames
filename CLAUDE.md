@@ -154,6 +154,14 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
     `recomputeSessionResults` die neu berechneten Punkte in **einem** Aufruf schreibt (nur `points`, nur
     wo status/attempts/Grad noch dem mitgeschickten Stand entsprechen; Host-Check; gibt nicht
     aktualisierte IDs zurück). Idempotent.
+25. `supabase/migrations/0023_leave_and_end.sql` ausführen – **vor** dem Deploy der App-Version 1.27.0
+    (rückwärtskompatibel, alte Apps merken nichts). Legt `participants.left_at`, `sessions.ends_at` und
+    `sessions.shared_control` (Default `true`) an, stellt `is_session_member`/`owns_participant` auf
+    **aktive** Teilnehmer um (`left_at is null`), legt `is_session_open`, `can_control_session`, die RPC
+    `set_session_end(p_session_id, p_end)` und den Sperr-Trigger `trg_results_session_open` (SQLSTATE
+    `BCEND`) an und ersetzt `cleanup_stale_sessions` („leer“ = keine aktiven Teilnehmer). Idempotent.
+    **0001 und 0012 danach nicht erneut ausführen** – sie setzten die Funktionen auf den Stand ohne
+    `left_at` zurück.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.
@@ -472,6 +480,37 @@ liegen `+`/`-`/`0` auf der fokussierten Karte.
 nicht vom Verschieben der Karte zu unterscheiden. `useSvgPanZoom` liefert `onLongPress` und
 `disabled` bereits mit, falls später doch ein Drag dazukommen soll.
 
+**Verlassen behält die Ergebnisse (Migration `0023`).** „Verlassen“ löscht die Teilnehmer-Zeile
+nicht mehr (früher fielen per Cascade alle eigenen Ergebnisse weg), sondern setzt
+`participants.left_at`. Die Ergebnisse bleiben in der Rangliste, ausgegraut mit „hat verlassen“
+(`LeaderboardRow.inactive`), und ein Ausgetretener ist nie „du“. Rechte fallen trotzdem weg:
+`is_session_member` und `owns_participant` zählen nur aktive Teilnehmer – das hält die alte
+Bedeutung, damit erben auch `can_score_others`, Boulder-/Session-Policies das automatisch. Der
+Wiederbeitritt läuft über dasselbe Upsert wie der Beitritt (`joinSession` schickt `left_at: null`
+mit); `participants_insert`/`participants_update` hängen nur an `user_id = auth.uid()`, darum klappt
+das. In `SessionView` ist `myParticipant` nur ein **aktiver** Teilnehmer, sonst erscheint das
+Beitrittsformular mit dem alten Namen. Für die Eingabezeilen („für andere eintragen“) gibt es eine
+eigene Liste nur aktiver Teilnehmer; Ranglisten bekommen alle. `listMySessions` und die
+Teilnehmerzahl in `listPublicSessions` filtern Ausgetretene heraus.
+
+**Spielende und Spielleitung (Migration `0023`).** Eine Challenge endet über `sessions.ends_at`:
+„Challenge beenden“ setzt die Serverzeit, „Wieder öffnen“ `null` – beides über die RPC
+`set_session_end`, erlaubt für alle mit Steuerrecht (`can_control_session` = Host **oder** aktives
+Mitglied bei `sessions.shared_control`, Haken „Alle dürfen die Challenge steuern“, Default an).
+Bewusst ein Zeitpunkt statt eines Flags: ein späteres Zeitlimit (Time Attack) setzt dort einen
+Zeitpunkt in der Zukunft. Die Phase fragt das UI **nur** über `sessionPhase()`
+(`src/lib/sessionPhase.ts`) bzw. `useSessionPhase()` ab (rendert neu, wenn ein künftiger Endzeitpunkt
+erreicht ist); `sessions.status` bleibt ungenutzt. Nach Spielende sperrt der Trigger
+`trg_results_session_open` Einfügen und Änderungen an `status`/`attempts` (reine Punkte-Updates aus
+`set_result_points` und dem Rescale-Trigger gehen durch); der Client erkennt den Fehler über
+`isSessionEndedError` (SQLSTATE `BCEND`). Bewusst **keine** Sperr-Trigger auf `boulders` (kein
+Konflikt mit dem Cascade beim Löschen/Cleanup; die Community spielt auf Ehrlichkeit) – das UI blendet
+Hinzufügen/Bearbeiten/Umsortieren nach Spielende aus, der `ResultEditor` zeigt über `lockedReason`
+nur noch an, und im `EditSessionDialog` sind Spielmodus und Punkteregeln gesperrt
+(`scoringLocked`). Oben in der beendeten Challenge stehen Banner und Endstand (Top 3).
+„Laufende Sessions“ zeigt beendete nicht mehr; „Zuletzt gespielt“ merkt sich `endedAt` beim Öffnen
+und zeigt „beendet“.
+
 **Verlauf gerätelokal.** Ohne Accounts merkt sich `src/lib/localHistory.ts` besuchte Sessions in
 `localStorage` (für die "Zuletzt gespielt"-Liste auf `Home`).
 
@@ -521,8 +560,9 @@ manuell synchron gehalten werden.
 ## Bewusst (noch) nicht gebaut
 
 Keine DELETE-Policy für `results` (einzelne Ergebnisse löschen fehlt); Archivieren von Sessions
-(`status='archived'`) ist im UI nicht umgesetzt – nur hartes Löschen durch jeden Teilnehmer
-(`sessions_delete` via `is_session_member`, Cascade); Host-Korrektur fremder Ergebnisse ist per RLS erlaubt, aber im UI
+(`status='archived'`) ist nicht umgesetzt – das Spielende hängt an `ends_at`, gelöscht wird hart
+durch jeden aktiven Teilnehmer (`sessions_delete` via `is_session_member`, Cascade); beendete Sessions
+räumt das nächtliche Cleanup nach denselben Regeln ab wie laufende; Host-Korrektur fremder Ergebnisse ist per RLS erlaubt, aber im UI
 nicht umgesetzt; keine Pro-Boulder-Detailansicht ("wer hat was"), Spielmodi bisher nur „Nur Flash“
 (Rest siehe `spielmodi.md`), keine
 Offline-Eingabe mit Sync. Kein Aufräumen verwaister anonymer `auth.users` (die wachsen monoton; das

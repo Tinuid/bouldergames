@@ -14,6 +14,9 @@ export interface HistoryEntry {
   // Spielmodus fürs Badge in „Zuletzt gespielt“. Optional: ältere Einträge haben ihn
   // nicht und bekommen ihn beim nächsten Öffnen der Session (SessionView).
   gameMode?: GameMode
+  // Zeitpunkt des Spielendes (sessions.ends_at), aktualisiert beim Öffnen der Session.
+  // Optional wie gameMode: ältere Einträge haben ihn nicht.
+  endedAt?: string | null
   lastVisited: number
 }
 

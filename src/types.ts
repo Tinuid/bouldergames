@@ -57,6 +57,13 @@ export interface Session {
   // true: erscheint auf der Startseite in der Liste laufender Sessions und ist dort
   // ohne Code beitretbar (Migration 0013). Default false.
   is_public: boolean
+  // true (Default): alle aktiven Teilnehmer dürfen die Challenge steuern – beenden und
+  // wieder öffnen (Migration 0023, RLS can_control_session). false: nur der Host.
+  shared_control: boolean
+  // Spielende (Migration 0023): Zeitpunkt, ab dem die Challenge beendet ist. null = offen.
+  // Phase immer über sessionPhase() (src/lib/sessionPhase.ts) abfragen.
+  ends_at: string | null
+  // Ungenutzt – das Spielende hängt an ends_at (siehe sessionPhase.ts).
   status: 'active' | 'archived'
   created_at: string
 }
@@ -67,6 +74,9 @@ export interface Participant {
   user_id: string
   display_name: string
   joined_at: string
+  // Challenge verlassen (Migration 0023): die Zeile bleibt, die Ergebnisse auch; ohne
+  // Schreibrechte. null = aktiv. Ein erneuter Beitritt setzt wieder null.
+  left_at: string | null
 }
 
 export interface Boulder {

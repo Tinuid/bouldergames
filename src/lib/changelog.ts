@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.27.0',
+    date: '14.11.2026',
+    text: 'Neu: Challenges lassen sich beenden – danach steht der Endstand fest, mit Siegertreppchen oben in der Challenge. Wieder öffnen geht jederzeit.\nWer eine Challenge verlässt, behält seine Ergebnisse: sie zählen ausgegraut weiter, und beim Wiederbeitritt geht es dort weiter.\nNeuer Haken „Alle dürfen die Challenge steuern“ (standardmäßig an): dann darf jeder beenden, nicht nur der Host.',
+  },
+  {
     version: '1.26.2',
     date: '14.11.2026',
     text: 'Zuverlässiger: Neue App-Versionen kommen jetzt an, sobald du in die App zurückkehrst. Nach Bildschirm-aus oder Funkloch lädt die Challenge den aktuellen Stand nach. Und wenn der Host die Punkteregeln ändert, gehen gleichzeitige Einträge anderer nicht mehr verloren.',
