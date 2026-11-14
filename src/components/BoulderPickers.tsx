@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { BOULDER_COLORS } from '../lib/colors'
 import { DIFFICULTIES } from '../lib/difficulty'
 import { makePreviewBlob } from '../lib/images'
-import { diagLog, useDiagFlag } from '../lib/diagFlags' // Diagnose-Modus (vorübergehend, siehe CLAUDE.md)
 import { Camera, Picture, X } from './icons'
 
 // Gemeinsame Auswahl-Bausteine für Boulder-Formulare: Grad, Farbe und Foto.
@@ -142,20 +141,8 @@ export function PhotoField({
     if (galleryInputRef.current) galleryInputRef.current.value = ''
   }, [resetKey])
 
-  // Diagnose-Modus (vorübergehend, siehe CLAUDE.md): Gegenprobe ohne capture + Log.
-  const noCapture = useDiagFlag('noCapture')
-
   function pick(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0] ?? null
-    const via = e.target === cameraInputRef.current ? 'kamera' : 'galerie'
-    const capture = e.target.getAttribute('capture') ?? '–'
-    diagLog(
-      f
-        ? `pick ${via} (capture=${capture}): ${f.type} ${Math.round(f.size / 1024)} KB`
-        : `pick ${via} (capture=${capture}): leer`,
-      'pick',
-    )
-    onPick(f)
+    onPick(e.target.files?.[0] ?? null)
   }
 
   const previewSrc = previewUrl ?? existingUrl
@@ -169,7 +156,7 @@ export function PhotoField({
         ref={cameraInputRef}
         type="file"
         accept="image/*"
-        capture={noCapture ? undefined : 'environment'}
+        capture="environment"
         className="hidden"
         onChange={pick}
       />
@@ -189,17 +176,7 @@ export function PhotoField({
         </div>
       ) : previewSrc ? (
         <div className="relative h-56 overflow-hidden rounded-sm2 border border-border-strong bg-surface-2">
-          <img
-            src={previewSrc}
-            alt="Vorschau"
-            className="h-full w-full object-cover"
-            onLoad={(e) =>
-              diagLog(
-                `preview geladen ${e.currentTarget.naturalWidth}×${e.currentTarget.naturalHeight}`,
-                'preview',
-              )
-            }
-          />
+          <img src={previewSrc} alt="Vorschau" className="h-full w-full object-cover" />
           <button
             type="button"
             className="absolute right-2 top-2 flex items-center gap-1 rounded-lg bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
@@ -218,10 +195,7 @@ export function PhotoField({
           <button
             type="button"
             className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded-sm2 border border-border-strong bg-surface-2 px-2 py-3.5 text-[13.5px] font-semibold text-ink transition hover:border-accent hover:text-accent active:scale-[0.97]"
-            onClick={() => {
-              diagLog('tap „Foto aufnehmen"', 'tap')
-              cameraInputRef.current?.click()
-            }}
+            onClick={() => cameraInputRef.current?.click()}
           >
             <Camera className="text-[17px]" />
             Foto aufnehmen

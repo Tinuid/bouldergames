@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.23.1',
+    date: '14.11.2026',
+    text: 'Der versteckte Diagnose-Modus ist wieder ausgebaut – das Bildschirm-Flackern nach dem Fotografieren ist behoben. Für dich ändert sich nichts.',
+  },
+  {
     version: '1.23.0',
     date: '11.11.2026',
     text: 'Neue Boulder-Farbe „holz-schwarz“ für Holzgriffe mit schwarzem Grip-Belag – auf Wunsch aus dem Feedback.',

@@ -240,14 +240,6 @@ body {
   animation: bcFlash 1.1s ease;
 }
 
-/* Diagnose-Modus (vorübergehend, siehe CLAUDE.md): Gegenproben-Schalter aus src/lib/diagFlags.ts. */
-.diag-no-blur .sheet-scrim {
-  backdrop-filter: none;
-}
-.diag-no-safe-area body {
-  padding: 0;
-}
-
 /* ════════════════ REDUCED MOTION ════════════════ */
 @media (prefers-reduced-motion: reduce) {
   *,

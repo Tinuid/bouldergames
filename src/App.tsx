@@ -7,7 +7,6 @@ import SessionView from './routes/SessionView'
 import SessionLeaderboard from './routes/SessionLeaderboard'
 import FeedbackList from './routes/FeedbackList'
 import GymMap from './routes/GymMap'
-import ViewportDiag from './components/ViewportDiag' // Diagnose-Modus (vorübergehend, siehe CLAUDE.md)
 
 export default function App() {
   const { loading, error } = useAuth()
@@ -29,19 +28,16 @@ export default function App() {
   }
 
   return (
-    <>
-      <ViewportDiag />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/create" element={<CreateSession />} />
-        <Route path="/join" element={<JoinSession />} />
-        <Route path="/join/:code" element={<JoinSession />} />
-        <Route path="/s/:sessionId" element={<SessionView />} />
-        <Route path="/s/:sessionId/rangliste" element={<SessionLeaderboard />} />
-        <Route path="/karte" element={<GymMap />} />
-        <Route path="/feedback" element={<FeedbackList />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </>
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/create" element={<CreateSession />} />
+      <Route path="/join" element={<JoinSession />} />
+      <Route path="/join/:code" element={<JoinSession />} />
+      <Route path="/s/:sessionId" element={<SessionView />} />
+      <Route path="/s/:sessionId/rangliste" element={<SessionLeaderboard />} />
+      <Route path="/karte" element={<GymMap />} />
+      <Route path="/feedback" element={<FeedbackList />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
