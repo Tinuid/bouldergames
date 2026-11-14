@@ -30,10 +30,33 @@ export const GAME_MODES: GameModeInfo[] = [
   },
 ]
 
-// Angekündigte Modi: nur als ausgegraute „bald“-Karte in der Moduswahl, nicht wählbar
-// und (noch) nicht im CHECK der Datenbank.
+// Angekündigte Modi: nur als ausgegraute Kachel unter „Bald verfügbar“ in der Moduswahl,
+// nicht wählbar und (noch) nicht im CHECK der Datenbank. Wird ein Modus gebaut, wandert er
+// von hier nach GAME_MODES. Erst die Wünsche aus dem Feedback, dann die eigenen Ideen
+// (Details und offene Fragen: spielmodi.md).
 export const UPCOMING_GAME_MODES: { key: string; title: string; subtitle: string }[] = [
+  // Aus dem Feedback
   { key: 'time_attack', title: 'Time Attack', subtitle: 'Punkte gegen die Uhr' },
+  { key: 'color', title: 'Farb-Challenge', subtitle: 'Nur bestimmte Farben zählen' },
+  {
+    key: 'last_man_standing',
+    title: 'Last Man Standing',
+    subtitle: 'Wer nicht toppt, fliegt raus',
+  },
+  { key: 'bets', title: 'Wetten', subtitle: 'Punkte auf Flash oder Top setzen' },
+  { key: 'few_holds', title: 'Wenige Griffe', subtitle: 'Toppen mit möglichst wenig Griffen' },
+  { key: 'max_holds', title: 'X Griffe', subtitle: 'Die meisten Boulder mit höchstens X Griffen' },
+  // Ideen
+  { key: 'best_n', title: 'Beste N', subtitle: 'Nur deine besten Boulder zählen' },
+  { key: 'rarity', title: 'Seltenheit', subtitle: 'Seltene Tops zählen mehr' },
+  { key: 'first_ascent', title: 'Erstbegehung', subtitle: 'Bonus für den ersten Top' },
+  { key: 'handicap', title: 'Handicap', subtitle: 'Punkte nach eigenem Niveau' },
+  { key: 'teams', title: 'Teams', subtitle: 'Gemeinsam punkten' },
+  { key: 'bingo', title: 'Hallen-Bingo', subtitle: 'Eine Reihe Aufgaben voll machen' },
+  { key: 'area_tour', title: 'Bereichs-Tour', subtitle: 'In jedem Bereich einer' },
+  { key: 'pyramid', title: 'Pyramide', subtitle: 'Viele leichte, wenige schwere' },
+  { key: 'horse', title: 'H-O-R-S-E', subtitle: 'Nachklettern oder Buchstabe' },
+  { key: 'random', title: 'Zufalls-Boulder', subtitle: 'Die App lost aus' },
 ]
 
 export function isGameMode(value: unknown): value is GameMode {

@@ -1,12 +1,47 @@
 import { GAME_MODES, UPCOMING_GAME_MODES } from '../lib/gameModes'
 import type { GameMode } from '../types'
-import { Bolt, Check, Timer } from './icons'
+import {
+  Bolt,
+  Check,
+  Coins,
+  Crown,
+  Diamond,
+  Dice,
+  Flag,
+  Grid,
+  Hand,
+  Hash,
+  Palette,
+  Plan,
+  Pyramid,
+  Repeat,
+  Scale,
+  Timer,
+  Trophy,
+  Users,
+} from './icons'
 
 // Icon je Modus (Darstellung bleibt hier, die Texte kommen aus lib/gameModes.ts).
+// Schlüssel = `value` aus GAME_MODES bzw. `key` aus UPCOMING_GAME_MODES.
 const ICONS: Record<string, React.ReactNode> = {
   standard: <Check />,
   flash_only: <Bolt />,
   time_attack: <Timer />,
+  color: <Palette />,
+  last_man_standing: <Crown />,
+  bets: <Coins />,
+  few_holds: <Hand />,
+  max_holds: <Hash />,
+  best_n: <Trophy />,
+  rarity: <Diamond />,
+  first_ascent: <Flag />,
+  handicap: <Scale />,
+  teams: <Users />,
+  bingo: <Grid />,
+  area_tour: <Plan />,
+  pyramid: <Pyramid />,
+  horse: <Repeat />,
+  random: <Dice />,
 }
 
 // Auswahl des Spielmodus als Karten-Liste – Schritt 1 beim Erstellen und oben im
@@ -51,25 +86,30 @@ export default function GameModePicker({
         )
       })}
 
-      {showUpcoming &&
-        UPCOMING_GAME_MODES.map((m) => (
-          <div
-            key={m.key}
-            aria-disabled="true"
-            className="flex w-full items-start gap-3 rounded-card border border-dashed border-border px-4 py-3.5 opacity-55"
-          >
-            <ModeIcon icon={ICONS[m.key]} active={false} />
-            <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-2 font-display text-[16px] font-bold leading-tight">
-                {m.title}
-                <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-muted">
-                  bald
+      {showUpcoming && UPCOMING_GAME_MODES.length > 0 && (
+        // Angekündigte Modi kompakt im 2er-Raster – es sind viele, und sie sind
+        // nur Vorschau: nicht antippbar, gestrichelt und blass.
+        <div className="mt-4">
+          <h2 className="section-label mb-2.5 px-0.5">Bald verfügbar</h2>
+          <ul className="grid grid-cols-2 gap-2">
+            {UPCOMING_GAME_MODES.map((m) => (
+              <li
+                key={m.key}
+                aria-disabled="true"
+                className="flex min-w-0 flex-col gap-1.5 rounded-sm2 border border-dashed border-border px-3 py-2.5 opacity-55"
+              >
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span className="shrink-0 text-[15px] text-muted">{ICONS[m.key]}</span>
+                  <span className="truncate font-display text-[13.5px] font-bold leading-tight">
+                    {m.title}
+                  </span>
                 </span>
-              </span>
-              <span className="mt-0.5 block text-[12.5px] text-muted">{m.subtitle}</span>
-            </span>
-          </div>
-        ))}
+                <span className="text-[11.5px] leading-snug text-muted">{m.subtitle}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }

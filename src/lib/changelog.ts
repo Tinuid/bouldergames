@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.26.1',
+    date: '14.11.2026',
+    text: 'Die Moduswahl zeigt jetzt unter „Bald verfügbar“ alle geplanten Spielmodi als Vorschau – von Time Attack über Wetten bis Hallen-Bingo. Sag uns per Feedback, welchen du als Nächstes willst.',
+  },
+  {
     version: '1.26.0',
     date: '14.11.2026',
     text: 'Neu: Spielmodi. Beim Erstellen einer Challenge wählst du jetzt zuerst den Modus. Erster neuer Modus: „Nur Flash“ – nur ein Flash bringt Punkte, ein Top nach Fehlversuchen zählt 0, Minuspunkte gibt es keine. Der Modus lässt sich in den Einstellungen nachträglich ändern. Das bisherige „Spielmodus“ (Klassisch/Multiplikator) heißt jetzt „Wertung“. Auf Wunsch aus dem Feedback.',

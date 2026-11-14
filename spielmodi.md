@@ -40,8 +40,12 @@ Wenn alle Modi eines Eintrags umgesetzt sind, den Eintrag löschen:
 Die Moduswahl ist **Schritt 1 von „Challenge erstellen“** (`/create`, Karten aus `GAME_MODES` in
 `src/lib/gameModes.ts`). Schritt 2 sind die Einstellungen unter `/create?modus=…`. Das Hauptmenü
 bekommt keine eigenen Einträge, weil jeder Modus eine Session mit Code, Bouldern und Rangliste bleibt.
-Der Modus erscheint als Badge im Session-Kopf und in den Listen der Startseite. Angekündigte Modi
-stehen als ausgegraute „bald“-Karten in `UPCOMING_GAME_MODES`.
+Der Modus erscheint als Badge im Session-Kopf und in den Listen der Startseite.
+
+**Alle geplanten Modi** (Feedback und Ideen unten) stehen seit 1.26.1 als ausgegraute Kacheln unter
+„Bald verfügbar“ in der Moduswahl (`UPCOMING_GAME_MODES` in `src/lib/gameModes.ts`, Icons in
+`GameModePicker`). Wenn ein Modus gebaut wird, wandert sein Eintrag von dort nach `GAME_MODES`. Der
+`key` sollte dann der spätere `game_mode`-Wert sein.
 
 Ausnahme für später: Solo-Modi ohne Gruppe (z.B. eine persönliche Hallen-Challenge) gehören eher zur
 Hallenkarte.
