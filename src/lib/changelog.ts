@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.29.0',
+    date: '14.11.2026',
+    text: 'Unter der Haube: Grade werden jetzt so gespeichert, wie sie heißen (Grad 8 ist 8), mit Platz für künftige Grade 9 und 10. Punkte bleiben gleich. Ein gespeicherter Filter auf der Hallenkarte wird dabei einmal zurückgesetzt.',
+  },
+  {
     version: '1.28.0',
     date: '14.11.2026',
     text: 'Die Moduswahl zeigt jetzt, was kommt: weitere Modi, Spielformen wie Last Man Standing oder Hallen-Bingo und Extras wie ein Zeitlimit, die sich später mit jedem Modus kombinieren lassen. Im Hintergrund rechnen alle Ranglisten jetzt an einer Stelle – die Grundlage für die neuen Spielmodi.',

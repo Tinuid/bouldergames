@@ -89,18 +89,22 @@ describe('computePoints im Multiplikator-Modus (Grad × Ergebnis)', () => {
     expect(computePoints('top', 6, strict, 4)).toBe(-20)
   })
 
-  // Sonderstufen: Code 8 = "?" zählt 4, Code 9 = "!" zählt 6 (siehe difficulty.ts).
-  it('Flash auf "?" (Code 8) = 30 × 4 = 120', () => {
-    expect(computePoints('flash', 1, cfg, 8)).toBe(120)
+  // Sonderstufen: Code 11 = "?" zählt 4, Code 12 = "!" zählt 6 (siehe difficulty.ts, Migration 0024).
+  it('Flash auf "?" (Code 11) = 30 × 4 = 120', () => {
+    expect(computePoints('flash', 1, cfg, 11)).toBe(120)
   })
 
-  it('Flash auf "!" (Code 9) = 30 × 6 = 180', () => {
-    expect(computePoints('flash', 1, cfg, 9)).toBe(180)
+  it('Flash auf "!" (Code 12) = 30 × 6 = 180', () => {
+    expect(computePoints('flash', 1, cfg, 12)).toBe(180)
   })
 
-  // Grad 8 hat Code 10, weil Code 8 schon "?" ist.
-  it('Flash auf Grad 8 (Code 10) = 30 × 8 = 240', () => {
-    expect(computePoints('flash', 1, cfg, 10)).toBe(240)
+  // Seit 0024 gilt Code = Grad.
+  it('Flash auf Grad 8 (Code 8) = 30 × 8 = 240', () => {
+    expect(computePoints('flash', 1, cfg, 8)).toBe(240)
+  })
+
+  it('unbekannter Code zählt Faktor 1 (wie der Server)', () => {
+    expect(computePoints('flash', 1, cfg, 99)).toBe(30)
   })
 
   it('Boulder der Woche im Multiplikator: Flash auf Grad 4 = 30 × 4 × 2 = 240', () => {

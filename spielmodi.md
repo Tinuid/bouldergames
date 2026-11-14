@@ -9,10 +9,9 @@ Ebenen (Modus, Spielform, Extras – alle übrigen als graue Kacheln), die zentr
 Ergebnisse“ (`participants.left_at`). Details zur Umsetzung stehen in `CLAUDE.md` unter „Spielmodi“,
 „Rangliste rechnet zentral“, „Spielende und Spielleitung“ und „Verlassen behält die Ergebnisse“.
 
-**Noch offen aus dem Gerüst-Plan:** Release 4 – Grad-Codes = Grad (`?` = 11, `!` = 12, 9/10 frei).
-Frühestens einige Tage nach 1.26.2 ausrollen, damit alte App-Versionen nicht mehr laufen: eine alte App
-würde Code 11 mit Faktor 11 rechnen und ein „?“ als Code 8 (dann Grad 8) speichern. Plan mit allen
-Schutzmaßnahmen: Abschnitt „Release 4“ unten.
+**Grad-Codes = Grad** (Release 4) ist seit **1.29.0** umgesetzt (Migration `0024`): `?` = 11, `!` = 12,
+9/10 frei, dazu `difficultyGrade()`. Bewusst ohne die geplante Wartezeit nach 1.26.2 ausgerollt – die App
+nutzt nur ein kleiner Freundeskreis, ein kurz falsch gerechneter Boulder wäre verschmerzbar.
 
 ## Entscheidungen aus dem Prüfdokument (14.11.2026)
 
@@ -25,12 +24,12 @@ Aus Lucas' Kommentaren im Dokument „Spielmodi – Konzept & Prüfergebnis“:
 - **Spielende** umsetzen. ✅ 1.27.0.
 - **Spielleitung:** Haken beim Erstellen, standardmäßig an. ✅ 1.27.0.
 - **Grad-Codes = Grad**, Leerplätze für Grad 9 und 10; `difficultyGrade()` trotzdem einführen.
-  ⏳ Release 4.
+  ✅ 1.29.0.
 - **Drei Ebenen** (Spielform / Modus / Extras): gute Idee. **Das Zeitlimit ist nie vorbelegt.** ✅ 1.28.0
   (als Katalog, die Extras sind noch nicht wählbar).
 - **Rangliste über `scoreSession`.** ✅ 1.28.0.
 
-## Release 4 – Grad-Codes = Grad (noch offen)
+## Release 4 – Grad-Codes = Grad (✅ 1.29.0, zur Dokumentation)
 
 Migration `0024_difficulty_codes.sql`, eine Transaktion in `do $$ … $$`, gesichert über einen Merker in
 `app_config` (`difficulty_codes_v2`), damit ein zweiter Lauf nichts ändert:
@@ -402,7 +401,7 @@ Geordnet so, dass jeder Schritt einen Baustein legt, den spätere Modi wiederver
 1. ~~**Gerüst + Nur Flash**~~ – erledigt in 1.26.0.
 2. ~~**Grundsatzfrage Modus/Option**~~ – entschieden: drei Ebenen. ~~[B] Rangliste rechnet~~,
    ~~[H] Spielende~~, ~~Spielleitung~~, ~~Verlassen~~ – erledigt in 1.26.2–1.28.0.
-   Offen: Release 4 (Grad-Codes).
+   ~~Release 4 (Grad-Codes)~~ – erledigt in 1.29.0.
 3. **Beste N** (S): erster Modus auf [B]; legt `game_config` [A] an (für N) und füllt den `switch` in
    `scoreSession`.
 4. **Farb-Challenge** (S–M) und **X Griffe** (S): nutzen [A], keine neue Wertungsmechanik.
@@ -417,7 +416,7 @@ Geordnet so, dass jeder Schritt einen Baustein legt, den spätere Modi wiederver
 
 ## Konventionen fürs Umsetzen (aus `CLAUDE.md`)
 
-- Migrationen nummeriert fortführen (nächste: `0024_…`), **idempotent** schreiben, `src/types.ts`
+- Migrationen nummeriert fortführen (nächste: `0025_…`), **idempotent** schreiben, `src/types.ts`
   manuell mitziehen. Vor dem Push per Supabase-MCP anwenden und Setup-Schritt in `CLAUDE.md` ergänzen.
 - `computePoints` bleibt die Quelle der Basis-Punkte. Neue Faktoren laufen überall mit, wo heute
   `difficulty`/`weekBonus` mitlaufen (`upsertResult`, `recomputeSessionResults`, `ResultEditor`).
@@ -434,6 +433,5 @@ Geordnet so, dass jeder Schritt einen Baustein legt, den spätere Modi wiederver
 ## Startprompt für den neuen Chat
 
 > Lies `spielmodi.md` und `CLAUDE.md`. Wir bauen Spielmodi für die Boulder-Challenges. Das Grundgerüst
-> steht (1.28.0), alle Modi haben ein Konzept. Offen ist noch Release 4 (Grad-Codes) – frühestens einige
-> Tage nach 1.26.2. Wähle mit mir den nächsten Schritt (Release 4 oder den nächsten Modus laut
-> „Empfohlene Reihenfolge“), kläre die offenen Fragen und erstelle einen Plan.
+> steht (1.26.2–1.29.0), alle Modi haben ein Konzept. Wähle mit mir den nächsten Modus laut „Empfohlene
+> Reihenfolge“, kläre seine offenen Fragen und erstelle einen Plan.

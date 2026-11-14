@@ -162,6 +162,13 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
     `BCEND`) an und ersetzt `cleanup_stale_sessions` („leer“ = keine aktiven Teilnehmer). Idempotent.
     **0001 und 0012 danach nicht erneut ausführen** – sie setzten die Funktionen auf den Stand ohne
     `left_at` zurück.
+26. `supabase/migrations/0024_difficulty_codes.sql` ausführen – **vor** dem Deploy der App-Version 1.29.0.
+    Schlüsselt die Grad-Codes in `boulders` und `gym_boulders` um (8 → 11 `?`, 9 → 12 `!`, 10 → 8 Grad 8;
+    danach gilt Code = Grad), ersetzt die Rescale-Trigger-Funktion (maßgebliche Fassung statt 0019) und
+    setzt CHECKs auf beide Tabellen (`1–8, 11, 12`). Das Umschlüsseln läuft dank Merker
+    `app_config.difficulty_codes_v2` nur einmal, der Rescale-Trigger ist dabei abgeschaltet – Punkte
+    ändern sich nicht. Idempotent. **0008, 0015 und 0019 danach nicht erneut ausführen** – sie setzten
+    Funktion bzw. CHECK auf die alten Codes zurück.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.
@@ -250,14 +257,16 @@ gleichem `tiebreak` (heute leer); Tops und Name ordnen nur die Anzeige. Bewusst 
 
 **Schwierigkeiten zentralisiert.** Die wählbaren Stufen leben als einzige Quelle der Wahrheit in
 `src/lib/difficulty.ts` (`DIFFICULTIES`): die Grade 1–8 sowie die Sonderstufen `?` und `!`. In
-`boulders.difficulty` (int) steht der **Code** – für 1–7 ist er identisch mit dem Grad, `?` = 8,
-`!` = 9, und **Grad 8 = Code 10** (kam später; Code 8 war schon `?`). Anzeige-Label
-(`difficultyLabel`) und Wertungs-Faktor (`difficultyFactor`) sind davon entkoppelt: `?` zählt 4, `!`
-zählt 6, Grad 8 zählt 8. Eigene Codes verhindern, dass `?`/`!` als Grad 4/6 missgedeutet werden. Die
-Reihenfolge in `DIFFICULTIES` ist die Anzeige-Reihenfolge, nicht die der Codes. Neue Stufen **nur hier**
-ergänzen – und per neuer Migration das Code→Faktor-Mapping im Rescale-Trigger (aktuelle Fassung:
-`0019_grade_8.sql`) spiegeln, da der Server bei Grad-Änderung ebenfalls über den Faktor reskaliert,
-sowie `gym_boulders_difficulty_check` erweitern.
+`boulders.difficulty` (int) steht der **Code** – seit Migration `0024` gilt **Code = Grad** für 1–8,
+die Codes 9 und 10 sind für künftige Grade reserviert, `?` = 11 und `!` = 12 (bis 0024: `?` = 8,
+`!` = 9, Grad 8 = 10). Anzeige-Label (`difficultyLabel`) und Wertungs-Faktor (`difficultyFactor`) sind
+davon entkoppelt: `?` zählt 4, `!` zählt 6; unbekannte Codes zählen 1 – wie auf dem Server. Für
+Rechnungen mit Abständen („Grad 5+“, „X+1“, Handicap, Pyramide) gibt es `difficultyGrade(code)`: der
+echte Grad 1–10 oder `null` für `?`/`!`/ohne Grad. Die Reihenfolge in `DIFFICULTIES` ist die
+Anzeige-Reihenfolge, nicht die der Codes. Neue Stufen **nur hier** ergänzen – und per neuer Migration
+das Code→Faktor-Mapping im Rescale-Trigger (aktuelle Fassung: `0024_difficulty_codes.sql`) spiegeln, da
+der Server bei Grad-Änderung ebenfalls über den Faktor reskaliert, sowie die CHECKs
+`boulders_difficulty_check` und `gym_boulders_difficulty_check` erweitern.
 
 **Datenzugriff zentralisiert.** Alle Supabase-Queries liegen in `src/lib/api.ts` – Routen und
 Komponenten rufen diese Funktionen auf, statt selbst `supabase.from(...)` zu nutzen. Wichtige

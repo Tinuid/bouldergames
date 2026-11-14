@@ -56,8 +56,10 @@ const TAP_SLOP_PX = 10
 // eine neue Referenz und würde unnötig neu zeichnen.
 const EMPTY_SET: Set<string> = new Set()
 
+// v2 seit Migration 0024 (Grad-Codes = Grad): gespeicherte Filter enthalten Grad-Codes,
+// alte Filter (mit "?" = 8) werden darum verworfen statt umgeschlüsselt.
 function filterStorageKey(gymId: string) {
-  return `bg:gymFilter:${gymId}`
+  return `bg:gymFilter:v2:${gymId}`
 }
 
 export default function GymMap() {
