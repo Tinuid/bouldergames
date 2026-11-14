@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computePoints, isBoulderOfWeek, normalizeResult } from './scoring'
+import { computePoints, countsAttempts, isBoulderOfWeek, normalizeResult } from './scoring'
 import { DEFAULT_SCORING } from '../types'
 
 // Standard-Strafmodus ist 'top_floor' (Top nie negativ).
@@ -109,7 +109,11 @@ describe('computePoints im Multiplikator-Modus (Grad × Ergebnis)', () => {
 })
 
 describe('Boulder der Woche (×2)', () => {
-  const classic = { ...DEFAULT_SCORING, mode: 'classic' as const, penaltyMode: 'top_floor' as const }
+  const classic = {
+    ...DEFAULT_SCORING,
+    mode: 'classic' as const,
+    penaltyMode: 'top_floor' as const,
+  }
 
   it('verdoppelt einen Top im klassischen Modus: (25 − 5) × 2 = 40', () => {
     expect(computePoints('top', 2, classic, null, true)).toBe(40)
@@ -127,6 +131,50 @@ describe('Boulder der Woche (×2)', () => {
     expect(isBoulderOfWeek({ featured_at: '2026-11-14', removed_at: null })).toBe(true)
     expect(isBoulderOfWeek({ featured_at: null, removed_at: null })).toBe(false)
     expect(isBoulderOfWeek({ featured_at: '2026-11-14', removed_at: '2026-11-15' })).toBe(false)
+  })
+})
+
+describe('computePoints – Nur Flash (flash_only)', () => {
+  const cfg = { ...DEFAULT_SCORING, gameMode: 'flash_only' as const }
+
+  it.each(['top_floor', 'strict', 'misses'] as const)(
+    'Flash = 30 im Strafmodus %s',
+    (penaltyMode) => {
+      expect(computePoints('flash', 1, { ...cfg, penaltyMode })).toBe(30)
+    },
+  )
+
+  it('Top zählt 0, auch nach Fehlversuchen', () => {
+    expect(computePoints('top', 2, cfg)).toBe(0)
+    expect(computePoints('top', 9, { ...cfg, penaltyMode: 'strict' })).toBe(0)
+  })
+
+  it('Nicht geschafft zählt 0 (keine Minuspunkte)', () => {
+    expect(computePoints('fail', 3, cfg)).toBe(0)
+  })
+
+  it('Offen = 0', () => {
+    expect(computePoints('open', 0, cfg)).toBe(0)
+  })
+
+  it('Multiplikator: Flash × Grad', () => {
+    expect(computePoints('flash', 1, { ...cfg, mode: 'multiplier' }, 4)).toBe(120)
+  })
+
+  it('Boulder der Woche verdoppelt den Flash', () => {
+    expect(computePoints('flash', 1, cfg, null, true)).toBe(60)
+  })
+})
+
+describe('countsAttempts', () => {
+  it('Standard mit Kosten > 0 zählt Versuche', () => {
+    expect(countsAttempts(DEFAULT_SCORING)).toBe(true)
+  })
+  it('Kosten 0 → keine Versuche', () => {
+    expect(countsAttempts({ ...DEFAULT_SCORING, attemptCost: 0 })).toBe(false)
+  })
+  it('Nur Flash → keine Versuche', () => {
+    expect(countsAttempts({ ...DEFAULT_SCORING, gameMode: 'flash_only' })).toBe(false)
   })
 })
 

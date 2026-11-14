@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.26.0',
+    date: '14.11.2026',
+    text: 'Neu: Spielmodi. Beim Erstellen einer Challenge wählst du jetzt zuerst den Modus. Erster neuer Modus: „Nur Flash“ – nur ein Flash bringt Punkte, ein Top nach Fehlversuchen zählt 0, Minuspunkte gibt es keine. Der Modus lässt sich in den Einstellungen nachträglich ändern. Das bisherige „Spielmodus“ (Klassisch/Multiplikator) heißt jetzt „Wertung“. Auf Wunsch aus dem Feedback.',
+  },
+  {
     version: '1.25.0',
     date: '14.11.2026',
     text: 'Neu: Boulder der Woche – auf der Hallenkarte mit einem Stern markiert. Wer ihn in eine Challenge übernimmt, bekommt dort doppelte Punkte, auch wenn später ein neuer Boulder der Woche gewählt wird. Auf Wunsch aus dem Feedback.',

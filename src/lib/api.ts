@@ -75,6 +75,7 @@ export async function createSession(params: {
         top_points: params.scoring.topPoints,
         attempt_cost: params.scoring.attemptCost,
         penalty_mode: params.scoring.penaltyMode,
+        game_mode: params.scoring.gameMode,
         shared_scoring: params.sharedScoring ?? false,
         is_public: params.isPublic ?? false,
       })
@@ -179,6 +180,7 @@ export async function updateSession(params: {
       top_points: params.scoring.topPoints,
       attempt_cost: params.scoring.attemptCost,
       penalty_mode: params.scoring.penaltyMode,
+      game_mode: params.scoring.gameMode,
       shared_scoring: params.sharedScoring,
       is_public: params.isPublic,
     })

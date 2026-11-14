@@ -299,3 +299,18 @@ export function Crosshair(p: IconProps) {
     </svg>
   )
 }
+
+// Stoppuhr – angekündigter Modus „Time Attack“.
+export function Timer(p: IconProps) {
+  return (
+    <svg {...base} {...p}>
+      <circle cx="12" cy="13.5" r="7.5" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="M12 13.5V9.5M9.5 2.5h5M18.5 6.5l1.5-1.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}

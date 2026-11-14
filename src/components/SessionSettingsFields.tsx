@@ -1,12 +1,15 @@
 import { computePoints } from '../lib/scoring'
-import type { PenaltyMode, ScoringConfig, ScoringMode } from '../types'
+import type { GameMode, PenaltyMode, ScoringConfig, ScoringMode } from '../types'
 import { Bolt, Check, Down, Up, X } from './icons'
 
 // Die Spieleinstellungen einer Session – geteilt von CreateSession (Anlegen)
 // und EditSessionDialog (nachträgliches Ändern durch den Host). Eine Quelle der
 // Wahrheit für Layout und Texte, damit beide Formulare nicht auseinanderlaufen.
+// Den Spielmodus selbst wählt dieses Formular nicht (das tun Schritt 1 beim Erstellen
+// bzw. der GameModePicker im Edit-Dialog) – es blendet nur aus, was im Modus nicht zählt.
 export interface SessionSettingsValues {
   name: string
+  gameMode: GameMode
   mode: ScoringMode
   flashPoints: number
   topPoints: number
@@ -41,12 +44,26 @@ const PENALTY_MODES: { value: PenaltyMode; title: string; subtitle: string; hint
 export default function SessionSettingsFields({
   values,
   onChange,
+  modeSlot,
 }: {
   values: SessionSettingsValues
   onChange: (patch: Partial<SessionSettingsValues>) => void
+  // Optionaler Inhalt direkt nach dem Namen – im Edit-Dialog die Moduswahl.
+  modeSlot?: React.ReactNode
 }) {
-  const { name, mode, flashPoints, topPoints, attemptCost, penaltyMode, sharedScoring, isPublic } =
-    values
+  const {
+    name,
+    gameMode,
+    mode,
+    flashPoints,
+    topPoints,
+    attemptCost,
+    penaltyMode,
+    sharedScoring,
+    isPublic,
+  } = values
+  // „Nur Flash“: Top-Punkte, Versuchskosten und Strafmodus wirken nicht – ausblenden.
+  const flashOnly = gameMode === 'flash_only'
 
   // Beispielpunkte direkt aus der Punktelogik berechnen (immer konsistent mit dem Spiel).
   // Basis = klassisch (ohne Grad-Faktor), damit die Strafmodus-Beispiele den reinen Effekt zeigen.
@@ -56,6 +73,7 @@ export default function SessionSettingsFields({
     topPoints,
     attemptCost,
     penaltyMode,
+    gameMode: 'standard',
   }
   const exFlash = computePoints('flash', 1, baseCfg)
   const exTop1 = computePoints('top', 2, baseCfg) // 1 Fehlversuch
@@ -77,8 +95,10 @@ export default function SessionSettingsFields({
         />
       </div>
 
+      {modeSlot}
+
       <div className="panel mb-[18px]">
-        <div className="panel-title mb-3.5">Spielmodus</div>
+        <div className="panel-title mb-3.5">Wertung</div>
         <div className="seg">
           <SegOption
             active={mode === 'classic'}
@@ -94,11 +114,22 @@ export default function SessionSettingsFields({
           />
         </div>
         <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
-          {mode === 'multiplier' ? (
+          {mode === 'multiplier' && flashOnly ? (
+            <>
+              Der Schwierigkeitsgrad multipliziert die Punkte. Beispiel: ein Flash (klassisch{' '}
+              {flashPoints}) zählt auf Grad 4 = {flashPoints * 4}. Grad ist beim Anlegen eines
+              Boulders Pflicht.
+            </>
+          ) : mode === 'multiplier' ? (
             <>
               Der Schwierigkeitsgrad multipliziert die Punkte. Beispiel: ein Top mit 1 Fehlversuch
               (klassisch {exTop1}) zählt auf Grad 4 = {exTop1 * 4}. Grad ist beim Anlegen eines
               Boulders Pflicht.
+            </>
+          ) : flashOnly ? (
+            <>
+              Feste Punkte pro Flash; der Schwierigkeitsgrad dient nur zur Info. Beispiel: ein Flash
+              zählt {flashPoints} Punkte – unabhängig vom Grad.
             </>
           ) : (
             <>
@@ -113,6 +144,8 @@ export default function SessionSettingsFields({
         <div className="panel-title mb-3.5">
           {mode === 'multiplier' ? 'Punkteregeln (pro Grad)' : 'Punkteregeln'}
         </div>
+        {/* Bei „Nur Flash“ bleiben die ausgeblendeten Werte gespeichert und greifen wieder,
+            wenn der Host zurück auf „Standard“ wechselt. */}
         <RuleRow
           icon={<Bolt />}
           tone="flash"
@@ -120,53 +153,64 @@ export default function SessionSettingsFields({
           value={flashPoints}
           onChange={(n) => onChange({ flashPoints: n })}
         />
-        <RuleRow
-          icon={<Check />}
-          tone="top"
-          label="Punkte für Top"
-          value={topPoints}
-          onChange={(n) => onChange({ topPoints: n })}
-        />
-        <RuleRow
-          icon={<X />}
-          tone="miss"
-          label="Kosten pro Fehlversuch"
-          value={attemptCost}
-          min={0}
-          onChange={(n) => onChange({ attemptCost: n })}
-        />
+        {!flashOnly && (
+          <>
+            <RuleRow
+              icon={<Check />}
+              tone="top"
+              label="Punkte für Top"
+              value={topPoints}
+              onChange={(n) => onChange({ topPoints: n })}
+            />
+            <RuleRow
+              icon={<X />}
+              tone="miss"
+              label="Kosten pro Fehlversuch"
+              value={attemptCost}
+              min={0}
+              onChange={(n) => onChange({ attemptCost: n })}
+            />
+          </>
+        )}
+        {flashOnly && (
+          <p className="mt-1 text-[12.5px] leading-relaxed text-muted">
+            Top und nicht geschaffte Boulder zählen 0 – Minuspunkte gibt es keine.
+          </p>
+        )}
       </div>
 
-      <div className="panel mb-[18px]">
-        <div className="panel-title mb-3.5">Minuspunkte</div>
-        <div className="grid grid-cols-3 gap-2">
-          {PENALTY_MODES.map((p) => (
-            <button
-              key={p.value}
-              type="button"
-              aria-pressed={penaltyMode === p.value}
-              onClick={() => onChange({ penaltyMode: p.value })}
-              className={`chip${penaltyMode === p.value ? ' is-active' : ''}`}
-            >
-              <span className="font-display text-[13px] font-bold leading-tight">{p.title}</span>
-              <span
-                className={`text-[11px] ${penaltyMode === p.value ? 'text-accent-ink/80' : 'text-muted'}`}
+      {!flashOnly && (
+        <div className="panel mb-[18px]">
+          <div className="panel-title mb-3.5">Minuspunkte</div>
+          <div className="grid grid-cols-3 gap-2">
+            {PENALTY_MODES.map((p) => (
+              <button
+                key={p.value}
+                type="button"
+                aria-pressed={penaltyMode === p.value}
+                onClick={() => onChange({ penaltyMode: p.value })}
+                className={`chip${penaltyMode === p.value ? ' is-active' : ''}`}
               >
-                {p.subtitle}
-              </span>
-            </button>
-          ))}
+                <span className="font-display text-[13px] font-bold leading-tight">{p.title}</span>
+                <span
+                  className={`text-[11px] ${penaltyMode === p.value ? 'text-accent-ink/80' : 'text-muted'}`}
+                >
+                  {p.subtitle}
+                </span>
+              </button>
+            ))}
+          </div>
+          <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
+            {PENALTY_MODES.find((p) => p.value === penaltyMode)?.hint}
+          </p>
+          <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
+            Beispiel: Flash = <b className="text-ink">{exFlash}</b> · Top, 1 Fehlversuch ={' '}
+            <b className="text-ink">{exTop1}</b> · Top, 8 Fehlversuche ={' '}
+            <b className="text-ink">{exTopMany}</b> · 3× nicht geschafft ={' '}
+            <b className="text-ink">{exFail}</b>.
+          </p>
         </div>
-        <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
-          {PENALTY_MODES.find((p) => p.value === penaltyMode)?.hint}
-        </p>
-        <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
-          Beispiel: Flash = <b className="text-ink">{exFlash}</b> · Top, 1 Fehlversuch ={' '}
-          <b className="text-ink">{exTop1}</b> · Top, 8 Fehlversuche ={' '}
-          <b className="text-ink">{exTopMany}</b> · 3× nicht geschafft ={' '}
-          <b className="text-ink">{exFail}</b>.
-        </p>
-      </div>
+      )}
 
       <div className="panel mb-[18px]">
         <div className="panel-title mb-3.5">Eintragen</div>
@@ -263,7 +307,12 @@ function RuleRow({
       </span>
       <span className="flex-1 text-[15px] font-medium">{label}</span>
       <div className="stepper">
-        <button type="button" className="step-btn" onClick={() => set(value - 1)} aria-label="weniger">
+        <button
+          type="button"
+          className="step-btn"
+          onClick={() => set(value - 1)}
+          aria-label="weniger"
+        >
           <Down className="text-[16px]" />
         </button>
         <span className="step-val">{value}</span>

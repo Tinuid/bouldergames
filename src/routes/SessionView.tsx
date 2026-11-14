@@ -18,6 +18,7 @@ import {
 import { deleteBoulderImage, uploadBoulderImage } from '../lib/images'
 import { forgetSession, rememberSession } from '../lib/localHistory'
 import { DIFFICULTIES } from '../lib/difficulty'
+import { countsAttempts } from '../lib/scoring'
 import { BOULDER_COLORS, colorSwatch } from '../lib/colors'
 import {
   scoringFromSession,
@@ -155,6 +156,7 @@ export default function SessionView() {
         code: session.join_code,
         name: session.name,
         displayName: myParticipant.display_name,
+        gameMode: session.game_mode,
       })
     }
   }, [session, myParticipant])
@@ -495,6 +497,15 @@ export default function SessionView() {
       </div>
 
       <div className="mb-[22px] flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] leading-relaxed text-muted">
+        {scoring.gameMode === 'flash_only' && (
+          <>
+            <span className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 font-semibold text-accent">
+              <Bolt className="text-[13px]" />
+              Nur Flash
+            </span>
+            <span className="text-faint">·</span>
+          </>
+        )}
         {scoring.mode === 'multiplier' && (
           <>
             <span className="font-num font-bold text-accent">×Grad</span>
@@ -505,15 +516,24 @@ export default function SessionView() {
           <Bolt className="text-[14px] text-accent" />
           {scoring.flashPoints} Flash
         </span>
-        <span className="text-faint">·</span>
-        <span className="inline-flex items-center gap-1">
-          <Check className="text-[14px] text-ok" />
-          {scoring.topPoints} Top
-        </span>
-        <span className="text-faint">·</span>
-        <span>−{scoring.attemptCost}/Fehlversuch</span>
-        <span className="text-faint">·</span>
-        <span className="font-semibold text-ok">{PENALTY_LABELS[scoring.penaltyMode]}</span>
+        {scoring.gameMode === 'flash_only' ? (
+          <>
+            <span className="text-faint">·</span>
+            <span>Top zählt 0</span>
+          </>
+        ) : (
+          <>
+            <span className="text-faint">·</span>
+            <span className="inline-flex items-center gap-1">
+              <Check className="text-[14px] text-ok" />
+              {scoring.topPoints} Top
+            </span>
+            <span className="text-faint">·</span>
+            <span>−{scoring.attemptCost}/Fehlversuch</span>
+            <span className="text-faint">·</span>
+            <span className="font-semibold text-ok">{PENALTY_LABELS[scoring.penaltyMode]}</span>
+          </>
+        )}
       </div>
 
       <div className="mb-[26px]">
@@ -834,7 +854,7 @@ export default function SessionView() {
           participants={orderedParticipants}
           resultsByParticipant={byBoulderParticipant.get(rankingBoulder.id)}
           currentUserId={userId}
-          showAttempts={scoring.attemptCost > 0}
+          showAttempts={countsAttempts(scoring)}
           onClose={() => setRankingBoulder(null)}
         />
       )}

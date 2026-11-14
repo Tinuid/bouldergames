@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { useAuth } from '../hooks/useAuth'
 import { useRealtimeSession } from '../hooks/useRealtimeSession'
 import { computeLeaderboardRows, summarizeLeaderboard } from '../lib/leaderboard'
+import { countsAttempts } from '../lib/scoring'
 import { scoringFromSession, type Participant } from '../types'
 import { ChevronLeft } from '../components/icons'
 import Leaderboard from '../components/Leaderboard'
@@ -146,7 +147,7 @@ export default function SessionLeaderboard() {
           meParticipant={myParticipant}
           boulders={boulders}
           results={results}
-          showAttempts={scoringFromSession(session).attemptCost > 0}
+          showAttempts={countsAttempts(scoringFromSession(session))}
           onClose={closePlayer}
           onSelectBoulder={goToBoulder}
         />

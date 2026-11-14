@@ -32,6 +32,10 @@ import { difficultyFactor } from './difficulty'
  * GANZE Ergebnis – in beiden Spielmodi und bewusst auch Minuspunkte, analog zum
  * Grad-Faktor. Der Server-Rescale (0019) bleibt dadurch korrekt: er skaliert über das
  * Verhältnis alter/neuer Grad-Faktor, der Bonus-Faktor kürzt sich heraus.
+ *
+ * Spielmodus „Nur Flash“ (`gameMode === 'flash_only'`): ein Flash bringt die Flash-Punkte,
+ * alles andere (Top, nicht geschafft, offen) zählt 0 – ohne Minuspunkte; Versuchskosten
+ * und Strafmodus wirken nicht. Grad-Faktor und Boulder der Woche wirken weiter.
  */
 export function computePoints(
   status: ResultStatus,
@@ -46,6 +50,10 @@ export function computePoints(
   const successCost = config.penaltyMode === 'strict' ? tries : failed
 
   let base: number
+  if (config.gameMode === 'flash_only') {
+    base = status === 'flash' ? config.flashPoints : 0
+    return applyFactors(base, config, difficulty, weekBonus)
+  }
   switch (status) {
     case 'flash':
       base = config.flashPoints - successCost * config.attemptCost
@@ -65,12 +73,30 @@ export function computePoints(
     base = Math.max(0, base)
   }
 
+  return applyFactors(base, config, difficulty, weekBonus)
+}
+
+// Grad-Faktor (nur Multiplikator) und Boulder-der-Woche-Bonus – in jedem Spielmodus gleich.
+function applyFactors(
+  base: number,
+  config: ScoringConfig,
+  difficulty: number | null,
+  weekBonus: boolean,
+): number {
   if (config.mode === 'multiplier') {
     // `difficulty` ist der gespeicherte Code; der Faktor kommt aus difficulty.ts
     // (Grade 1–7 = sich selbst, Grad 8 = Code 10, Sonderstufen "?"=4 / "!"=6, fehlend = 1).
     base = base * difficultyFactor(difficulty)
   }
   return weekBonus ? base * WEEK_BONUS_FACTOR : base
+}
+
+/**
+ * Ob Fehlversuche in dieser Session etwas zählen – nur dann zeigt das UI den
+ * Versuchszähler und die Versuchsanzahlen. Bei „Nur Flash“ oder Kosten 0 nicht.
+ */
+export function countsAttempts(config: ScoringConfig): boolean {
+  return config.gameMode !== 'flash_only' && config.attemptCost > 0
 }
 
 // Punkte-Faktor des Boulders der Woche.

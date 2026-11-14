@@ -2,9 +2,8 @@ import { useState } from 'react'
 import { recomputeSessionResults, updateSession } from '../lib/api'
 import { useDialogEscape } from '../hooks/useDialogEscape'
 import { scoringFromSession, type Boulder, type Result, type Session } from '../types'
-import SessionSettingsFields, {
-  type SessionSettingsValues,
-} from './SessionSettingsFields'
+import SessionSettingsFields, { type SessionSettingsValues } from './SessionSettingsFields'
+import GameModePicker from './GameModePicker'
 import { GripVertical } from './icons'
 
 // Dialog, mit dem der Host die Spieleinstellungen einer bestehenden Session
@@ -29,6 +28,7 @@ export default function EditSessionDialog({
   const initialScoring = scoringFromSession(session)
   const [values, setValues] = useState<SessionSettingsValues>({
     name: session.name,
+    gameMode: initialScoring.gameMode,
     mode: initialScoring.mode,
     flashPoints: initialScoring.flashPoints,
     topPoints: initialScoring.topPoints,
@@ -47,6 +47,7 @@ export default function EditSessionDialog({
   // Wirken sich die Änderungen auf die Punktevergabe aus? Nur dann müssen
   // bestehende Ergebnisse neu berechnet werden (Name/„für andere“ tun das nicht).
   const scoringChanged =
+    values.gameMode !== initialScoring.gameMode ||
     values.mode !== initialScoring.mode ||
     values.flashPoints !== initialScoring.flashPoints ||
     values.topPoints !== initialScoring.topPoints ||
@@ -65,6 +66,7 @@ export default function EditSessionDialog({
       topPoints: values.topPoints,
       attemptCost: values.attemptCost,
       penaltyMode: values.penaltyMode,
+      gameMode: values.gameMode,
     }
     try {
       await updateSession({
@@ -98,7 +100,20 @@ export default function EditSessionDialog({
           Einstellungen bearbeiten
         </div>
 
-        <SessionSettingsFields values={values} onChange={patch} />
+        <SessionSettingsFields
+          values={values}
+          onChange={patch}
+          modeSlot={
+            <div className="panel mb-[18px]">
+              <div className="panel-title mb-3.5">Spielmodus</div>
+              <GameModePicker
+                value={values.gameMode}
+                onChange={(gameMode) => patch({ gameMode })}
+                showUpcoming={false}
+              />
+            </div>
+          }
+        />
 
         {boulders.length >= 2 && (
           <>

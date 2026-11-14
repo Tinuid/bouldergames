@@ -2,6 +2,8 @@
 // Speichert, an welchen Sessions dieses Gerät teilgenommen hat, damit man
 // sie auf der Startseite wiederfindet und erneut betreten kann.
 
+import type { GameMode } from '../types'
+
 const KEY = 'boulder.history.v1'
 
 export interface HistoryEntry {
@@ -9,6 +11,9 @@ export interface HistoryEntry {
   code: string
   name: string
   displayName: string
+  // Spielmodus fürs Badge in „Zuletzt gespielt“. Optional: ältere Einträge haben ihn
+  // nicht und bekommen ihn beim nächsten Öffnen der Session (SessionView).
+  gameMode?: GameMode
   lastVisited: number
 }
 

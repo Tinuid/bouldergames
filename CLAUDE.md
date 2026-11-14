@@ -145,6 +145,10 @@ Dev-Server neu starten. Backend-seitig müssen zwei Dinge im Supabase-Dashboard 
     Legt `gym_boulders.featured_at` (+ partieller Unique-Index: höchstens einer pro Halle), die
     Passwort-RPC `set_gym_boulder_featured` (Lageplan-Passwort wie 0016), `boulders.week_bonus` und den
     Trigger `trg_boulder_week_bonus` an. Idempotent.
+23. `supabase/migrations/0021_game_mode.sql` ausführen – **vor** dem Deploy der App-Version 1.26.0
+    (die App schickt `game_mode` beim Erstellen mit). Legt `sessions.game_mode` an (`'standard'` |
+    `'flash_only'`, Default `'standard'`, CHECK `sessions_game_mode_check`). Keine RLS-Änderung, kein
+    Trigger nötig. Idempotent. Neue Modi erweitern den CHECK per neuer Migration.
 
 `src/lib/supabase.ts` wirft bewusst **nicht** beim Import, wenn die Env fehlt (Client wird mit
 Platzhaltern erzeugt), damit die App startet und eine Konfigurations-Meldung zeigt.
@@ -188,13 +192,26 @@ Fehlversuche sind `attempts − 1` (beim Fail zählen alle Versuche als Fehlvers
 (`src/components/Leaderboard.tsx`) summiert `points` rein client-seitig aus den `results`.
 `normalizeResult` erzwingt Konsistenz (z.B. Flash ⇒ genau 1 Versuch).
 
-Zwei **Spielmodi** (`ScoringConfig.mode`, gespeichert in `sessions.scoring_mode`, beim Erstellen
-in `CreateSession` wählbar): `'classic'` (feste Punkte, Grad nur Info) und `'multiplier'`, bei dem
+Zwei **Wertungen** (`ScoringConfig.mode`, gespeichert in `sessions.scoring_mode`, im UI-Panel
+„Wertung“ – hieß bis 1.25 „Spielmodus“): `'classic'` (feste Punkte, Grad nur Info) und `'multiplier'`, bei dem
 das komplette klassische Ergebnis mit dem Schwierigkeitsgrad des Boulders multipliziert wird (z.B.
 Flash auf Grad 4 = `(flashPoints − attemptCost) × 4`). Im Multiplikator-Modus ist der Grad beim
 Anlegen eines Boulders **Pflicht** (`AddBoulderDialog`-Prop `requireDifficulty`); fehlt er dennoch,
 rechnet `computePoints` mit Faktor 1. Darum muss `difficulty` bis in `upsertResult` durchgereicht
 werden.
+
+**Spielmodi (Migration `0021`).** Unabhängig von der Wertung hat jede Session einen
+`sessions.game_mode` (`ScoringConfig.gameMode`). Katalog mit Anzeige-Texten und Reihenfolge:
+`src/lib/gameModes.ts` (`GAME_MODES`, dazu `UPCOMING_GAME_MODES` als ausgegraute „bald“-Karten ohne
+DB-Wert). `'flash_only'` („Nur Flash“): in `computePoints` bringt nur ein Flash die Flash-Punkte,
+alles andere 0 – Versuchskosten und Strafmodus wirken nicht, ×Grad und Boulder der Woche schon.
+`countsAttempts(config)` entscheidet, ob das UI Versuchszähler und -anzahlen zeigt – statt
+`attemptCost > 0` direkt abzufragen. Die Moduswahl ist **Schritt 1** von `/create` (`GameModePicker`);
+Schritt 2 liegt unter `/create?modus=<wert>` – bewusst in der URL, damit der Zurück-Button zur
+Moduswahl führt; der Router-State (Karten-Vorauswahl) wird beim Schrittwechsel mitgegeben.
+`SessionSettingsFields` wählt den Modus nicht selbst, blendet aber aus, was im Modus nicht zählt.
+Nachträglich änderbar im `EditSessionDialog` (zählt als Punkte-Änderung ⇒ `recomputeSessionResults`).
+Ideen und offene Modi: `spielmodi.md`.
 
 **Schwierigkeiten zentralisiert.** Die wählbaren Stufen leben als einzige Quelle der Wahrheit in
 `src/lib/difficulty.ts` (`DIFFICULTIES`): die Grade 1–8 sowie die Sonderstufen `?` und `!`. In
@@ -475,6 +492,7 @@ manuell synchron gehalten werden.
 Keine DELETE-Policy für `results` (einzelne Ergebnisse löschen fehlt); Archivieren von Sessions
 (`status='archived'`) ist im UI nicht umgesetzt – nur hartes Löschen durch jeden Teilnehmer
 (`sessions_delete` via `is_session_member`, Cascade); Host-Korrektur fremder Ergebnisse ist per RLS erlaubt, aber im UI
-nicht umgesetzt; keine Pro-Boulder-Detailansicht ("wer hat was"), keine Challenge-Modi, keine
+nicht umgesetzt; keine Pro-Boulder-Detailansicht ("wer hat was"), Spielmodi bisher nur „Nur Flash“
+(Rest siehe `spielmodi.md`), keine
 Offline-Eingabe mit Sync. Kein Aufräumen verwaister anonymer `auth.users` (die wachsen monoton; das
 Session-Cleanup aus `0012` löscht sie **nicht** mit).

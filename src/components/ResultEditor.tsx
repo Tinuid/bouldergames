@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { computePoints, normalizeResult } from '../lib/scoring'
+import { computePoints, countsAttempts, normalizeResult } from '../lib/scoring'
 import type { Result, ResultStatus, ScoringConfig } from '../types'
 import { Bolt, Check, Minus, Plus } from './icons'
 
@@ -95,8 +95,11 @@ export default function ResultEditor({
   }
 
   const preview = computePoints(status, attempts, scoring, difficulty, weekBonus)
-  // Kosten Fehlversuche keine Punkte, gibt es nichts zu zählen – dann fällt der Knopf weg.
-  const showCounter = scoring.attemptCost > 0
+  // Kosten Fehlversuche keine Punkte (oder „Nur Flash“), gibt es nichts zu zählen –
+  // dann fällt der Knopf weg.
+  const showCounter = countsAttempts(scoring)
+  // „Nur Flash“: ein Top bleibt für die Statistik eintragbar, zählt aber 0.
+  const topDoesNotCount = scoring.gameMode === 'flash_only' && status === 'top'
   // Ein Top braucht seinen einen Fehlversuch; darunter geht der Zähler nicht.
   const minusDisabled = status === 'top' && misses <= 1
   const counterCls =
@@ -227,6 +230,7 @@ export default function ResultEditor({
           <span className={`ml-1 font-num font-bold ${preview < 0 ? 'text-bad' : 'text-ok'}`}>
             {preview}
           </span>
+          {topDoesNotCount && <span className="ml-1.5 font-medium">· zählt nur Flash</span>}
         </div>
       )}
     </div>

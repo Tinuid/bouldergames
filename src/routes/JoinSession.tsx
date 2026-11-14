@@ -38,6 +38,7 @@ export default function JoinSession() {
         code: session.join_code,
         name: session.name,
         displayName: displayName.trim(),
+        gameMode: session.game_mode,
       })
       navigate(`/s/${session.id}`)
     } catch (err) {

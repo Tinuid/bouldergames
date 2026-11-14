@@ -14,6 +14,12 @@ export type ScoringMode = 'classic' | 'multiplier'
 //  'misses'    – erfolgreicher Zug gratis; nur Fehlversuche kosten (Top kann negativ werden).
 export type PenaltyMode = 'top_floor' | 'strict' | 'misses'
 
+// Spielmodus (sessions.game_mode, Migration 0021) – unabhängig von der Wertung:
+//  'standard'   – Flash, Top und Fehlversuche wie gewohnt.
+//  'flash_only' – „Nur Flash“: nur ein Flash bringt Punkte, alles andere zählt 0.
+// Anzeige-Texte und Reihenfolge liegen in src/lib/gameModes.ts.
+export type GameMode = 'standard' | 'flash_only'
+
 export interface ScoringConfig {
   mode: ScoringMode
   flashPoints: number
@@ -21,6 +27,7 @@ export interface ScoringConfig {
   // Kosten pro Fehlversuch (im 'strict'-Modus kostet auch der erfolgreiche Zug).
   attemptCost: number
   penaltyMode: PenaltyMode
+  gameMode: GameMode
 }
 
 export const DEFAULT_SCORING: ScoringConfig = {
@@ -29,6 +36,7 @@ export const DEFAULT_SCORING: ScoringConfig = {
   topPoints: 25,
   attemptCost: 5,
   penaltyMode: 'top_floor',
+  gameMode: 'standard',
 }
 
 export interface Session {
@@ -41,6 +49,8 @@ export interface Session {
   top_points: number
   attempt_cost: number
   penalty_mode: PenaltyMode
+  // Spielmodus (Migration 0021). Default 'standard'.
+  game_mode: GameMode
   // true: jeder Teilnehmer darf Ergebnisse für ALLE Mitspieler eintragen/ändern
   // (RLS-Funktion can_score_others, Migration 0011). Default false.
   shared_scoring: boolean
@@ -166,5 +176,6 @@ export function scoringFromSession(s: Session): ScoringConfig {
     topPoints: s.top_points,
     attemptCost: s.attempt_cost,
     penaltyMode: s.penalty_mode ?? 'strict',
+    gameMode: s.game_mode ?? 'standard',
   }
 }

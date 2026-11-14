@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { getHistory, forgetSession, type HistoryEntry } from '../lib/localHistory'
 import { listPublicSessions, type SessionSummary } from '../lib/api'
 import { supabase } from '../lib/supabase'
+import { gameModeInfo } from '../lib/gameModes'
+import type { GameMode } from '../types'
 import BrandMark from '../components/BrandMark'
 import VersionBadge from '../components/VersionBadge'
 import FeedbackDialog from '../components/FeedbackDialog'
@@ -92,6 +94,7 @@ export default function Home() {
                   </div>
                   <div className="mt-0.5 truncate text-[13px] text-muted">
                     Code {h.code} · als {h.displayName}
+                    <ModeNote mode={h.gameMode} />
                   </div>
                 </button>
                 <button
@@ -121,7 +124,10 @@ export default function Home() {
                     <div className="truncate font-display text-[17px] font-bold tracking-[-0.01em]">
                       {s.name}
                     </div>
-                    <div className="mt-0.5 text-[13px] text-muted">Code {s.join_code}</div>
+                    <div className="mt-0.5 text-[13px] text-muted">
+                      Code {s.join_code}
+                      <ModeNote mode={s.game_mode} />
+                    </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
                     <span className="text-[13px] text-muted">{s.participantCount} Spieler</span>
@@ -171,4 +177,10 @@ export default function Home() {
       <ChangelogDialog open={changelogOpen} onClose={() => setChangelogOpen(false)} />
     </div>
   )
+}
+
+// Spielmodus-Hinweis in den Listen – nur für Modi abseits von „Standard“.
+function ModeNote({ mode }: { mode: GameMode | undefined }) {
+  if (!mode || mode === 'standard') return null
+  return <span className="font-semibold text-accent"> · {gameModeInfo(mode).title}</span>
 }
